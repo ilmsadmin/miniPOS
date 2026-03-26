@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -29,6 +31,7 @@ import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Product
 import com.minipos.ui.scanner.BarcodeScannerScreen
+import com.minipos.ui.scanner.ImageViewerScreen
 import com.minipos.ui.scanner.ProductImagePicker
 import java.io.File
 
@@ -163,6 +166,32 @@ private fun ProductListItem(
     onDelete: () -> Unit,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showImageViewer by remember { mutableStateOf(false) }
+
+    // Build all images for viewer
+    val allImages = remember(product) {
+        buildList {
+            product.imagePath?.let { add(it) }
+            addAll(product.additionalImages)
+        }
+    }
+
+    // Full-screen image viewer
+    if (showImageViewer && allImages.isNotEmpty()) {
+        Dialog(
+            onDismissRequest = { showImageViewer = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            ImageViewerScreen(
+                images = allImages,
+                initialIndex = 0,
+                onClose = { showImageViewer = false },
+            )
+        }
+    }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -202,7 +231,8 @@ private fun ProductListItem(
                     contentDescription = product.name,
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showImageViewer = true },
                     contentScale = ContentScale.Crop,
                 )
             } else {
@@ -222,11 +252,21 @@ private fun ProductListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    "SKU: ${product.sku} · ${product.unit}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "SKU: ${product.sku} · ${product.unit}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary,
+                    )
+                    if (allImages.size > 1) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "📷${allImages.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AppColors.TextTertiary,
+                        )
+                    }
+                }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(

@@ -25,6 +25,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
@@ -50,6 +52,18 @@ fun ProductImagePicker(
     val context = LocalContext.current
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var isPickingMainImage by remember { mutableStateOf(true) }
+
+    // Image viewer state
+    var showImageViewer by remember { mutableStateOf(false) }
+    var viewerInitialIndex by remember { mutableIntStateOf(0) }
+
+    // Build the combined image list for the viewer
+    val allImages = remember(mainImagePath, additionalImages) {
+        buildList {
+            mainImagePath?.let { add(it) }
+            addAll(additionalImages)
+        }
+    }
 
     // Camera permission
     var hasCameraPermission by remember {
@@ -195,6 +209,23 @@ fun ProductImagePicker(
         )
     }
 
+    // Image viewer fullscreen dialog
+    if (showImageViewer && allImages.isNotEmpty()) {
+        Dialog(
+            onDismissRequest = { showImageViewer = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            ImageViewerScreen(
+                images = allImages,
+                initialIndex = viewerInitialIndex,
+                onClose = { showImageViewer = false },
+            )
+        }
+    }
+
     Column {
         Text(
             "Ảnh sản phẩm",
@@ -213,8 +244,13 @@ fun ProductImagePicker(
                     label = "Ảnh đại diện",
                     isMain = true,
                     onClick = {
-                        isPickingMainImage = true
-                        showImageSourceDialog = true
+                        if (mainImagePath != null) {
+                            viewerInitialIndex = 0
+                            showImageViewer = true
+                        } else {
+                            isPickingMainImage = true
+                            showImageSourceDialog = true
+                        }
                     },
                     onRemove = if (mainImagePath != null) {
                         {
@@ -232,8 +268,9 @@ fun ProductImagePicker(
                     label = "Ảnh ${index + 2}",
                     isMain = false,
                     onClick = {
-                        isPickingMainImage = false
-                        showImageSourceDialog = true
+                        // Open viewer at the correct index (offset by 1 if main image exists)
+                        viewerInitialIndex = if (mainImagePath != null) index + 1 else index
+                        showImageViewer = true
                     },
                     onRemove = {
                         ImageHelper.deleteImage(path)

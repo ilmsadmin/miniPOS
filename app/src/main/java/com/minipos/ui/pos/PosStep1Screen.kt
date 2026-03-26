@@ -1,6 +1,8 @@
 package com.minipos.ui.pos
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -23,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -31,6 +35,7 @@ import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Product
 import com.minipos.ui.scanner.BarcodeScannerScreen
+import com.minipos.ui.scanner.ImageViewerScreen
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,15 +190,44 @@ fun PosStep1Screen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ProductGridItem(product: Product, quantity: Int, availableStock: Double?, onClick: () -> Unit) {
     val isOutOfStock = product.trackInventory && (availableStock ?: 0.0) <= 0.0
+    var showImageViewer by remember { mutableStateOf(false) }
+
+    val allImages = remember(product) {
+        buildList {
+            product.imagePath?.let { add(it) }
+            addAll(product.additionalImages)
+        }
+    }
+
+    // Full-screen image viewer
+    if (showImageViewer && allImages.isNotEmpty()) {
+        Dialog(
+            onDismissRequest = { showImageViewer = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            ImageViewerScreen(
+                images = allImages,
+                initialIndex = 0,
+                onClose = { showImageViewer = false },
+            )
+        }
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !isOutOfStock, onClick = onClick),
+            .combinedClickable(
+                enabled = true,
+                onClick = { if (!isOutOfStock) onClick() },
+                onLongClick = { if (allImages.isNotEmpty()) showImageViewer = true },
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = when {
