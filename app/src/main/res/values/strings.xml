@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">miniPOS</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">miniPOS</string>
+    <string name="welcome_subtitle">Hệ thống bán hàng đơn giản\ncho cửa hàng của bạn</string>
+    <string name="create_store">Tạo cửa hàng mới</string>
+    <string name="join_store">Tham gia cửa hàng</string>
+    <string name="restore_from_gdrive">Khôi phục từ Google Drive</string>
+
+    <!-- Create Store -->
+    <string name="create_store_title">Tạo cửa hàng</string>
+    <string name="store_name">Tên cửa hàng</string>
+    <string name="store_code">Mã cửa hàng</string>
+    <string name="store_code_hint">Dùng để kết nối thiết bị</string>
+    <string name="store_address">Địa chỉ</string>
+    <string name="store_phone">Số điện thoại</string>
+    <string name="next">Tiếp theo</string>
+    <string name="back">Quay lại</string>
+    <string name="step_format">Bước %1$d/%2$d</string>
+
+    <!-- Create Account -->
+    <string name="create_account_title">Tạo tài khoản</string>
+    <string name="display_name">Tên hiển thị</string>
+    <string name="pin_label">PIN đăng nhập (4–6 số)</string>
+    <string name="admin_password">Mật khẩu quản trị</string>
+    <string name="confirm_password">Xác nhận mật khẩu</string>
+    <string name="create">Tạo cửa hàng</string>
+
+    <!-- Login -->
+    <string name="login_title">Đăng nhập</string>
+    <string name="enter_pin">Nhập PIN</string>
+    <string name="pin_error">PIN không đúng</string>
+    <string name="account_locked">Tài khoản bị khóa. Thử lại sau %1$d phút</string>
+    <string name="use_biometric">Đăng nhập bằng vân tay</string>
+
+    <!-- Home -->
+    <string name="home_title">Trang chủ</string>
+    <string name="today_revenue">Doanh thu hôm nay</string>
+    <string name="today_orders">Đơn hàng hôm nay</string>
+    <string name="card_pos">Bán hàng (POS)</string>
+    <string name="card_inventory">Quản lý kho</string>
+    <string name="card_purchase">Nhập hàng</string>
+    <string name="card_products">Sản phẩm</string>
+    <string name="card_suppliers">Nhà cung cấp</string>
+    <string name="card_customers">Khách hàng</string>
+    <string name="card_reports">Báo cáo</string>
+    <string name="card_orders">Lịch sử đơn hàng</string>
+    <string name="card_settings">Cài đặt</string>
+    <string name="low_stock_alert">%1$d sản phẩm sắp hết hàng</string>
+
+    <!-- POS -->
+    <string name="pos_title">Bán hàng</string>
+    <string name="step1_select_products">Chọn sản phẩm</string>
+    <string name="step2_quantity_price">Số lượng &amp; Giá</string>
+    <string name="step3_customer">Khách hàng</string>
+    <string name="step4_payment">Thanh toán</string>
+    <string name="step5_receipt">Hoá đơn</string>
+    <string name="search_product">Tìm sản phẩm…</string>
+    <string name="scan_barcode">Quét mã vạch</string>
+    <string name="all_categories">Tất cả</string>
+    <string name="items_selected">%1$d sản phẩm</string>
+    <string name="subtotal">Tạm tính</string>
+    <string name="discount">Giảm giá</string>
+    <string name="tax">Thuế</string>
+    <string name="total">Tổng cộng</string>
+    <string name="walk_in_customer">Khách lẻ</string>
+    <string name="select_customer">Chọn khách hàng</string>
+    <string name="create_customer_quick">Tạo khách hàng mới</string>
+    <string name="payment_cash">Tiền mặt</string>
+    <string name="payment_transfer">Chuyển khoản</string>
+    <string name="payment_ewallet">Ví điện tử</string>
+    <string name="amount_received">Tiền khách đưa</string>
+    <string name="change_amount">Tiền thừa</string>
+    <string name="confirm_payment">Xác nhận thanh toán</string>
+    <string name="payment_success">Thanh toán thành công!</string>
+    <string name="print_receipt">In hoá đơn</string>
+    <string name="share_receipt">Chia sẻ hoá đơn</string>
+    <string name="new_order">Tạo đơn mới</string>
+    <string name="go_home">Về trang chủ</string>
+
+    <!-- Products -->
+    <string name="products_title">Sản phẩm</string>
+    <string name="add_product">Thêm sản phẩm</string>
+    <string name="edit_product">Sửa sản phẩm</string>
+    <string name="product_name">Tên sản phẩm</string>
+    <string name="product_sku">Mã sản phẩm</string>
+    <string name="product_barcode">Mã vạch</string>
+    <string name="cost_price">Giá nhập</string>
+    <string name="selling_price">Giá bán</string>
+    <string name="unit">Đơn vị tính</string>
+    <string name="category">Danh mục</string>
+    <string name="supplier">Nhà cung cấp</string>
+    <string name="track_inventory">Quản lý tồn kho</string>
+    <string name="save">Lưu</string>
+    <string name="delete">Xoá</string>
+    <string name="cancel">Huỷ</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Danh mục</string>
+    <string name="add_category">Thêm danh mục</string>
+    <string name="category_name">Tên danh mục</string>
+    <string name="uncategorized">Chưa phân loại</string>
+
+    <!-- Suppliers -->
+    <string name="suppliers_title">Nhà cung cấp</string>
+    <string name="add_supplier">Thêm nhà cung cấp</string>
+    <string name="contact_person">Người liên hệ</string>
+
+    <!-- Customers -->
+    <string name="customers_title">Khách hàng</string>
+    <string name="add_customer">Thêm khách hàng</string>
+    <string name="customer_name">Tên khách hàng</string>
+    <string name="customer_phone">Số điện thoại</string>
+    <string name="total_spent">Tổng chi tiêu</string>
+    <string name="visit_count">Số lần mua</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Kho hàng</string>
+    <string name="stock_overview">Tổng quan tồn kho</string>
+    <string name="purchase_in">Nhập kho</string>
+    <string name="stock_check">Kiểm kho</string>
+
+    <!-- Orders -->
+    <string name="orders_title">Lịch sử đơn hàng</string>
+    <string name="order_detail">Chi tiết đơn hàng</string>
+    <string name="refund">Trả hàng / Hoàn tiền</string>
+
+    <!-- Reports -->
+    <string name="reports_title">Báo cáo</string>
+    <string name="sales_report">Doanh thu</string>
+    <string name="product_report">Sản phẩm</string>
+    <string name="staff_report">Nhân viên</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Cài đặt</string>
+    <string name="store_settings">Thông tin cửa hàng</string>
+    <string name="user_management">Quản lý nhân viên</string>
+    <string name="device_management">Quản lý thiết bị</string>
+    <string name="printer_setup">Cài đặt máy in</string>
+    <string name="backup_restore">Sao lưu &amp; Khôi phục</string>
+    <string name="about">Về ứng dụng</string>
+    <string name="logout">Đăng xuất</string>
+
+    <!-- Common -->
+    <string name="error_required">Trường này không được để trống</string>
+    <string name="error_pin_length">PIN phải từ 4–6 chữ số</string>
+    <string name="error_password_length">Mật khẩu tối thiểu 6 ký tự</string>
+    <string name="error_password_mismatch">Mật khẩu không khớp</string>
+    <string name="loading">Đang tải…</string>
+    <string name="no_data">Không có dữ liệu</string>
+    <string name="confirm_delete">Bạn có chắc chắn muốn xoá?</string>
+    <string name="yes">Có</string>
+    <string name="no">Không</string>
+    <string name="currency_format">%1$,.0fđ</string>
+</resources>
