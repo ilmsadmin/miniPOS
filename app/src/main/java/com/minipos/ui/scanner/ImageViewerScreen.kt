@@ -3,8 +3,11 @@ package com.minipos.ui.scanner
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -21,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -142,6 +146,7 @@ fun ImageViewerScreen(
 
 /**
  * A zoomable image that supports pinch-to-zoom and double-tap-to-zoom.
+ * When not zoomed (scale == 1f), horizontal drags pass through to the HorizontalPager.
  */
 @Composable
 private fun ZoomableImage(imagePath: String) {
@@ -157,29 +162,52 @@ private fun ZoomableImage(imagePath: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // Custom pointer input that only consumes pan when zoomed
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 5f)
-                    // Calculate max offset based on scale
-                    val maxX = (size.width * (newScale - 1f)) / 2f
-                    val maxY = (size.height * (newScale - 1f)) / 2f
-                    val newOffset = Offset(
-                        x = (offset.x + pan.x * newScale).coerceIn(-maxX, maxX),
-                        y = (offset.y + pan.y * newScale).coerceIn(-maxY, maxY),
-                    )
-                    scale = newScale
-                    offset = if (newScale > 1f) newOffset else Offset.Zero
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
+
+                        // Always handle pinch zoom (2+ fingers)
+                        if (zoom != 1f) {
+                            val newScale = (scale * zoom).coerceIn(1f, 5f)
+                            scale = newScale
+                            if (newScale <= 1f) {
+                                offset = Offset.Zero
+                            }
+                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                        }
+                        // Only handle pan when zoomed in
+                        else if (scale > 1.01f && pan != Offset.Zero) {
+                            val maxX = (size.width * (scale - 1f)) / 2f
+                            val maxY = (size.height * (scale - 1f)) / 2f
+                            val newOffset = Offset(
+                                x = (offset.x + pan.x).coerceIn(-maxX, maxX),
+                                y = (offset.y + pan.y).coerceIn(-maxY, maxY),
+                            )
+                            // Only consume horizontal pan if we're not at the edge
+                            // (allow pager to take over when panned to edge)
+                            val atLeftEdge = offset.x >= maxX - 1f && pan.x > 0
+                            val atRightEdge = offset.x <= -maxX + 1f && pan.x < 0
+                            if (!atLeftEdge && !atRightEdge) {
+                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                            }
+                            offset = newOffset
+                        }
+                        // When not zoomed: don't consume — let HorizontalPager handle swipe
+                    } while (event.changes.any { it.pressed })
                 }
             }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = {
                         if (scale > 1.5f) {
-                            // Zoom out
                             scale = 1f
                             offset = Offset.Zero
                         } else {
-                            // Zoom in to 3x
                             scale = 3f
                         }
                     }
