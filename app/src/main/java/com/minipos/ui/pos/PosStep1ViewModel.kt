@@ -19,6 +19,7 @@ data class PosStep1State(
     val selectedCategory: Category? = null,
     val searchQuery: String = "",
     val stockError: String? = null,
+    val showBarcodeScanner: Boolean = false,
 )
 
 @HiltViewModel
@@ -109,5 +110,23 @@ class PosStep1ViewModel @Inject constructor(
     fun clearStockError() {
         cartHolder.clearStockError()
         _state.update { it.copy(stockError = null) }
+    }
+
+    fun showBarcodeScanner() {
+        _state.update { it.copy(showBarcodeScanner = true) }
+    }
+
+    fun dismissBarcodeScanner() {
+        _state.update { it.copy(showBarcodeScanner = false) }
+    }
+
+    fun onBarcodeScanned(barcode: String) {
+        _state.update { it.copy(showBarcodeScanner = false) }
+        val product = _state.value.allProducts.firstOrNull { it.barcode == barcode }
+        if (product != null) {
+            cartHolder.addItem(product)
+        } else {
+            _state.update { it.copy(stockError = "Không tìm thấy sản phẩm với mã: $barcode") }
+        }
     }
 }

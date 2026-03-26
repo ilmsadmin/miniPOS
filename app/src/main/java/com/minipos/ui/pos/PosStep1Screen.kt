@@ -15,16 +15,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Product
+import com.minipos.ui.scanner.BarcodeScannerScreen
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +43,16 @@ fun PosStep1Screen(
     val state by viewModel.state.collectAsState()
     val cart by viewModel.cartHolder.cart.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Full-screen barcode scanner overlay
+    if (state.showBarcodeScanner) {
+        BarcodeScannerScreen(
+            onBarcodeScanned = { value, _ -> viewModel.onBarcodeScanned(value) },
+            onClose = { viewModel.dismissBarcodeScanner() },
+            title = "Quét mã vạch sản phẩm",
+        )
+        return
+    }
 
     // Show stock error as snackbar
     LaunchedEffect(state.stockError) {
@@ -109,7 +126,7 @@ fun PosStep1Screen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
-                    IconButton(onClick = { /* TODO: barcode scanner */ }) {
+                    IconButton(onClick = { viewModel.showBarcodeScanner() }) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = "Quét mã vạch")
                     }
                 },
@@ -194,16 +211,30 @@ private fun ProductGridItem(product: Product, quantity: Int, availableStock: Dou
                     .padding(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon(
-                    Icons.Default.Inventory2,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = when {
-                        isOutOfStock -> AppColors.Error
-                        quantity > 0 -> AppColors.Primary
-                        else -> AppColors.TextSecondary
-                    },
-                )
+                if (product.imagePath != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(File(product.imagePath!!))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = product.name,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Inventory2,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = when {
+                            isOutOfStock -> AppColors.Error
+                            quantity > 0 -> AppColors.Primary
+                            else -> AppColors.TextSecondary
+                        },
+                    )
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     product.name,

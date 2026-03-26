@@ -6,4 +6,10 @@
     <cache-path
         name="shared"
         path="shared/" />
+    <cache-path
+        name="camera_temp"
+        path="camera_temp/" />
+    <files-path
+        name="product_images"
+        path="product_images/" />
 </paths>

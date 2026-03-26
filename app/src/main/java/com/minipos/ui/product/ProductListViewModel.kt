@@ -24,6 +24,7 @@ data class ProductListState(
     val showForm: Boolean = false,
     val editingProduct: Product? = null,
     val isLoading: Boolean = true,
+    val showBarcodeScanner: Boolean = false,
 )
 
 data class ProductFormState(
@@ -38,6 +39,8 @@ data class ProductFormState(
     val minStock: String = "0",
     val trackInventory: Boolean = true,
     val taxRate: String = "0",
+    val imagePath: String? = null,
+    val additionalImages: List<String> = emptyList(),
     val isSaving: Boolean = false,
     val error: String? = null,
 )
@@ -113,6 +116,8 @@ class ProductListViewModel @Inject constructor(
             minStock = product.minStock.toString(),
             trackInventory = product.trackInventory,
             taxRate = product.taxRate.toString(),
+            imagePath = product.imagePath,
+            additionalImages = product.additionalImages,
         )
         _state.update { it.copy(showForm = true, editingProduct = product) }
     }
@@ -145,6 +150,8 @@ class ProductListViewModel @Inject constructor(
                 sellingPrice = form.sellingPrice.toDoubleOrNull() ?: 0.0,
                 unit = form.unit,
                 description = form.description.ifBlank { null },
+                imagePath = form.imagePath,
+                additionalImages = form.additionalImages,
                 minStock = form.minStock.toIntOrNull() ?: 0,
                 trackInventory = form.trackInventory,
                 taxRate = form.taxRate.toDoubleOrNull() ?: 0.0,
@@ -170,5 +177,18 @@ class ProductListViewModel @Inject constructor(
             productRepository.delete(product.id)
             loadData()
         }
+    }
+
+    fun showBarcodeScanner() {
+        _state.update { it.copy(showBarcodeScanner = true) }
+    }
+
+    fun dismissBarcodeScanner() {
+        _state.update { it.copy(showBarcodeScanner = false) }
+    }
+
+    fun onBarcodeScanned(barcode: String) {
+        _formState.update { it.copy(barcode = barcode) }
+        _state.update { it.copy(showBarcodeScanner = false) }
     }
 }

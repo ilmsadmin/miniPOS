@@ -135,6 +135,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.1")
     implementation("androidx.camera:camera-view:1.3.1")
 
+    // Image processing
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
     // Biometric
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
 

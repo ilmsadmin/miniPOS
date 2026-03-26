@@ -126,6 +126,7 @@ data class ProductEntity(
     @ColumnInfo(name = "selling_price") val sellingPrice: Double = 0.0,
     @ColumnInfo(name = "unit") val unit: String = "cái",
     @ColumnInfo(name = "image_path") val imagePath: String? = null,
+    @ColumnInfo(name = "additional_images") val additionalImages: String? = null,
     @ColumnInfo(name = "min_stock") val minStock: Int = 0,
     @ColumnInfo(name = "max_stock") val maxStock: Int? = null,
     @ColumnInfo(name = "is_active") val isActive: Boolean = true,

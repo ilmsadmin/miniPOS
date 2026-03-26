@@ -13,6 +13,7 @@ data class Product(
     val sellingPrice: Double = 0.0,
     val unit: String = "cái",
     val imagePath: String? = null,
+    val additionalImages: List<String> = emptyList(),
     val minStock: Int = 0,
     val maxStock: Int? = null,
     val isActive: Boolean = true,

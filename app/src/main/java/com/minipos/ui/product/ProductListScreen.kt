@@ -14,14 +14,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
+import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Product
+import com.minipos.ui.scanner.BarcodeScannerScreen
+import com.minipos.ui.scanner.ProductImagePicker
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,10 +46,22 @@ fun ProductListScreen(
             formState = formState,
             categories = state.categories,
             isEditing = state.editingProduct != null,
+            productId = state.editingProduct?.id ?: remember { UuidGenerator.generate() },
             onFieldChange = { viewModel.updateFormField(it) },
             onSave = { viewModel.saveProduct() },
             onDismiss = { viewModel.dismissForm() },
+            onScanBarcode = { viewModel.showBarcodeScanner() },
         )
+    }
+
+    // Full-screen barcode scanner overlay
+    if (state.showBarcodeScanner) {
+        BarcodeScannerScreen(
+            onBarcodeScanned = { value, _ -> viewModel.onBarcodeScanned(value) },
+            onClose = { viewModel.dismissBarcodeScanner() },
+            title = "Quét mã vạch sản phẩm",
+        )
+        return // Don't render the main screen behind the scanner
     }
 
     Scaffold(
@@ -172,12 +193,26 @@ private fun ProductListItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Default.Inventory2,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = AppColors.Primary,
-            )
+            if (product.imagePath != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(File(product.imagePath!!))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Icon(
+                    Icons.Default.Inventory2,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = AppColors.Primary,
+                )
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -221,9 +256,11 @@ private fun ProductFormSheet(
     formState: ProductFormState,
     categories: List<com.minipos.domain.model.Category>,
     isEditing: Boolean,
+    productId: String,
     onFieldChange: (ProductFormState.() -> ProductFormState) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
+    onScanBarcode: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -241,7 +278,7 @@ private fun ProductFormSheet(
                     )
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = formState.sku,
                             onValueChange = { v -> onFieldChange { copy(sku = v) } },
@@ -257,6 +294,11 @@ private fun ProductFormSheet(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(8.dp),
+                            trailingIcon = {
+                                IconButton(onClick = onScanBarcode) {
+                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Quét mã vạch", tint = AppColors.Primary)
+                                }
+                            },
                         )
                     }
                 }
@@ -338,6 +380,17 @@ private fun ProductFormSheet(
                             onCheckedChange = { v -> onFieldChange { copy(trackInventory = v) } },
                         )
                     }
+                }
+                item {
+                    Text("Ảnh sản phẩm", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ProductImagePicker(
+                        mainImagePath = formState.imagePath,
+                        additionalImages = formState.additionalImages,
+                        onMainImageChanged = { path -> onFieldChange { copy(imagePath = path) } },
+                        onAdditionalImagesChanged = { images -> onFieldChange { copy(additionalImages = images) } },
+                        productId = productId,
+                    )
                 }
                 if (formState.error != null) {
                     item {

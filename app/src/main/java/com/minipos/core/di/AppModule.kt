@@ -29,7 +29,7 @@ object AppModule {
             MiniPosDatabase::class.java,
             AppConstants.DB_NAME
         )
-            .addMigrations(MiniPosDatabase.MIGRATION_1_2)
+            .addMigrations(MiniPosDatabase.MIGRATION_1_2, MiniPosDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
     }
