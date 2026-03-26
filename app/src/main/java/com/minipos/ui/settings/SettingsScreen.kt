@@ -219,7 +219,7 @@ fun SettingsScreen(
                                 }
                                 if (!store.address.isNullOrBlank()) {
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(store.address!!, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                    Text(store.address, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                                 }
                                 if (!store.phone.isNullOrBlank()) {
                                     Text("SĐT: ${store.phone}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
@@ -463,7 +463,7 @@ private fun SalesSettingsDialog(
                     )
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 // Receipt header
                 OutlinedTextField(
@@ -487,7 +487,7 @@ private fun SalesSettingsDialog(
                     shape = RoundedCornerShape(8.dp),
                 )
 
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 // Auto print receipt
                 Row(

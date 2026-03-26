@@ -45,4 +45,13 @@ sealed class Screen(val route: String) {
     // Settings
     object Settings : Screen("settings")
     object UserManagement : Screen("settings/users")
+
+    // Barcode
+    object BarcodeManagement : Screen("barcode")
+
+    // Store Management hub
+    object StoreManagement : Screen("store_management")
+
+    // Scan to POS
+    object ScanToPos : Screen("scan_to_pos")
 }

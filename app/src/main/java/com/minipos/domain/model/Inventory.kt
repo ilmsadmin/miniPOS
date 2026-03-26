@@ -58,3 +58,43 @@ data class DashboardData(
     val todayProfit: Double = 0.0,
     val lowStockCount: Int = 0,
 )
+
+data class StockOverviewItem(
+    val productId: String,
+    val productName: String,
+    val productSku: String,
+    val productUnit: String,
+    val minStock: Int,
+    val costPrice: Double,
+    val sellingPrice: Double,
+    val currentStock: Double,
+    val stockValue: Double, // currentStock * costPrice
+)
+
+data class StockHistoryItem(
+    val id: String,
+    val productId: String,
+    val productName: String,
+    val productSku: String,
+    val type: StockMovementType,
+    val quantity: Double,
+    val quantityBefore: Double,
+    val quantityAfter: Double,
+    val unitCost: Double? = null,
+    val referenceId: String? = null,
+    val referenceType: String? = null,
+    val supplierId: String? = null,
+    val supplierName: String? = null,
+    val notes: String?,
+    val createdBy: String,
+    val createdAt: Long,
+)
+
+data class StockSummary(
+    val totalProducts: Int = 0,
+    val totalStockValue: Double = 0.0,
+    val lowStockCount: Int = 0,
+    val outOfStockCount: Int = 0,
+    val totalStockIn: Double = 0.0,
+    val totalStockOut: Double = 0.0,
+)

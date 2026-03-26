@@ -84,7 +84,7 @@ fun PosStep2Screen(
                             )
                         }
                     }
-                    Divider()
+                    HorizontalDivider()
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),

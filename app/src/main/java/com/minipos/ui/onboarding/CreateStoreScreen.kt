@@ -51,7 +51,7 @@ fun CreateStoreScreen(
         ) {
             // Step indicator
             LinearProgressIndicator(
-                progress = state.step / 2f,
+                progress = { state.step / 2f },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),

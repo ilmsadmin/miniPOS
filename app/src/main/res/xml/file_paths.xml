@@ -12,4 +12,7 @@
     <files-path
         name="product_images"
         path="product_images/" />
+    <cache-path
+        name="barcodes"
+        path="barcodes/" />
 </paths>

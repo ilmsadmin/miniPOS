@@ -71,6 +71,10 @@ interface InventoryRepository {
     suspend fun getStock(storeId: String, productId: String): InventoryItem?
     suspend fun adjustStock(storeId: String, productId: String, amount: Double, type: StockMovementType, userId: String, referenceId: String?, supplierId: String? = null): Result<Unit>
     suspend fun getLowStockCount(storeId: String): Int
+    suspend fun getAllStockOverview(storeId: String): List<StockOverviewItem>
+    suspend fun getStockHistory(storeId: String, startTime: Long, endTime: Long): List<StockHistoryItem>
+    suspend fun getStockHistoryByProduct(storeId: String, productId: String): List<StockHistoryItem>
+    suspend fun getStockSummary(storeId: String, startTime: Long, endTime: Long): StockSummary
 }
 
 interface OrderRepository {

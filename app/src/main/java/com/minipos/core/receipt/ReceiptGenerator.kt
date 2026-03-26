@@ -169,7 +169,7 @@ object ReceiptGenerator {
             append("""<div class="order-info"><strong>Mã:</strong> ${escapeHtml(order.orderCode)}</div>""")
             append("""<div class="order-info"><strong>Ngày:</strong> ${DateUtils.formatDateTime(order.createdAt)}</div>""")
             if (!order.customerName.isNullOrBlank()) {
-                append("""<div class="order-info"><strong>KH:</strong> ${escapeHtml(order.customerName!!)}</div>""")
+                append("""<div class="order-info"><strong>KH:</strong> ${escapeHtml(order.customerName)}</div>""")
             }
 
             // Items
@@ -183,7 +183,7 @@ object ReceiptGenerator {
                 append("<tr>")
                 append("""<td colspan="2" class="item-name">${escapeHtml(item.productName)}""")
                 if (!item.variantName.isNullOrBlank()) {
-                    append(""" <span style="font-size:10px;color:#666">(${escapeHtml(item.variantName!!)})</span>""")
+                    append(""" <span style="font-size:10px;color:#666">(${escapeHtml(item.variantName)})</span>""")
                 }
                 append("</td></tr>")
                 append("""<tr><td class="item-detail">${CurrencyFormatter.format(item.unitPrice)} x $qty</td>""")
@@ -231,7 +231,7 @@ object ReceiptGenerator {
 
             // Notes
             if (!order.notes.isNullOrBlank()) {
-                append("""<div class="order-info"><strong>Ghi chú:</strong> ${escapeHtml(order.notes!!)}</div><hr class="divider">""")
+                append("""<div class="order-info"><strong>Ghi chú:</strong> ${escapeHtml(order.notes)}</div><hr class="divider">""")
             }
 
             // Footer

@@ -75,7 +75,7 @@ fun OnboardingScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Divider()
+        HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
         Text("hoặc", style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
         Spacer(modifier = Modifier.height(8.dp))

@@ -67,7 +67,7 @@ class PosStep1ViewModel @Inject constructor(
                                         (p.barcode?.contains(current.searchQuery, ignoreCase = true) == true)
                             }
                             current.selectedCategory != null -> products.filter { p ->
-                                p.categoryId == current.selectedCategory?.id
+                                p.categoryId == current.selectedCategory.id
                             }
                             else -> products
                         }

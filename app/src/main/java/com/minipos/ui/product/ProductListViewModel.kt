@@ -2,6 +2,7 @@ package com.minipos.ui.product
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Product
@@ -59,6 +60,7 @@ class ProductListViewModel @Inject constructor(
     val formState: StateFlow<ProductFormState> = _formState
 
     private var storeId: String = ""
+    private var storeCode: String = ""
 
     init { loadData() }
 
@@ -66,6 +68,7 @@ class ProductListViewModel @Inject constructor(
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
             storeId = store.id
+            storeCode = store.code
             val products = productRepository.getAll(storeId)
             val categories = categoryRepository.getAll(storeId)
             _state.update { it.copy(products = products, categories = categories, isLoading = false) }
@@ -190,5 +193,21 @@ class ProductListViewModel @Inject constructor(
     fun onBarcodeScanned(barcode: String) {
         _formState.update { it.copy(barcode = barcode) }
         _state.update { it.copy(showBarcodeScanner = false) }
+    }
+
+    fun generateBarcode() {
+        viewModelScope.launch {
+            // Get all existing barcodes to determine next sequence
+            val allProducts = productRepository.getAll(storeId)
+            val existingBarcodes = allProducts
+                .mapNotNull { it.barcode }
+                .filter { it.startsWith("2") && it.length == 13 }
+            val maxSeq = existingBarcodes.maxOfOrNull { barcode ->
+                try { barcode.substring(3, 9).toInt() } catch (_: Exception) { 0 }
+            } ?: 0
+
+            val newBarcode = BarcodeGenerator.generateEan13(storeCode, maxSeq + 1)
+            _formState.update { it.copy(barcode = newBarcode) }
+        }
     }
 }

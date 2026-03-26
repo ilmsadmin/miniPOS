@@ -144,7 +144,7 @@ private fun CustomerItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(customer.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                 if (!customer.phone.isNullOrBlank()) {
-                    Text(customer.phone!!, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Text(customer.phone, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 }
                 Row {
                     Text("${customer.visitCount} lần mua", style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)

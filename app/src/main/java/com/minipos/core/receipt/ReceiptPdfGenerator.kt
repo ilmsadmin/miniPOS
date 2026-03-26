@@ -52,9 +52,6 @@ object ReceiptPdfGenerator {
         deferred: CompletableDeferred<File>,
     ) {
         try {
-            // Use print document adapter approach
-            val printAdapter = webView.createPrintDocumentAdapter(fileName)
-
             // For simpler approach, create PDF using PdfDocument from measured WebView
             val width = (80 * 72 / 25.4).toInt() // 80mm in points (72 dpi)
             val contentHeight = webView.contentHeight
@@ -112,6 +109,7 @@ object ReceiptPdfGenerator {
                     try {
                         // Measure and layout the WebView
                         val widthPx = 595 // A4 width in 72dpi points ~= 210mm
+                        @Suppress("DEPRECATION")
                         val measuredHeight = (webView.contentHeight * webView.scale).toInt()
                             .coerceAtLeast(400)
 

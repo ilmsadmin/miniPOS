@@ -86,7 +86,7 @@ fun PosStep4Screen(
                                 )
                             }
                         }
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         SummaryRow("Tạm tính", CurrencyFormatter.format(cart.subtotal))
                         if (cart.orderDiscountAmount > 0) {
                             SummaryRow("Giảm giá", "-${CurrencyFormatter.format(cart.orderDiscountAmount)}", color = AppColors.Error)

@@ -184,7 +184,7 @@ private fun CustomerRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(customer.name, fontWeight = FontWeight.Medium)
                 if (!customer.phone.isNullOrBlank()) {
-                    Text(customer.phone!!, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Text(customer.phone, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 }
             }
             Text(

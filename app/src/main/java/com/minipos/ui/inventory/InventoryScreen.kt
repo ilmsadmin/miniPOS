@@ -1,25 +1,49 @@
 package com.minipos.ui.inventory
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.AssignmentReturn
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.core.theme.AppColors
+import com.minipos.core.utils.CurrencyFormatter
+import com.minipos.core.utils.DateUtils
 import com.minipos.domain.model.StockMovementType
+import com.minipos.domain.model.StockOverviewItem
+import com.minipos.domain.model.StockHistoryItem
+import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
+import com.patrykandpatrick.vico.compose.chart.Chart
+import com.patrykandpatrick.vico.compose.chart.column.columnChart
+import com.patrykandpatrick.vico.compose.component.lineComponent
+import com.patrykandpatrick.vico.core.axis.AxisPosition
+import com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter
+import com.patrykandpatrick.vico.core.component.shape.Shapes
+import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import com.patrykandpatrick.vico.core.entry.entryOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +66,7 @@ fun InventoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tồn kho") },
+                title = { Text("Quản lý kho") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
@@ -51,110 +75,799 @@ fun InventoryScreen(
             )
         },
     ) { paddingValues ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (state.items.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Chưa có sản phẩm theo dõi tồn kho", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
-                }
-            }
-        } else {
-            // Summary header
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            // Tab Row
+            TabRow(
+                selectedTabIndex = state.selectedTab.ordinal,
+                containerColor = AppColors.Surface,
+                contentColor = AppColors.Primary,
             ) {
-                // Summary cards
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val totalProducts = state.items.size
-                        val lowStock = state.items.count { it.currentStock <= it.product.minStock && it.currentStock > 0 }
-                        val outOfStock = state.items.count { it.currentStock <= 0 }
+                Tab(
+                    selected = state.selectedTab == InventoryTab.OVERVIEW,
+                    onClick = { viewModel.selectTab(InventoryTab.OVERVIEW) },
+                    text = { Text("Tổng quan") },
+                    icon = { Icon(Icons.Default.Dashboard, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
+                Tab(
+                    selected = state.selectedTab == InventoryTab.STOCK_CHECK,
+                    onClick = { viewModel.selectTab(InventoryTab.STOCK_CHECK) },
+                    text = { Text("Kiểm kho") },
+                    icon = { Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
+                Tab(
+                    selected = state.selectedTab == InventoryTab.HISTORY,
+                    onClick = { viewModel.selectTab(InventoryTab.HISTORY) },
+                    text = { Text("Lịch sử") },
+                    icon = { Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
+            }
 
-                        SummaryCard(
-                            label = "Tổng SP",
-                            value = totalProducts.toString(),
-                            color = AppColors.Primary,
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryCard(
-                            label = "Sắp hết",
-                            value = lowStock.toString(),
-                            color = AppColors.Warning,
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryCard(
-                            label = "Hết hàng",
-                            value = outOfStock.toString(),
-                            color = AppColors.Error,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+            if (state.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-
-                items(state.items) { item ->
-                    val isLow = item.currentStock <= item.product.minStock && item.currentStock > 0
-                    val isOut = item.currentStock <= 0
-
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = when {
-                                isOut -> AppColors.ErrorContainer
-                                isLow -> AppColors.AccentContainer
-                                else -> AppColors.Surface
-                            }
-                        ),
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(item.product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                                Text(
-                                    "SKU: ${item.product.sku} · Min: ${item.product.minStock}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = AppColors.TextSecondary,
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    "${item.currentStock.toLong()} ${item.product.unit}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = when {
-                                        isOut -> AppColors.Error
-                                        isLow -> AppColors.Warning
-                                        else -> AppColors.Secondary
-                                    },
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(onClick = { viewModel.showAdjustDialog(item.product) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Điều chỉnh", tint = AppColors.Primary, modifier = Modifier.size(20.dp))
-                            }
-                        }
-                    }
+            } else {
+                when (state.selectedTab) {
+                    InventoryTab.OVERVIEW -> OverviewTab(state = state)
+                    InventoryTab.STOCK_CHECK -> StockCheckTab(state = state, viewModel = viewModel)
+                    InventoryTab.HISTORY -> HistoryTab(state = state, viewModel = viewModel)
                 }
             }
         }
     }
 }
 
+// ==================== OVERVIEW TAB ====================
+
 @Composable
-private fun SummaryCard(label: String, value: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+private fun OverviewTab(state: InventoryState) {
+    val summary = state.summary
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // Summary cards grid
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SummaryCard(
+                    label = "Tổng SP",
+                    value = summary.totalProducts.toString(),
+                    icon = Icons.Default.Category,
+                    color = AppColors.Primary,
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryCard(
+                    label = "Sắp hết",
+                    value = summary.lowStockCount.toString(),
+                    icon = Icons.Default.Warning,
+                    color = AppColors.Warning,
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryCard(
+                    label = "Hết hàng",
+                    value = summary.outOfStockCount.toString(),
+                    icon = Icons.Default.RemoveShoppingCart,
+                    color = AppColors.Error,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        // Stock value card
+        item {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = AppColors.SecondaryContainer),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                ) {
+                    Text("Giá trị tồn kho", style = MaterialTheme.typography.titleSmall, color = AppColors.SecondaryDark)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        CurrencyFormatter.format(summary.totalStockValue),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.SecondaryDark,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        Column {
+                            Text("Nhập kho", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            Text(
+                                "+${summary.totalStockIn.toLong()}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.Secondary,
+                            )
+                        }
+                        Column {
+                            Text("Xuất kho", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            Text(
+                                "-${summary.totalStockOut.toLong()}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.Error,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bar chart - Top 10 products by stock quantity
+        if (state.overviewItems.isNotEmpty()) {
+            item {
+                StockBarChart(
+                    title = "Top sản phẩm theo tồn kho",
+                    items = state.overviewItems.sortedByDescending { it.currentStock }.take(10),
+                )
+            }
+        }
+
+        // Low-stock products warning list
+        val lowStockItems = state.overviewItems.filter { it.currentStock in 0.01..it.minStock.toDouble() }
+        if (lowStockItems.isNotEmpty()) {
+            item {
+                Text(
+                    "⚠️ Sản phẩm sắp hết hàng",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Warning,
+                )
+            }
+            items(lowStockItems) { item ->
+                OverviewProductCard(item = item, statusColor = AppColors.Warning)
+            }
+        }
+
+        // Out-of-stock products
+        val outOfStockItems = state.overviewItems.filter { it.currentStock <= 0 }
+        if (outOfStockItems.isNotEmpty()) {
+            item {
+                Text(
+                    "🚫 Sản phẩm hết hàng",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Error,
+                )
+            }
+            items(outOfStockItems) { item ->
+                OverviewProductCard(item = item, statusColor = AppColors.Error)
+            }
+        }
+
+        // Spacer at bottom
+        item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
+}
+
+@Composable
+private fun StockBarChart(title: String, items: List<StockOverviewItem>) {
+    if (items.isEmpty()) return
+
+    val chartEntryModelProducer = remember(items) {
+        ChartEntryModelProducer(
+            items.mapIndexed { index, item -> entryOf(index.toFloat(), item.currentStock.toFloat()) }
+        )
+    }
+    val productNames = remember(items) { items.map { it.productName.take(10) } }
+
+    val bottomAxisFormatter = AxisValueFormatter<AxisPosition.Horizontal.Bottom> { value, _ ->
+        productNames.getOrElse(value.toInt()) { "" }
+    }
+
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
+            Chart(
+                chart = columnChart(
+                    columns = listOf(
+                        lineComponent(
+                            color = AppColors.Primary,
+                            thickness = 16.dp,
+                            shape = Shapes.roundedCornerShape(topLeftPercent = 20, topRightPercent = 20),
+                        )
+                    ),
+                ),
+                chartModelProducer = chartEntryModelProducer,
+                startAxis = rememberStartAxis(),
+                bottomAxis = rememberBottomAxis(
+                    valueFormatter = bottomAxisFormatter,
+                    labelRotationDegrees = -45f,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverviewProductCard(item: StockOverviewItem, statusColor: Color) {
+    Card(
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = statusColor.copy(alpha = 0.06f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "SKU: ${item.productSku} · Min: ${item.minStock}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "${item.currentStock.toLong()} ${item.productUnit}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor,
+                )
+                Text(
+                    CurrencyFormatter.formatCompact(item.stockValue),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary,
+                )
+            }
+        }
+    }
+}
+
+// ==================== STOCK CHECK TAB ====================
+
+@Composable
+private fun StockCheckTab(state: InventoryState, viewModel: InventoryViewModel) {
+    val filteredItems = viewModel.filteredStockCheckItems
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Search bar
+        OutlinedTextField(
+            value = state.stockCheckSearch,
+            onValueChange = { viewModel.updateStockCheckSearch(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { Text("Tìm theo tên, SKU, barcode...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            trailingIcon = {
+                if (state.stockCheckSearch.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.updateStockCheckSearch("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Xóa")
+                    }
+                }
+            },
+        )
+
+        // Quick stats row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            val totalProducts = state.stockCheckItems.size
+            val lowStock = state.stockCheckItems.count { it.currentStock > 0 && it.currentStock <= it.product.minStock }
+            val outOfStock = state.stockCheckItems.count { it.currentStock <= 0 }
+
+            MiniStatChip(label = "Tất cả", value = totalProducts.toString(), color = AppColors.Primary)
+            MiniStatChip(label = "Sắp hết", value = lowStock.toString(), color = AppColors.Warning)
+            MiniStatChip(label = "Hết hàng", value = outOfStock.toString(), color = AppColors.Error)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (filteredItems.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        if (state.stockCheckSearch.isNotEmpty()) "Không tìm thấy sản phẩm" else "Chưa có sản phẩm theo dõi tồn kho",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AppColors.TextSecondary,
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(filteredItems) { item ->
+                    StockCheckProductCard(item = item, onAdjust = { viewModel.showAdjustDialog(item.product) })
+                }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniStatChip(label: String, value: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = color.copy(alpha = 0.1f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = color)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = color)
+        }
+    }
+}
+
+@Composable
+private fun StockCheckProductCard(item: ProductStock, onAdjust: () -> Unit) {
+    val isLow = item.currentStock > 0 && item.currentStock <= item.product.minStock
+    val isOut = item.currentStock <= 0
+
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                isOut -> AppColors.ErrorContainer
+                isLow -> AppColors.AccentContainer
+                else -> AppColors.Surface
+            }
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        "SKU: ${item.product.sku} · Đơn vị: ${item.product.unit}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "${item.currentStock.toLong()} ${item.product.unit}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            isOut -> AppColors.Error
+                            isLow -> AppColors.Warning
+                            else -> AppColors.Secondary
+                        },
+                    )
+                    Text(
+                        "Min: ${item.product.minStock}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary,
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                FilledTonalIconButton(
+                    onClick = onAdjust,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = AppColors.PrimaryContainer,
+                        contentColor = AppColors.Primary,
+                    ),
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Điều chỉnh", modifier = Modifier.size(18.dp))
+                }
+            }
+
+            // Stock level progress bar
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { (item.currentStock / (item.product.minStock * 3.0).coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = when {
+                    isOut -> AppColors.Error
+                    isLow -> AppColors.Warning
+                    else -> AppColors.Secondary
+                },
+                trackColor = AppColors.Border,
+            )
+        }
+    }
+}
+
+// ==================== HISTORY TAB ====================
+
+@Composable
+private fun HistoryTab(state: InventoryState, viewModel: InventoryViewModel) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Filter chips row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = state.historyFilterType == "all",
+                onClick = { viewModel.setHistoryFilterType("all") },
+                label = { Text("Tất cả") },
+                leadingIcon = if (state.historyFilterType == "all") { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
+            )
+            FilterChip(
+                selected = state.historyFilterType == "in",
+                onClick = { viewModel.setHistoryFilterType("in") },
+                label = { Text("Nhập kho") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = AppColors.SecondaryContainer,
+                    selectedLabelColor = AppColors.SecondaryDark,
+                ),
+                leadingIcon = if (state.historyFilterType == "in") { { Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
+            )
+            FilterChip(
+                selected = state.historyFilterType == "out",
+                onClick = { viewModel.setHistoryFilterType("out") },
+                label = { Text("Xuất kho") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = AppColors.ErrorContainer,
+                    selectedLabelColor = AppColors.ErrorDark,
+                ),
+                leadingIcon = if (state.historyFilterType == "out") { { Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
+            )
+        }
+
+        // Date range display
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.DateRange, contentDescription = null, tint = AppColors.TextSecondary, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                "${DateUtils.formatDate(state.historyStartTime)} - ${DateUtils.formatDate(state.historyEndTime)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.TextSecondary,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val filteredItems = viewModel.filteredHistoryItems
+
+        if (state.historyLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (filteredItems.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Chưa có lịch sử nhập/xuất kho", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                }
+            }
+        } else {
+            var selectedHistoryItem by remember { mutableStateOf<StockHistoryItem?>(null) }
+
+            // Detail bottom sheet
+            if (selectedHistoryItem != null) {
+                HistoryDetailDialog(
+                    item = selectedHistoryItem!!,
+                    onDismiss = { selectedHistoryItem = null },
+                )
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(filteredItems) { item ->
+                    HistoryItemCard(
+                        item = item,
+                        onClick = { selectedHistoryItem = item },
+                    )
+                }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryItemCard(item: StockHistoryItem, onClick: () -> Unit) {
+    val isIncoming = item.type in listOf(
+        StockMovementType.PURCHASE_IN, StockMovementType.RETURN_IN, StockMovementType.ADJUSTMENT_IN
+    )
+    val typeInfo = getMovementTypeInfo(item.type)
+
+    Card(
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Type icon
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(typeInfo.second.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(typeInfo.first, contentDescription = null, tint = typeInfo.second, modifier = Modifier.size(20.dp))
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Details
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(typeInfo.third, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                if (!item.notes.isNullOrBlank()) {
+                    Text(item.notes, style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+
+            // Quantity + time
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "${if (isIncoming) "+" else "-"}${item.quantity.toLong()}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isIncoming) AppColors.Secondary else AppColors.Error,
+                )
+                Text(
+                    "${item.quantityBefore.toLong()} → ${item.quantityAfter.toLong()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextTertiary,
+                    fontSize = 11.sp,
+                )
+                Text(
+                    DateUtils.formatDateTime(item.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextTertiary,
+                    fontSize = 10.sp,
+                )
+            }
+        }
+    }
+}
+
+private fun getMovementTypeInfo(type: StockMovementType): Triple<ImageVector, Color, String> {
+    return when (type) {
+        StockMovementType.PURCHASE_IN -> Triple(Icons.Default.ShoppingCart, AppColors.Secondary, "Nhập hàng")
+        StockMovementType.SALE_OUT -> Triple(Icons.Default.PointOfSale, AppColors.Error, "Bán hàng")
+        StockMovementType.RETURN_IN -> Triple(Icons.AutoMirrored.Filled.AssignmentReturn, AppColors.Info, "Trả hàng (nhận)")
+        StockMovementType.RETURN_OUT -> Triple(Icons.AutoMirrored.Filled.Undo, AppColors.Warning, "Trả hàng (trả)")
+        StockMovementType.ADJUSTMENT_IN -> Triple(Icons.Default.AddCircle, AppColors.Secondary, "Điều chỉnh tăng")
+        StockMovementType.ADJUSTMENT_OUT -> Triple(Icons.Default.RemoveCircle, AppColors.Error, "Điều chỉnh giảm")
+        StockMovementType.DAMAGE_OUT -> Triple(Icons.Default.BrokenImage, AppColors.Error, "Hàng hỏng")
+        StockMovementType.TRANSFER -> Triple(Icons.Default.SwapHoriz, AppColors.Info, "Chuyển kho")
+    }
+}
+
+@Composable
+private fun HistoryDetailDialog(
+    item: StockHistoryItem,
+    onDismiss: () -> Unit,
+) {
+    val typeInfo = getMovementTypeInfo(item.type)
+    val isIncoming = item.type in listOf(
+        StockMovementType.PURCHASE_IN, StockMovementType.RETURN_IN, StockMovementType.ADJUSTMENT_IN
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Đóng") }
+        },
+        icon = {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(typeInfo.second.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(typeInfo.first, contentDescription = null, tint = typeInfo.second, modifier = Modifier.size(24.dp))
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    typeInfo.third,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    "${if (isIncoming) "+" else "-"}${item.quantity.toLong()} đơn vị",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isIncoming) AppColors.Secondary else AppColors.Error,
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                HorizontalDivider(color = AppColors.Divider)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Product
+                DetailRow(
+                    icon = Icons.Default.Inventory2,
+                    label = "Sản phẩm",
+                    value = item.productName,
+                )
+
+                // SKU
+                DetailRow(
+                    icon = Icons.Default.Tag,
+                    label = "SKU",
+                    value = item.productSku,
+                )
+
+                // Stock change
+                DetailRow(
+                    icon = Icons.Default.SwapVert,
+                    label = "Thay đổi tồn kho",
+                    value = "${item.quantityBefore.toLong()} → ${item.quantityAfter.toLong()}",
+                )
+
+                // Unit cost
+                if (item.unitCost != null && item.unitCost > 0) {
+                    DetailRow(
+                        icon = Icons.Default.AttachMoney,
+                        label = "Đơn giá nhập",
+                        value = CurrencyFormatter.format(item.unitCost),
+                    )
+                    DetailRow(
+                        icon = Icons.Default.Calculate,
+                        label = "Tổng giá trị",
+                        value = CurrencyFormatter.format(item.unitCost * item.quantity),
+                    )
+                }
+
+                // Supplier
+                if (!item.supplierName.isNullOrBlank()) {
+                    DetailRow(
+                        icon = Icons.Default.LocalShipping,
+                        label = "Nhà cung cấp",
+                        value = item.supplierName,
+                    )
+                }
+
+                // Reference
+                if (!item.referenceId.isNullOrBlank()) {
+                    val refLabel = when (item.referenceType?.lowercase()) {
+                        "order" -> "Mã đơn hàng"
+                        "purchase" -> "Mã phiếu nhập"
+                        "return" -> "Mã trả hàng"
+                        else -> "Mã tham chiếu"
+                    }
+                    DetailRow(
+                        icon = Icons.Default.Receipt,
+                        label = refLabel,
+                        value = item.referenceId,
+                    )
+                }
+
+                // Notes
+                if (!item.notes.isNullOrBlank()) {
+                    DetailRow(
+                        icon = Icons.AutoMirrored.Filled.Notes,
+                        label = "Ghi chú",
+                        value = item.notes,
+                    )
+                }
+
+                // Created by
+                DetailRow(
+                    icon = Icons.Default.Person,
+                    label = "Thực hiện bởi",
+                    value = item.createdBy,
+                )
+
+                // Timestamp
+                DetailRow(
+                    icon = Icons.Default.AccessTime,
+                    label = "Thời gian",
+                    value = DateUtils.formatDateTime(item.createdAt),
+                )
+
+                // Movement ID
+                DetailRow(
+                    icon = Icons.Default.Fingerprint,
+                    label = "Mã giao dịch",
+                    value = item.id.take(12) + "...",
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun DetailRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = AppColors.TextTertiary,
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = AppColors.TextTertiary,
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = AppColors.TextPrimary,
+            )
+        }
+    }
+}
+
+// ==================== SHARED COMPONENTS ====================
+
+@Composable
+private fun SummaryCard(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -166,6 +879,8 @@ private fun SummaryCard(label: String, value: String, color: androidx.compose.ui
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = color)
             Text(label, style = MaterialTheme.typography.bodySmall, color = color)
         }
@@ -191,7 +906,7 @@ private fun StockAdjustDialog(
         StockMovementType.ADJUSTMENT_IN to "Điều chỉnh tăng",
         StockMovementType.ADJUSTMENT_OUT to "Điều chỉnh giảm",
         StockMovementType.DAMAGE_OUT to "Hàng hỏng",
-        StockMovementType.RETURN_IN to "Trả lại",
+        StockMovementType.RETURN_IN to "Trả lại (nhận)",
     )
 
     val isPurchaseIn = selectedType == StockMovementType.PURCHASE_IN
@@ -211,7 +926,6 @@ private fun StockAdjustDialog(
                             selected = selectedType == type,
                             onClick = {
                                 selectedType = type
-                                // Reset supplier if not purchase_in
                                 if (type != StockMovementType.PURCHASE_IN) {
                                     selectedSupplierId = null
                                 }

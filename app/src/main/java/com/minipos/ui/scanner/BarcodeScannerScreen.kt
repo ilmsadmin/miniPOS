@@ -131,6 +131,7 @@ fun BarcodeScannerScreen(
                             it.setSurfaceProvider(previewView.surfaceProvider)
                         }
 
+                        @Suppress("DEPRECATION")
                         val imageAnalysis = ImageAnalysis.Builder()
                             .setTargetResolution(Size(1280, 720))
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)

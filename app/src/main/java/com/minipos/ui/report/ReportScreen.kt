@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -127,7 +128,7 @@ fun ReportScreen(
                             modifier = Modifier.weight(1f),
                         )
                         ReportMetricCard(
-                            icon = Icons.Default.TrendingUp,
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
                             label = "TB/đơn",
                             value = CurrencyFormatter.formatCompact(avgOrderValue),
                             color = AppColors.Accent,

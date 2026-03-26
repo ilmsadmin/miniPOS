@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -109,7 +110,7 @@ fun PosStep1Screen(
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Tiếp theo", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
                         }
                     }
                 }
@@ -248,7 +249,7 @@ private fun ProductGridItem(product: Product, quantity: Int, availableStock: Dou
                 if (product.imagePath != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(File(product.imagePath!!))
+                            .data(File(product.imagePath))
                             .crossfade(true)
                             .build(),
                         contentDescription = product.name,

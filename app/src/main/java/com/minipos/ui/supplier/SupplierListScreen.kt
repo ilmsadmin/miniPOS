@@ -131,7 +131,7 @@ private fun SupplierItem(
                     Text("LH: ${supplier.contactPerson}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 }
                 if (!supplier.phone.isNullOrBlank()) {
-                    Text(supplier.phone!!, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Text(supplier.phone, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 }
             }
             IconButton(onClick = { showDeleteConfirm = true }) {

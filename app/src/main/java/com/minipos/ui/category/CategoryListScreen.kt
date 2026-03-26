@@ -130,7 +130,7 @@ private fun CategoryItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(category.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                 if (!category.description.isNullOrBlank()) {
-                    Text(category.description!!, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Text(category.description, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 }
             }
             IconButton(onClick = { showDeleteConfirm = true }) {

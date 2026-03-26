@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -293,7 +294,7 @@ private fun PosStep5ShareDialog(
                     color = AppColors.SurfaceVariant,
                 ) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.TextSnippet, contentDescription = null, tint = AppColors.Secondary, modifier = Modifier.size(28.dp))
+                        Icon(Icons.AutoMirrored.Filled.TextSnippet, contentDescription = null, tint = AppColors.Secondary, modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("Chia sẻ văn bản", fontWeight = FontWeight.Medium)

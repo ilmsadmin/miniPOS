@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -127,10 +128,10 @@ fun OrderDetailScreen(
                             InfoRow("Thời gian", DateUtils.formatDateTime(order.createdAt))
                             InfoRow("Trạng thái", order.status.name)
                             if (!order.customerName.isNullOrBlank()) {
-                                InfoRow("Khách hàng", order.customerName!!)
+                                InfoRow("Khách hàng", order.customerName)
                             }
                             if (!order.notes.isNullOrBlank()) {
-                                InfoRow("Ghi chú", order.notes!!)
+                                InfoRow("Ghi chú", order.notes)
                             }
                         }
                     }
@@ -185,7 +186,7 @@ fun OrderDetailScreen(
                             if (order.taxAmount > 0) {
                                 InfoRow("Thuế", CurrencyFormatter.format(order.taxAmount))
                             }
-                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -423,7 +424,7 @@ private fun ShareOptionsDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            Icons.Default.TextSnippet,
+                            Icons.AutoMirrored.Filled.TextSnippet,
                             contentDescription = null,
                             tint = AppColors.Secondary,
                             modifier = Modifier.size(28.dp),

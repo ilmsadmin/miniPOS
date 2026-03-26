@@ -1,5 +1,6 @@
 package com.minipos.ui.product
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.minipos.core.theme.AppColors
+import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Product
@@ -54,6 +57,7 @@ fun ProductListScreen(
             onSave = { viewModel.saveProduct() },
             onDismiss = { viewModel.dismissForm() },
             onScanBarcode = { viewModel.showBarcodeScanner() },
+            onGenerateBarcode = { viewModel.generateBarcode() },
         )
     }
 
@@ -225,7 +229,7 @@ private fun ProductListItem(
             if (product.imagePath != null) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(File(product.imagePath!!))
+                        .data(File(product.imagePath))
                         .crossfade(true)
                         .build(),
                     contentDescription = product.name,
@@ -301,6 +305,7 @@ private fun ProductFormSheet(
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     onScanBarcode: () -> Unit,
+    onGenerateBarcode: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -335,11 +340,40 @@ private fun ProductFormSheet(
                             singleLine = true,
                             shape = RoundedCornerShape(8.dp),
                             trailingIcon = {
-                                IconButton(onClick = onScanBarcode) {
-                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Quét mã vạch", tint = AppColors.Primary)
+                                Row {
+                                    IconButton(onClick = onGenerateBarcode, modifier = Modifier.size(24.dp)) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = "Tạo mã vạch", tint = AppColors.Accent, modifier = Modifier.size(18.dp))
+                                    }
+                                    IconButton(onClick = onScanBarcode, modifier = Modifier.size(24.dp)) {
+                                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Quét mã vạch", tint = AppColors.Primary, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             },
                         )
+                    }
+                }
+                // Barcode preview
+                if (formState.barcode.length == 13) {
+                    item {
+                        val barcodeBitmap = remember(formState.barcode) {
+                            try { BarcodeGenerator.generateBarcodeBitmap(formState.barcode, width = 300, height = 100, showText = true) }
+                            catch (_: Exception) { null }
+                        }
+                        if (barcodeBitmap != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Image(
+                                    bitmap = barcodeBitmap.asImageBitmap(),
+                                    contentDescription = "Barcode preview",
+                                    modifier = Modifier.height(60.dp),
+                                    contentScale = ContentScale.Fit,
+                                )
+                            }
+                        }
                     }
                 }
                 item {
@@ -422,8 +456,6 @@ private fun ProductFormSheet(
                     }
                 }
                 item {
-                    Text("Ảnh sản phẩm", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                    Spacer(modifier = Modifier.height(4.dp))
                     ProductImagePicker(
                         mainImagePath = formState.imagePath,
                         additionalImages = formState.additionalImages,
@@ -434,7 +466,7 @@ private fun ProductFormSheet(
                 }
                 if (formState.error != null) {
                     item {
-                        Text(formState.error!!, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
+                        Text(formState.error, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

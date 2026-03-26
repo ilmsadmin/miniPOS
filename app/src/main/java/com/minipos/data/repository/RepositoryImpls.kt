@@ -688,6 +688,67 @@ class InventoryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getLowStockCount(storeId: String): Int = inventoryDao.getLowStockCount(storeId)
+
+    override suspend fun getAllStockOverview(storeId: String): List<StockOverviewItem> {
+        return inventoryDao.getAllStockWithProduct(storeId).map {
+            StockOverviewItem(
+                productId = it.productId,
+                productName = it.productName,
+                productSku = it.productSku,
+                productUnit = it.productUnit,
+                minStock = it.productMinStock,
+                costPrice = it.productCostPrice,
+                sellingPrice = it.productSellingPrice,
+                currentStock = it.quantity,
+                stockValue = it.quantity * it.productCostPrice,
+            )
+        }
+    }
+
+    override suspend fun getStockHistory(storeId: String, startTime: Long, endTime: Long): List<StockHistoryItem> {
+        return inventoryDao.getStockMovements(storeId, startTime, endTime).map { it.toHistoryItem() }
+    }
+
+    override suspend fun getStockHistoryByProduct(storeId: String, productId: String): List<StockHistoryItem> {
+        return inventoryDao.getStockMovementsByProduct(storeId, productId).map { it.toHistoryItem() }
+    }
+
+    override suspend fun getStockSummary(storeId: String, startTime: Long, endTime: Long): StockSummary {
+        val overview = getAllStockOverview(storeId)
+        val totalProducts = overview.size
+        val totalStockValue = overview.sumOf { it.stockValue }
+        val lowStockCount = overview.count { it.currentStock > 0 && it.currentStock <= it.minStock }
+        val outOfStockCount = overview.count { it.currentStock <= 0 }
+        val totalStockIn = inventoryDao.getTotalStockIn(storeId, startTime, endTime)
+        val totalStockOut = inventoryDao.getTotalStockOut(storeId, startTime, endTime)
+        return StockSummary(
+            totalProducts = totalProducts,
+            totalStockValue = totalStockValue,
+            lowStockCount = lowStockCount,
+            outOfStockCount = outOfStockCount,
+            totalStockIn = totalStockIn,
+            totalStockOut = totalStockOut,
+        )
+    }
+
+    private fun com.minipos.data.database.dao.StockMovementWithProduct.toHistoryItem() = StockHistoryItem(
+        id = id,
+        productId = productId,
+        productName = productName,
+        productSku = productSku,
+        type = StockMovementType.fromString(type),
+        quantity = quantity,
+        quantityBefore = quantityBefore,
+        quantityAfter = quantityAfter,
+        unitCost = unitCost,
+        referenceId = referenceId,
+        referenceType = referenceType,
+        supplierId = supplierId,
+        supplierName = supplierName,
+        notes = notes,
+        createdBy = createdBy,
+        createdAt = createdAt,
+    )
 }
 
 // ============ Entity Mappers ============

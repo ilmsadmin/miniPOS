@@ -4,6 +4,44 @@ import androidx.room.*
 import com.minipos.data.database.entity.*
 import kotlinx.coroutines.flow.Flow
 
+// Query result data classes for JOIN queries
+data class StockWithProduct(
+    val id: String,
+    @ColumnInfo(name = "store_id") val storeId: String,
+    @ColumnInfo(name = "product_id") val productId: String,
+    @ColumnInfo(name = "variant_id") val variantId: String?,
+    val quantity: Double,
+    @ColumnInfo(name = "reserved_qty") val reservedQty: Double,
+    @ColumnInfo(name = "product_name") val productName: String,
+    @ColumnInfo(name = "product_sku") val productSku: String,
+    @ColumnInfo(name = "product_unit") val productUnit: String,
+    @ColumnInfo(name = "product_min_stock") val productMinStock: Int,
+    @ColumnInfo(name = "product_cost_price") val productCostPrice: Double,
+    @ColumnInfo(name = "product_selling_price") val productSellingPrice: Double,
+)
+
+data class StockMovementWithProduct(
+    val id: String,
+    @ColumnInfo(name = "store_id") val storeId: String,
+    @ColumnInfo(name = "product_id") val productId: String,
+    @ColumnInfo(name = "variant_id") val variantId: String?,
+    @ColumnInfo(name = "supplier_id") val supplierId: String?,
+    val type: String,
+    val quantity: Double,
+    @ColumnInfo(name = "quantity_before") val quantityBefore: Double,
+    @ColumnInfo(name = "quantity_after") val quantityAfter: Double,
+    @ColumnInfo(name = "unit_cost") val unitCost: Double?,
+    @ColumnInfo(name = "reference_id") val referenceId: String?,
+    @ColumnInfo(name = "reference_type") val referenceType: String?,
+    val notes: String?,
+    @ColumnInfo(name = "created_by") val createdBy: String,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "product_name") val productName: String,
+    @ColumnInfo(name = "product_sku") val productSku: String,
+    @ColumnInfo(name = "supplier_name") val supplierName: String?,
+)
+
 @Dao
 interface StoreDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -185,6 +223,55 @@ interface InventoryDao {
         AND p.track_inventory = 1 AND i.quantity <= p.min_stock
     """)
     suspend fun getLowStockCount(storeId: String): Int
+
+    @RewriteQueriesToDropUnusedColumns
+    @Query("""
+        SELECT i.*, p.name AS product_name, p.sku AS product_sku, p.unit AS product_unit, 
+               p.min_stock AS product_min_stock, p.cost_price AS product_cost_price,
+               p.selling_price AS product_selling_price
+        FROM inventory i
+        INNER JOIN products p ON p.id = i.product_id
+        WHERE i.store_id = :storeId AND p.is_deleted = 0 AND p.is_active = 1 AND p.track_inventory = 1
+        ORDER BY i.quantity ASC
+    """)
+    suspend fun getAllStockWithProduct(storeId: String): List<StockWithProduct>
+
+    @RewriteQueriesToDropUnusedColumns
+    @Query("""
+        SELECT sm.*, p.name AS product_name, p.sku AS product_sku, s.name AS supplier_name
+        FROM stock_movements sm
+        INNER JOIN products p ON p.id = sm.product_id
+        LEFT JOIN suppliers s ON s.id = sm.supplier_id
+        WHERE sm.store_id = :storeId AND sm.created_at BETWEEN :startTime AND :endTime
+        ORDER BY sm.created_at DESC
+    """)
+    suspend fun getStockMovements(storeId: String, startTime: Long, endTime: Long): List<StockMovementWithProduct>
+
+    @RewriteQueriesToDropUnusedColumns
+    @Query("""
+        SELECT sm.*, p.name AS product_name, p.sku AS product_sku, s.name AS supplier_name
+        FROM stock_movements sm
+        INNER JOIN products p ON p.id = sm.product_id
+        LEFT JOIN suppliers s ON s.id = sm.supplier_id
+        WHERE sm.store_id = :storeId AND sm.product_id = :productId
+        ORDER BY sm.created_at DESC
+        LIMIT :limit
+    """)
+    suspend fun getStockMovementsByProduct(storeId: String, productId: String, limit: Int = 50): List<StockMovementWithProduct>
+
+    @Query("""
+        SELECT COALESCE(SUM(CASE WHEN sm.type IN ('purchase_in', 'return_in', 'adjustment_in') THEN sm.quantity ELSE 0 END), 0)
+        FROM stock_movements sm
+        WHERE sm.store_id = :storeId AND sm.created_at BETWEEN :startTime AND :endTime
+    """)
+    suspend fun getTotalStockIn(storeId: String, startTime: Long, endTime: Long): Double
+
+    @Query("""
+        SELECT COALESCE(SUM(CASE WHEN sm.type IN ('sale_out', 'return_out', 'adjustment_out', 'damage_out') THEN ABS(sm.quantity) ELSE 0 END), 0)
+        FROM stock_movements sm
+        WHERE sm.store_id = :storeId AND sm.created_at BETWEEN :startTime AND :endTime
+    """)
+    suspend fun getTotalStockOut(storeId: String, startTime: Long, endTime: Long): Double
 }
 
 @Dao

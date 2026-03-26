@@ -19,6 +19,9 @@ import com.minipos.ui.order.OrderDetailScreen
 import com.minipos.ui.inventory.InventoryScreen
 import com.minipos.ui.report.ReportScreen
 import com.minipos.ui.settings.SettingsScreen
+import com.minipos.ui.barcode.BarcodeScreen
+import com.minipos.ui.scan.ScanToPosScreen
+import com.minipos.ui.home.StoreManagementScreen
 
 @Composable
 fun MiniPosNavGraph(
@@ -187,6 +190,33 @@ fun MiniPosNavGraph(
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        // Barcode management
+        composable(Screen.BarcodeManagement.route) {
+            BarcodeScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // Store Management hub
+        composable(Screen.StoreManagement.route) {
+            StoreManagementScreen(
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // Scan to POS
+        composable(Screen.ScanToPos.route) {
+            ScanToPosScreen(
+                onBack = { navController.popBackStack() },
+                onGoToPos = {
+                    navController.navigate(Screen.PosStep1.route) {
+                        popUpTo(Screen.Home.route)
                     }
                 },
             )

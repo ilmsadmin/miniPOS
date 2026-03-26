@@ -157,7 +157,6 @@ object ReceiptPrintHelper {
 
     private fun sendTextReceipt(output: OutputStream, store: Store, detail: OrderDetail) {
         val textReceipt = ReceiptGenerator.generateTextReceipt(store, detail)
-        val charset = charset("GBK") // Common charset for thermal printers
 
         output.write(ESC_INIT)
 
