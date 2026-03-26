@@ -123,6 +123,7 @@ class PosStep4ViewModel @Inject constructor(
 
                 when (result) {
                     is Result.Success -> {
+                        cartHolder.setLastOrderId(result.data.id)
                         _state.update { it.copy(isProcessing = false) }
                         onSuccess()
                     }

@@ -25,6 +25,14 @@ class PosCartHolder @Inject constructor(
     private val _stockError = MutableStateFlow<String?>(null)
     val stockError: StateFlow<String?> = _stockError
 
+    // Store the last created order ID for receipt printing/sharing
+    var lastOrderId: String? = null
+        private set
+
+    fun setLastOrderId(orderId: String) {
+        lastOrderId = orderId
+    }
+
     fun clearStockError() {
         _stockError.value = null
     }
