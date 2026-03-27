@@ -4,11 +4,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.StoreSettings
 import com.minipos.domain.model.User
@@ -29,11 +32,9 @@ import com.minipos.domain.model.UserRole
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onLogout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    var showLogoutConfirm by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Show messages
@@ -44,28 +45,18 @@ fun SettingsScreen(
         }
     }
 
-    // Logout confirmation dialog
-    if (showLogoutConfirm) {
-        AlertDialog(
-            onDismissRequest = { showLogoutConfirm = false },
-            title = { Text("Đăng xuất?") },
-            text = { Text("Bạn có chắc muốn đăng xuất khỏi ứng dụng?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutConfirm = false
-                    viewModel.logout { onLogout() }
-                }) { Text("Đăng xuất", color = AppColors.Error) }
-            },
-            dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text("Hủy") } },
-        )
-    }
-
     // Store Info Dialog
     if (state.showStoreInfoDialog) {
         StoreInfoDialog(
             store = state.store,
+            ownerUser = state.currentUser,
+            ownerHasPin = state.currentUserHasPin,
             onDismiss = { viewModel.dismissStoreInfoDialog() },
-            onSave = { name, address, phone -> viewModel.updateStoreInfo(name, address, phone) },
+            onSave = { name, address, phone, ownerName, currentPin, newPin ->
+                viewModel.updateStoreInfo(name, address, phone)
+                if (ownerName.isNotBlank()) viewModel.updateOwnerName(ownerName)
+                if (newPin.isNotBlank()) viewModel.updateOwnerPin(currentPin, newPin)
+            },
         )
     }
 
@@ -121,14 +112,14 @@ fun SettingsScreen(
     state.showDeleteUserConfirm?.let { user ->
         AlertDialog(
             onDismissRequest = { viewModel.dismissDeleteUserConfirm() },
-            title = { Text("Xoá nhân viên?") },
-            text = { Text("Bạn có chắc muốn xoá \"${user.displayName}\"? Thao tác này không thể hoàn tác.") },
+            title = { Text(stringResource(R.string.delete_user_title)) },
+            text = { Text(stringResource(R.string.delete_user_confirm_msg, user.displayName)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteUser(user.id) }) {
-                    Text("Xoá", color = AppColors.Error)
+                    Text(stringResource(R.string.delete_btn), color = AppColors.Error)
                 }
             },
-            dismissButton = { TextButton(onClick = { viewModel.dismissDeleteUserConfirm() }) { Text("Hủy") } },
+            dismissButton = { TextButton(onClick = { viewModel.dismissDeleteUserConfirm() }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -136,19 +127,19 @@ fun SettingsScreen(
     if (state.showBackupDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissBackupDialog() },
-            title = { Text("Sao lưu dữ liệu") },
+            title = { Text(stringResource(R.string.backup_title)) },
             text = {
                 Column {
-                    Text("Tính năng sao lưu lên Google Drive sẽ được cập nhật trong phiên bản tới.")
+                    Text(stringResource(R.string.backup_msg))
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Dữ liệu của bạn hiện đang được lưu trữ an toàn trên thiết bị này.",
+                        stringResource(R.string.backup_msg_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = { viewModel.dismissBackupDialog() }) { Text("Đã hiểu") } },
+            confirmButton = { TextButton(onClick = { viewModel.dismissBackupDialog() }) { Text(stringResource(R.string.understood)) } },
         )
     }
 
@@ -156,19 +147,19 @@ fun SettingsScreen(
     if (state.showRestoreDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissRestoreDialog() },
-            title = { Text("Khôi phục dữ liệu") },
+            title = { Text(stringResource(R.string.restore_title)) },
             text = {
                 Column {
-                    Text("Tính năng khôi phục từ Google Drive sẽ được cập nhật trong phiên bản tới.")
+                    Text(stringResource(R.string.restore_msg))
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Vui lòng đảm bảo đã sao lưu dữ liệu trước khi thực hiện khôi phục.",
+                        stringResource(R.string.restore_msg_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = { viewModel.dismissRestoreDialog() }) { Text("Đã hiểu") } },
+            confirmButton = { TextButton(onClick = { viewModel.dismissRestoreDialog() }) { Text(stringResource(R.string.understood)) } },
         )
     }
 
@@ -176,10 +167,10 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Cài đặt") },
+                title = { Text(stringResource(R.string.settings_label)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -214,7 +205,7 @@ fun SettingsScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(store.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Text("Mã: ${store.code}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                        Text("${stringResource(R.string.store_code_format, store.code)}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                                     }
                                 }
                                 if (!store.address.isNullOrBlank()) {
@@ -222,7 +213,7 @@ fun SettingsScreen(
                                     Text(store.address, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                                 }
                                 if (!store.phone.isNullOrBlank()) {
-                                    Text("SĐT: ${store.phone}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                    Text("${stringResource(R.string.store_phone_format, store.phone)}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                                 }
                             }
                         }
@@ -247,13 +238,11 @@ fun SettingsScreen(
                                 Column {
                                     Text(user.displayName, fontWeight = FontWeight.Medium)
                                     Text(
-                                        "Vai trò: ${
-                                            when (user.role) {
-                                                UserRole.OWNER -> "Chủ cửa hàng"
-                                                UserRole.MANAGER -> "Quản lý"
-                                                UserRole.CASHIER -> "Thu ngân"
-                                            }
-                                        }",
+                                        stringResource(R.string.role_label, when (user.role) {
+                                            UserRole.OWNER -> stringResource(R.string.role_owner)
+                                            UserRole.MANAGER -> stringResource(R.string.role_manager)
+                                            UserRole.CASHIER -> stringResource(R.string.role_cashier)
+                                        }),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = AppColors.TextSecondary,
                                     )
@@ -266,85 +255,69 @@ fun SettingsScreen(
                 item { Spacer(modifier = Modifier.height(8.dp)) }
 
                 // Settings items
-                item { SectionHeader("Cửa hàng") }
+                item { SectionHeader(stringResource(R.string.section_store)) }
                 item {
                     SettingsItem(
                         Icons.Default.Store,
-                        "Thông tin cửa hàng",
-                        "Chỉnh sửa tên, địa chỉ, số điện thoại",
+                        stringResource(R.string.store_info_label),
+                        stringResource(R.string.store_info_desc),
                     ) { viewModel.showStoreInfoDialog() }
                 }
                 item {
                     SettingsItem(
                         Icons.Default.People,
-                        "Nhân viên",
-                        "${state.users.size} người dùng",
+                        stringResource(R.string.staff_label),
+                        stringResource(R.string.staff_count, state.users.size),
                     ) { viewModel.showUserManagement() }
                 }
                 item {
                     val settings = state.store?.settings ?: StoreSettings()
                     SettingsItem(
                         Icons.Default.Tune,
-                        "Cài đặt bán hàng",
+                        stringResource(R.string.sales_settings_label),
                         buildString {
-                            if (settings.taxEnabled) append("Thuế ${settings.defaultTaxRate}%")
-                            else append("Thuế: tắt")
+                            if (settings.taxEnabled) append(stringResource(R.string.tax_enabled_format, settings.defaultTaxRate.toString()))
+                            else append(stringResource(R.string.tax_disabled))
                             append(" · ")
-                            if (settings.autoPrintReceipt) append("Tự động in") else append("In thủ công")
+                            if (settings.autoPrintReceipt) append(stringResource(R.string.auto_print)) else append(stringResource(R.string.manual_print))
                         },
                     ) { viewModel.showSalesSettingsDialog() }
                 }
 
                 item { Spacer(modifier = Modifier.height(8.dp)) }
-                item { SectionHeader("Dữ liệu") }
+                item { SectionHeader(stringResource(R.string.section_data)) }
                 item {
                     SettingsItem(
                         Icons.Default.CloudUpload,
-                        "Sao lưu",
-                        "Sao lưu dữ liệu lên Google Drive",
+                        stringResource(R.string.backup_label),
+                        stringResource(R.string.backup_desc),
                     ) { viewModel.showBackupDialog() }
                 }
                 item {
                     SettingsItem(
                         Icons.Default.CloudDownload,
-                        "Khôi phục",
-                        "Khôi phục từ bản sao lưu",
+                        stringResource(R.string.restore_label),
+                        stringResource(R.string.restore_desc),
                     ) { viewModel.showRestoreDialog() }
                 }
                 item {
                     SettingsItem(
                         Icons.Default.SyncAlt,
-                        "Đồng bộ P2P",
-                        "Sắp ra mắt",
+                        stringResource(R.string.p2p_sync_label),
+                        stringResource(R.string.coming_soon),
                     ) {
                         // P2P Sync - Coming soon
                     }
                 }
 
                 item { Spacer(modifier = Modifier.height(8.dp)) }
-                item { SectionHeader("Ứng dụng") }
+                item { SectionHeader(stringResource(R.string.section_app)) }
                 item {
                     SettingsItem(
                         Icons.Default.Info,
-                        "Phiên bản",
-                        "miniPOS v1.0.0",
+                        stringResource(R.string.version_label),
+                        stringResource(R.string.version_value),
                     ) {}
-                }
-
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-
-                // Logout button
-                item {
-                    OutlinedButton(
-                        onClick = { showLogoutConfirm = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Error),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Đăng xuất", fontWeight = FontWeight.Medium)
-                    }
                 }
 
                 item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -358,25 +331,34 @@ fun SettingsScreen(
 @Composable
 private fun StoreInfoDialog(
     store: com.minipos.domain.model.Store?,
+    ownerUser: com.minipos.domain.model.User?,
+    ownerHasPin: Boolean,
     onDismiss: () -> Unit,
-    onSave: (name: String, address: String?, phone: String?) -> Unit,
+    onSave: (name: String, address: String?, phone: String?, ownerName: String, currentPin: String, newPin: String) -> Unit,
 ) {
     var name by remember { mutableStateOf(store?.name ?: "") }
     var address by remember { mutableStateOf(store?.address ?: "") }
     var phone by remember { mutableStateOf(store?.phone ?: "") }
+    var ownerName by remember { mutableStateOf(ownerUser?.displayName ?: "") }
+    var currentPin by remember { mutableStateOf("") }
+    var newPin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
     var nameError by remember { mutableStateOf(false) }
+    var pinError by remember { mutableStateOf<String?>(null) }
+
+    val hasExistingPin = ownerHasPin
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Thông tin cửa hàng") },
+        title = { Text(stringResource(R.string.store_info_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },
-                    label = { Text("Tên cửa hàng *") },
+                    label = { Text(stringResource(R.string.store_name_label)) },
                     isError = nameError,
-                    supportingText = if (nameError) {{ Text("Tên không được để trống") }} else null,
+                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
@@ -384,7 +366,7 @@ private fun StoreInfoDialog(
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
-                    label = { Text("Địa chỉ") },
+                    label = { Text(stringResource(R.string.address_label)) },
                     singleLine = false,
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth(),
@@ -393,24 +375,89 @@ private fun StoreInfoDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Số điện thoại") },
+                    label = { Text(stringResource(R.string.store_phone_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                 )
+                HorizontalDivider()
+                OutlinedTextField(
+                    value = ownerName,
+                    onValueChange = { ownerName = it },
+                    label = { Text(stringResource(R.string.display_name_required)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                HorizontalDivider()
+                // PIN section
+                Text(
+                    stringResource(R.string.pin_section_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = AppColors.TextSecondary,
+                )
+                if (hasExistingPin) {
+                    OutlinedTextField(
+                        value = currentPin,
+                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { currentPin = it; pinError = null } },
+                        label = { Text(stringResource(R.string.pin_current_label)) },
+                        placeholder = { Text(stringResource(R.string.pin_current_hint)) },
+                        isError = pinError != null,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                }
+                OutlinedTextField(
+                    value = newPin,
+                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { newPin = it; pinError = null } },
+                    label = { Text(stringResource(R.string.pin_new_label)) },
+                    placeholder = { Text(stringResource(R.string.pin_leave_blank)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                if (newPin.isNotBlank()) {
+                    OutlinedTextField(
+                        value = confirmPin,
+                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { confirmPin = it; pinError = null } },
+                        label = { Text(stringResource(R.string.pin_confirm_label)) },
+                        isError = pinError != null,
+                        supportingText = pinError?.let {{ Text(pinError!!) }},
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
+            val pinLengthError = stringResource(R.string.pin_length_error)
+            val pinMismatchError = stringResource(R.string.pin_mismatch_error)
             TextButton(onClick = {
-                if (name.isBlank()) {
-                    nameError = true
-                } else {
-                    onSave(name.trim(), address.trim().ifBlank { null }, phone.trim().ifBlank { null })
+                if (name.isBlank()) { nameError = true; return@TextButton }
+                if (newPin.isNotBlank()) {
+                    if (newPin.length < 4) { pinError = pinLengthError; return@TextButton }
+                    if (newPin != confirmPin) { pinError = pinMismatchError; return@TextButton }
                 }
-            }) { Text("Lưu") }
+                onSave(
+                    name.trim(),
+                    address.trim().ifBlank { null },
+                    phone.trim().ifBlank { null },
+                    ownerName.trim(),
+                    currentPin,
+                    newPin,
+                )
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -432,16 +479,19 @@ private fun SalesSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Cài đặt bán hàng") },
+        title = { Text(stringResource(R.string.sales_settings_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 // Tax toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Bật thuế", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.enable_tax), style = MaterialTheme.typography.bodyLarge)
                     Switch(
                         checked = taxEnabled,
                         onCheckedChange = { taxEnabled = it },
@@ -454,7 +504,7 @@ private fun SalesSettingsDialog(
                     OutlinedTextField(
                         value = taxRate,
                         onValueChange = { taxRate = it.filter { c -> c.isDigit() || c == '.' } },
-                        label = { Text("Thuế suất mặc định (%)") },
+                        label = { Text(stringResource(R.string.tax_rate_label)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         suffix = { Text("%") },
@@ -495,7 +545,7 @@ private fun SalesSettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Tự động in hóa đơn", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.auto_print_receipt), style = MaterialTheme.typography.bodyLarge)
                     Switch(
                         checked = autoPrintReceipt,
                         onCheckedChange = { autoPrintReceipt = it },
@@ -509,7 +559,7 @@ private fun SalesSettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Cảnh báo tồn kho thấp", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.low_stock_alert_label), style = MaterialTheme.typography.bodyLarge)
                     Switch(
                         checked = lowStockAlert,
                         onCheckedChange = { lowStockAlert = it },
@@ -531,9 +581,9 @@ private fun SalesSettingsDialog(
                         autoPrintReceipt = autoPrintReceipt,
                     )
                 )
-            }) { Text("Lưu") }
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -558,9 +608,9 @@ private fun UserManagementDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Quản lý nhân viên")
+                Text(stringResource(R.string.user_management_title))
                 IconButton(onClick = onAddUser) {
-                    Icon(Icons.Default.PersonAdd, contentDescription = "Thêm nhân viên", tint = AppColors.Primary)
+                    Icon(Icons.Default.PersonAdd, contentDescription = stringResource(R.string.add_staff), tint = AppColors.Primary)
                 }
             }
         },
@@ -581,7 +631,7 @@ private fun UserManagementDialog(
                 if (users.isEmpty()) {
                     item {
                         Text(
-                            "Chưa có nhân viên nào",
+                            stringResource(R.string.no_staff_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             color = AppColors.TextSecondary,
                             modifier = Modifier.padding(16.dp),
@@ -590,7 +640,7 @@ private fun UserManagementDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Đóng") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
     )
 }
 
@@ -634,7 +684,7 @@ private fun UserCard(
                     if (isCurrent) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            "(Bạn)",
+                            stringResource(R.string.you_label),
                             style = MaterialTheme.typography.bodySmall,
                             color = AppColors.Primary,
                         )
@@ -642,9 +692,9 @@ private fun UserCard(
                 }
                 Text(
                     when (user.role) {
-                        UserRole.OWNER -> "Chủ cửa hàng"
-                        UserRole.MANAGER -> "Quản lý"
-                        UserRole.CASHIER -> "Thu ngân"
+                        UserRole.OWNER -> stringResource(R.string.role_owner)
+                        UserRole.MANAGER -> stringResource(R.string.role_manager)
+                        UserRole.CASHIER -> stringResource(R.string.role_cashier)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary,
@@ -656,18 +706,18 @@ private fun UserCard(
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Chỉnh sửa") },
+                        text = { Text(stringResource(R.string.edit_label)) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         onClick = { showMenu = false; onEdit() },
                     )
                     DropdownMenuItem(
-                        text = { Text("Đặt lại PIN") },
+                        text = { Text(stringResource(R.string.reset_pin_label)) },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
                         onClick = { showMenu = false; onResetPin() },
                     )
                     if (!isCurrent && user.role != UserRole.OWNER) {
                         DropdownMenuItem(
-                            text = { Text("Xoá", color = AppColors.Error) },
+                            text = { Text(stringResource(R.string.delete), color = AppColors.Error) },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = AppColors.Error, modifier = Modifier.size(20.dp)) },
                             onClick = { showMenu = false; onDelete() },
                         )
@@ -695,15 +745,15 @@ private fun AddUserDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Thêm nhân viên") },
+        title = { Text(stringResource(R.string.add_staff_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },
-                    label = { Text("Tên nhân viên *") },
+                    label = { Text(stringResource(R.string.staff_name_label)) },
                     isError = nameError,
-                    supportingText = if (nameError) {{ Text("Tên không được để trống") }} else null,
+                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
@@ -711,7 +761,7 @@ private fun AddUserDialog(
                 OutlinedTextField(
                     value = pin,
                     onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text("Mã PIN (4-6 số) *") },
+                    label = { Text(stringResource(R.string.pin_4_6_label)) },
                     isError = pinError != null,
                     supportingText = pinError?.let {{ Text(pinError!!) }},
                     singleLine = true,
@@ -723,7 +773,7 @@ private fun AddUserDialog(
                 OutlinedTextField(
                     value = confirmPin,
                     onValueChange = { confirmPin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text("Xác nhận PIN *") },
+                    label = { Text(stringResource(R.string.confirm_password)) },
                     isError = pinError != null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -732,32 +782,34 @@ private fun AddUserDialog(
                     shape = RoundedCornerShape(8.dp),
                 )
 
-                Text("Vai trò", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.role_selection), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = selectedRole == UserRole.MANAGER,
                         onClick = { selectedRole = UserRole.MANAGER },
-                        label = { Text("Quản lý") },
+                        label = { Text(stringResource(R.string.role_manager)) },
                     )
                     FilterChip(
                         selected = selectedRole == UserRole.CASHIER,
                         onClick = { selectedRole = UserRole.CASHIER },
-                        label = { Text("Thu ngân") },
+                        label = { Text(stringResource(R.string.role_cashier)) },
                     )
                 }
             }
         },
         confirmButton = {
+            val pinLengthError = stringResource(R.string.pin_length_error)
+            val pinMismatchError = stringResource(R.string.pin_mismatch_error)
             TextButton(onClick = {
                 when {
                     name.isBlank() -> nameError = true
-                    pin.length < 4 -> pinError = "PIN phải từ 4-6 số"
-                    pin != confirmPin -> pinError = "PIN không khớp"
+                    pin.length < 4 -> pinError = pinLengthError
+                    pin != confirmPin -> pinError = pinMismatchError
                     else -> onSave(name.trim(), pin, selectedRole)
                 }
-            }) { Text("Thêm") }
+            }) { Text(stringResource(R.string.add_btn)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -776,32 +828,32 @@ private fun EditUserDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Chỉnh sửa nhân viên") },
+        title = { Text(stringResource(R.string.edit_staff_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },
-                    label = { Text("Tên nhân viên *") },
+                    label = { Text(stringResource(R.string.edit_staff_name)) },
                     isError = nameError,
-                    supportingText = if (nameError) {{ Text("Tên không được để trống") }} else null,
+                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                 )
 
                 if (user.role != UserRole.OWNER) {
-                    Text("Vai trò", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.role_selection), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = selectedRole == UserRole.MANAGER,
                             onClick = { selectedRole = UserRole.MANAGER },
-                            label = { Text("Quản lý") },
+                            label = { Text(stringResource(R.string.role_manager)) },
                         )
                         FilterChip(
                             selected = selectedRole == UserRole.CASHIER,
                             onClick = { selectedRole = UserRole.CASHIER },
-                            label = { Text("Thu ngân") },
+                            label = { Text(stringResource(R.string.role_cashier)) },
                         )
                     }
                 }
@@ -814,9 +866,9 @@ private fun EditUserDialog(
                 } else {
                     onSave(user.copy(displayName = name.trim(), role = selectedRole))
                 }
-            }) { Text("Lưu") }
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -834,14 +886,14 @@ private fun ResetPinDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Đặt lại PIN") },
+        title = { Text(stringResource(R.string.reset_pin_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Đặt lại PIN cho ${user.displayName}", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.reset_pin_for, user.displayName), style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(
                     value = pin,
                     onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text("PIN mới (4-6 số) *") },
+                    label = { Text(stringResource(R.string.new_pin_label)) },
                     isError = pinError != null,
                     supportingText = pinError?.let {{ Text(pinError!!) }},
                     singleLine = true,
@@ -853,7 +905,7 @@ private fun ResetPinDialog(
                 OutlinedTextField(
                     value = confirmPin,
                     onValueChange = { confirmPin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text("Xác nhận PIN *") },
+                    label = { Text(stringResource(R.string.confirm_password)) },
                     isError = pinError != null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -864,15 +916,17 @@ private fun ResetPinDialog(
             }
         },
         confirmButton = {
+            val pinLengthError = stringResource(R.string.pin_length_error)
+            val pinMismatchError = stringResource(R.string.pin_mismatch_error)
             TextButton(onClick = {
                 when {
-                    pin.length < 4 -> pinError = "PIN phải từ 4-6 số"
-                    pin != confirmPin -> pinError = "PIN không khớp"
+                    pin.length < 4 -> pinError = pinLengthError
+                    pin != confirmPin -> pinError = pinMismatchError
                     else -> onSave(pin)
                 }
-            }) { Text("Đặt lại") }
+            }) { Text(stringResource(R.string.reset_btn)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

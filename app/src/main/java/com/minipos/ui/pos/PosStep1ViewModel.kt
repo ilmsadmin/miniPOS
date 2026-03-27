@@ -1,9 +1,12 @@
 package com.minipos.ui.pos
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.R
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Product
+import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.repository.CategoryRepository
 import com.minipos.domain.repository.ProductRepository
 import com.minipos.domain.repository.StoreRepository
@@ -20,10 +23,15 @@ data class PosStep1State(
     val searchQuery: String = "",
     val stockError: String? = null,
     val showBarcodeScanner: Boolean = false,
+    // Variant picker
+    val showVariantPicker: Boolean = false,
+    val variantPickerProduct: Product? = null,
+    val variantPickerVariants: List<ProductVariant> = emptyList(),
 )
 
 @HiltViewModel
 class PosStep1ViewModel @Inject constructor(
+    private val app: Application,
     private val storeRepository: StoreRepository,
     private val categoryRepository: CategoryRepository,
     private val productRepository: ProductRepository,
@@ -46,6 +54,9 @@ class PosStep1ViewModel @Inject constructor(
     private fun loadData() {
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
+
+            // Refresh store settings in cart holder (for tax calculation)
+            cartHolder.refreshStoreSettings()
 
             // Observe categories reactively
             launch {
@@ -104,7 +115,35 @@ class PosStep1ViewModel @Inject constructor(
     }
 
     fun addToCart(product: Product) {
-        cartHolder.addItem(product)
+        if (product.hasVariants) {
+            // Show variant picker
+            viewModelScope.launch {
+                val variants = productRepository.getVariants(product.id)
+                if (variants.isEmpty()) {
+                    // No variants defined yet, add product directly
+                    cartHolder.addItem(product)
+                } else {
+                    _state.update {
+                        it.copy(
+                            showVariantPicker = true,
+                            variantPickerProduct = product,
+                            variantPickerVariants = variants,
+                        )
+                    }
+                }
+            }
+        } else {
+            cartHolder.addItem(product)
+        }
+    }
+
+    fun addVariantToCart(product: Product, variant: ProductVariant) {
+        cartHolder.addItemWithVariant(product, variant)
+        dismissVariantPicker()
+    }
+
+    fun dismissVariantPicker() {
+        _state.update { it.copy(showVariantPicker = false, variantPickerProduct = null, variantPickerVariants = emptyList()) }
     }
 
     fun clearStockError() {
@@ -122,11 +161,24 @@ class PosStep1ViewModel @Inject constructor(
 
     fun onBarcodeScanned(barcode: String) {
         _state.update { it.copy(showBarcodeScanner = false) }
+        // First check product barcode
         val product = _state.value.allProducts.firstOrNull { it.barcode == barcode }
         if (product != null) {
-            cartHolder.addItem(product)
-        } else {
-            _state.update { it.copy(stockError = "Không tìm thấy sản phẩm với mã: $barcode") }
+            addToCart(product)
+            return
+        }
+        // Then check variant barcodes
+        viewModelScope.launch {
+            val storeId = storeRepository.getStore()?.id ?: return@launch
+            val variant = productRepository.getVariantByBarcode(storeId, barcode)
+            if (variant != null) {
+                val parentProduct = _state.value.allProducts.firstOrNull { it.id == variant.productId }
+                if (parentProduct != null) {
+                    cartHolder.addItemWithVariant(parentProduct, variant)
+                    return@launch
+                }
+            }
+            _state.update { it.copy(stockError = app.getString(R.string.msg_barcode_not_found, barcode)) }
         }
     }
 }

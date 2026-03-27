@@ -13,12 +13,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.Customer
+import com.minipos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,10 +35,10 @@ fun PosStep3Screen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bước 3: Khách hàng") },
+                title = { Text(stringResource(R.string.step3_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -71,7 +73,7 @@ fun PosStep3Screen(
                                     }
                                 }
                                 IconButton(onClick = { viewModel.selectCustomer(null) }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Bỏ chọn", tint = AppColors.TextSecondary)
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.deselect), tint = AppColors.TextSecondary)
                                 }
                             }
                         }
@@ -85,7 +87,7 @@ fun PosStep3Screen(
                         colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
                     ) {
                         Text(
-                            if (cart.customer == null) "Bỏ qua (Khách lẻ)" else "Tiếp theo",
+                            if (cart.customer == null) stringResource(R.string.skip_walk_in) else stringResource(R.string.next_step),
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
@@ -109,14 +111,14 @@ fun PosStep3Screen(
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.search(it) },
-                    placeholder = { Text("Tìm khách hàng…") },
+                    placeholder = { Text(stringResource(R.string.search_customer)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         IconButton(onClick = { viewModel.toggleCreateForm() }) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = "Thêm KH mới")
+                            Icon(Icons.Default.PersonAdd, contentDescription = stringResource(R.string.add_new_customer))
                         }
                     },
                     singleLine = true,
@@ -127,7 +129,7 @@ fun PosStep3Screen(
             // Recent customers header
             if (state.searchQuery.isBlank() && state.recentCustomers.isNotEmpty()) {
                 Text(
-                    "Khách hàng gần đây",
+                    stringResource(R.string.recent_customers),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
@@ -188,7 +190,7 @@ private fun CustomerRow(
                 }
             }
             Text(
-                "${customer.visitCount} lần",
+                stringResource(R.string.visit_count_format, customer.visitCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.TextTertiary,
             )
@@ -212,12 +214,12 @@ private fun QuickCreateCustomerCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Thêm khách hàng mới", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.add_new_customer_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Tên khách hàng *") },
+                label = { Text(stringResource(R.string.customer_name_required)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(8.dp),
@@ -226,7 +228,7 @@ private fun QuickCreateCustomerCard(
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
-                label = { Text("Số điện thoại") },
+                label = { Text(stringResource(R.string.phone_number)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -237,13 +239,13 @@ private fun QuickCreateCustomerCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(onClick = onCancel) { Text("Hủy") }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = { if (name.isNotBlank()) onCreate(name, phone.ifBlank { null }) },
                     enabled = name.isNotBlank(),
                     shape = RoundedCornerShape(8.dp),
-                ) { Text("Thêm") }
+                ) { Text(stringResource(R.string.add_btn)) }
             }
         }
     }

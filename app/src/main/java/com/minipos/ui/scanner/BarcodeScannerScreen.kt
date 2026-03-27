@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import java.util.concurrent.Executors
 
@@ -44,7 +46,7 @@ import java.util.concurrent.Executors
 fun BarcodeScannerScreen(
     onBarcodeScanned: (String, String) -> Unit, // (value, format)
     onClose: () -> Unit,
-    title: String = "Quét mã vạch / QR",
+    title: String = stringResource(R.string.scan_barcode_qr),
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -87,14 +89,14 @@ fun BarcodeScannerScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Cần quyền truy cập Camera",
+                    stringResource(R.string.camera_permission_needed),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Vui lòng cấp quyền Camera để quét mã vạch",
+                    stringResource(R.string.camera_permission_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
@@ -104,11 +106,11 @@ fun BarcodeScannerScreen(
                     onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Text("Cấp quyền")
+                    Text(stringResource(R.string.grant_permission))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = onClose) {
-                    Text("Đóng", color = Color.White)
+                    Text(stringResource(R.string.close), color = Color.White)
                 }
             }
         } else {
@@ -216,7 +218,7 @@ fun BarcodeScannerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, contentDescription = "Đóng", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
                     }
                     Text(
                         title,
@@ -230,7 +232,7 @@ fun BarcodeScannerScreen(
                     }) {
                         Icon(
                             if (flashEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                            contentDescription = "Đèn flash",
+                            contentDescription = stringResource(R.string.flash_cd),
                             tint = if (flashEnabled) AppColors.Accent else Color.White,
                         )
                     }
@@ -257,7 +259,7 @@ fun BarcodeScannerScreen(
 
                     // Guide text
                     Text(
-                        if (scannedValue != null) "Đã quét thành công!" else "Đưa mã vạch vào khung hình",
+                        if (scannedValue != null) stringResource(R.string.scan_success) else stringResource(R.string.scan_guide),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 32.dp),
@@ -304,7 +306,7 @@ fun BarcodeScannerScreen(
                                     },
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
-                                    Text("Quét lại")
+                                    Text(stringResource(R.string.scan_again))
                                 }
                                 Button(
                                     onClick = onClose,

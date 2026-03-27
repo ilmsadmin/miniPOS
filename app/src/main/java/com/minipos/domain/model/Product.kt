@@ -11,7 +11,7 @@ data class Product(
     val description: String? = null,
     val costPrice: Double = 0.0,
     val sellingPrice: Double = 0.0,
-    val unit: String = "cái",
+    val unit: String = "pcs",
     val imagePath: String? = null,
     val additionalImages: List<String> = emptyList(),
     val minStock: Int = 0,

@@ -50,7 +50,7 @@ class LoginViewModel @Inject constructor(
                 }
             } else {
                 // Database was likely wiped - show error state
-                _state.update { it.copy(storeName = "Lỗi dữ liệu", users = emptyList()) }
+                _state.update { it.copy(storeName = "Data Error", users = emptyList()) }
             }
         }
     }

@@ -5,10 +5,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.minipos.ui.home.HomeScreen
-import com.minipos.ui.login.LoginScreen
-import com.minipos.ui.onboarding.OnboardingScreen
-import com.minipos.ui.onboarding.CreateStoreScreen
-import com.minipos.ui.onboarding.JoinStoreScreen
 import com.minipos.ui.pos.*
 import com.minipos.ui.product.ProductListScreen
 import com.minipos.ui.category.CategoryListScreen
@@ -17,6 +13,7 @@ import com.minipos.ui.customer.CustomerListScreen
 import com.minipos.ui.order.OrderListScreen
 import com.minipos.ui.order.OrderDetailScreen
 import com.minipos.ui.inventory.InventoryScreen
+import com.minipos.ui.purchase.PurchaseScreen
 import com.minipos.ui.report.ReportScreen
 import com.minipos.ui.settings.SettingsScreen
 import com.minipos.ui.barcode.BarcodeScreen
@@ -32,48 +29,9 @@ fun MiniPosNavGraph(
         navController = navController,
         startDestination = startDestination,
     ) {
-        composable(Screen.Onboarding.route) {
-            OnboardingScreen(
-                onCreateStore = { navController.navigate(Screen.CreateStore.route) },
-                onJoinStore = { navController.navigate(Screen.JoinStore.route) },
-            )
-        }
-
-        composable(Screen.CreateStore.route) {
-            CreateStoreScreen(
-                onStoreCreated = {
-                    // Navigation to Home is handled by MainViewModel's appState flow
-                    // when isOnboarded becomes true
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-
-        composable(Screen.JoinStore.route) {
-            // Placeholder — join store functionality (P2P sync)
-            JoinStoreScreen(
-                onBack = { navController.popBackStack() },
-            )
-        }
-
-        composable(Screen.Login.route) {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                },
-            )
-        }
-
         composable(Screen.Home.route) {
             HomeScreen(
                 onNavigate = { route -> navController.navigate(route) },
-                onLogout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                    }
-                },
             )
         }
 
@@ -170,8 +128,7 @@ fun MiniPosNavGraph(
         }
 
         composable(Screen.PurchaseOrder.route) {
-            // Placeholder for purchase order feature
-            InventoryScreen(
+            PurchaseScreen(
                 onBack = { navController.popBackStack() },
             )
         }
@@ -187,11 +144,6 @@ fun MiniPosNavGraph(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onLogout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
             )
         }
 

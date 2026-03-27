@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.minipos.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -72,10 +73,10 @@ object BarcodePrintHelper {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Mã vạch sản phẩm - miniPOS")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_barcode_subject))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(shareIntent, "Chia sẻ mã vạch")
+        val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_barcode_chooser))
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }
@@ -92,10 +93,10 @@ object BarcodePrintHelper {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Mã vạch sản phẩm - miniPOS")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_barcode_subject))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(shareIntent, "Chia sẻ mã vạch")
+        val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_barcode_chooser))
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }
@@ -114,7 +115,7 @@ object BarcodePrintHelper {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(printIntent, "In mã vạch")
+        val chooser = Intent.createChooser(printIntent, context.getString(R.string.print_barcode_chooser))
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }

@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.Customer
@@ -42,15 +44,15 @@ fun CustomerListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Khách hàng") },
+                title = { Text(stringResource(R.string.customer_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.showCreateForm() }) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = "Thêm khách hàng")
+                        Icon(Icons.Default.PersonAdd, contentDescription = stringResource(R.string.add_customer_cd))
                     }
                 },
             )
@@ -65,7 +67,7 @@ fun CustomerListScreen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.search(it) },
-                placeholder = { Text("Tìm khách hàng…") },
+                placeholder = { Text(stringResource(R.string.search_customer_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -83,10 +85,10 @@ fun CustomerListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.People, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Chưa có khách hàng", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                        Text(stringResource(R.string.no_customers), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.showCreateForm() }, shape = RoundedCornerShape(8.dp)) {
-                            Text("Thêm khách hàng")
+                            Text(stringResource(R.string.add_customer_btn))
                         }
                     }
                 }
@@ -119,10 +121,10 @@ private fun CustomerItem(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Xóa khách hàng?") },
-            text = { Text("Bạn có chắc muốn xóa \"${customer.name}\"?") },
-            confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDelete() }) { Text("Xóa", color = AppColors.Error) } },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Hủy") } },
+            title = { Text(stringResource(R.string.delete_customer_title)) },
+            text = { Text(stringResource(R.string.delete_confirm_msg, customer.name)) },
+            confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDelete() }) { Text(stringResource(R.string.delete), color = AppColors.Error) } },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -147,14 +149,14 @@ private fun CustomerItem(
                     Text(customer.phone, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 }
                 Row {
-                    Text("${customer.visitCount} lần mua", style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
+                    Text(stringResource(R.string.visit_purchases_format, customer.visitCount), style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
                     if (customer.totalSpent > 0) {
-                        Text(" · Tổng chi: ${CurrencyFormatter.formatCompact(customer.totalSpent)}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
+                        Text(" · ${stringResource(R.string.total_spent_format, CurrencyFormatter.formatCompact(customer.totalSpent))}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
                     }
                 }
             }
             IconButton(onClick = { showDeleteConfirm = true }) {
-                Icon(Icons.Default.Delete, contentDescription = "Xóa", tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete), tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -174,14 +176,14 @@ private fun CustomerFormDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (editing != null) "Sửa khách hàng" else "Thêm khách hàng") },
+        title = { Text(if (editing != null) stringResource(R.string.edit_customer) else stringResource(R.string.add_customer_btn)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Tên khách hàng *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Số điện thoại") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), shape = RoundedCornerShape(8.dp))
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(8.dp))
-                OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Địa chỉ") }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Ghi chú") }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.customer_name_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.phone_number)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), shape = RoundedCornerShape(8.dp))
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(8.dp))
+                OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text(stringResource(R.string.address_label)) }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(stringResource(R.string.notes)) }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
             }
         },
         confirmButton = {
@@ -189,8 +191,8 @@ private fun CustomerFormDialog(
                 onClick = { if (name.isNotBlank()) onSave(name, phone.ifBlank { null }, email.ifBlank { null }, address.ifBlank { null }, notes.ifBlank { null }) },
                 enabled = name.isNotBlank(),
                 shape = RoundedCornerShape(8.dp),
-            ) { Text("Lưu") }
+            ) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

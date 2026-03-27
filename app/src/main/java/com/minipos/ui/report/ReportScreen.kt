@@ -14,10 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
@@ -33,10 +35,10 @@ fun ReportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Báo cáo") },
+                title = { Text(stringResource(R.string.reports_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -63,13 +65,13 @@ fun ReportScreen(
                             .padding(bottom = 8.dp),
                     ) {
                         Tab(selected = state.selectedTab == 0, onClick = { viewModel.selectTab(0) }) {
-                            Text("Hôm nay", modifier = Modifier.padding(12.dp))
+                            Text(stringResource(R.string.report_today), modifier = Modifier.padding(12.dp))
                         }
                         Tab(selected = state.selectedTab == 1, onClick = { viewModel.selectTab(1) }) {
-                            Text("7 ngày", modifier = Modifier.padding(12.dp))
+                            Text(stringResource(R.string.report_7days), modifier = Modifier.padding(12.dp))
                         }
                         Tab(selected = state.selectedTab == 2, onClick = { viewModel.selectTab(2) }) {
-                            Text("30 ngày", modifier = Modifier.padding(12.dp))
+                            Text(stringResource(R.string.report_30days), modifier = Modifier.padding(12.dp))
                         }
                     }
                 }
@@ -92,7 +94,7 @@ fun ReportScreen(
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("Doanh thu", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.8f))
+                            Text(stringResource(R.string.sales_report), style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.8f))
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 CurrencyFormatter.format(revenue),
@@ -102,7 +104,7 @@ fun ReportScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "$orders đơn hàng",
+                                stringResource(R.string.report_orders_count, orders),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.8f),
                             )
@@ -122,14 +124,14 @@ fun ReportScreen(
 
                         ReportMetricCard(
                             icon = Icons.Default.Receipt,
-                            label = "Số đơn",
+                            label = stringResource(R.string.report_order_count_label),
                             value = orders.toString(),
                             color = AppColors.Secondary,
                             modifier = Modifier.weight(1f),
                         )
                         ReportMetricCard(
                             icon = Icons.AutoMirrored.Filled.TrendingUp,
-                            label = "TB/đơn",
+                            label = stringResource(R.string.report_avg_order_label),
                             value = CurrencyFormatter.formatCompact(avgOrderValue),
                             color = AppColors.Accent,
                             modifier = Modifier.weight(1f),
@@ -140,7 +142,7 @@ fun ReportScreen(
                 // Recent orders for today
                 if (state.selectedTab == 0 && state.recentOrders.isNotEmpty()) {
                     item {
-                        Text("Đơn hàng hôm nay", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.report_today_orders), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                     }
                     items(state.recentOrders) { order ->
                         Card(

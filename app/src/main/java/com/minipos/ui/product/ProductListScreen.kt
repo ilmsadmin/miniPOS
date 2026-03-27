@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -29,10 +30,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.minipos.core.theme.AppColors
+import com.minipos.R
 import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Product
+import com.minipos.domain.model.ProductVariant
 import com.minipos.ui.scanner.BarcodeScannerScreen
 import com.minipos.ui.scanner.ImageViewerScreen
 import com.minipos.ui.scanner.ProductImagePicker
@@ -46,6 +49,7 @@ fun ProductListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val formState by viewModel.formState.collectAsState()
+    val variantFormState by viewModel.variantFormState.collectAsState()
 
     if (state.showForm) {
         ProductFormSheet(
@@ -53,11 +57,26 @@ fun ProductListScreen(
             categories = state.categories,
             isEditing = state.editingProduct != null,
             productId = state.editingProduct?.id ?: remember { UuidGenerator.generate() },
+            variants = state.variants,
             onFieldChange = { viewModel.updateFormField(it) },
             onSave = { viewModel.saveProduct() },
             onDismiss = { viewModel.dismissForm() },
             onScanBarcode = { viewModel.showBarcodeScanner() },
             onGenerateBarcode = { viewModel.generateBarcode() },
+            onAddVariant = { viewModel.showCreateVariantForm() },
+            onEditVariant = { viewModel.showEditVariantForm(it) },
+            onDeleteVariant = { viewModel.deleteVariant(it) },
+        )
+    }
+
+    // Variant form dialog
+    if (state.showVariantForm) {
+        VariantFormDialog(
+            formState = variantFormState,
+            isEditing = state.editingVariant != null,
+            onFieldChange = { viewModel.updateVariantFormField(it) },
+            onSave = { viewModel.saveVariant() },
+            onDismiss = { viewModel.dismissVariantForm() },
         )
     }
 
@@ -66,7 +85,7 @@ fun ProductListScreen(
         BarcodeScannerScreen(
             onBarcodeScanned = { value, _ -> viewModel.onBarcodeScanned(value) },
             onClose = { viewModel.dismissBarcodeScanner() },
-            title = "Quét mã vạch sản phẩm",
+            title = stringResource(R.string.scan_product_barcode_title),
         )
         return // Don't render the main screen behind the scanner
     }
@@ -74,15 +93,15 @@ fun ProductListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sản phẩm") },
+                title = { Text(stringResource(R.string.products_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.showCreateForm() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Thêm sản phẩm")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_product_cd))
                     }
                 },
             )
@@ -97,7 +116,7 @@ fun ProductListScreen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.search(it) },
-                placeholder = { Text("Tìm sản phẩm…") },
+                placeholder = { Text(stringResource(R.string.product_search_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -115,7 +134,7 @@ fun ProductListScreen(
                     FilterChip(
                         selected = state.selectedCategory == null,
                         onClick = { viewModel.filterByCategory(null) },
-                        label = { Text("Tất cả") },
+                        label = { Text(stringResource(R.string.filter_all)) },
                     )
                 }
                 items(state.categories) { category ->
@@ -138,10 +157,10 @@ fun ProductListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Chưa có sản phẩm", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                        Text(stringResource(R.string.no_products), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.showCreateForm() }, shape = RoundedCornerShape(8.dp)) {
-                            Text("Thêm sản phẩm đầu tiên")
+                            Text(stringResource(R.string.add_first_product))
                         }
                     }
                 }
@@ -153,6 +172,7 @@ fun ProductListScreen(
                     items(state.products) { product ->
                         ProductListItem(
                             product = product,
+                            currentStock = state.stockMap[product.id] ?: 0.0,
                             onClick = { viewModel.showEditForm(product) },
                             onDelete = { viewModel.deleteProduct(product) },
                         )
@@ -166,6 +186,7 @@ fun ProductListScreen(
 @Composable
 private fun ProductListItem(
     product: Product,
+    currentStock: Double,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -200,15 +221,15 @@ private fun ProductListItem(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Xóa sản phẩm?") },
-            text = { Text("Bạn có chắc muốn xóa \"${product.name}\"?") },
+            title = { Text(stringResource(R.string.delete_product_title)) },
+            text = { Text(stringResource(R.string.delete_product_confirm, product.name)) },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
-                    Text("Xóa", color = AppColors.Error)
+                    Text(stringResource(R.string.delete_label), color = AppColors.Error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Hủy") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel_btn_label)) }
             },
         )
     }
@@ -248,7 +269,7 @@ private fun ProductListItem(
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     product.name,
                     style = MaterialTheme.typography.titleSmall,
@@ -256,39 +277,43 @@ private fun ProductListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "SKU: ${product.sku} · ${product.unit}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.TextSecondary,
-                    )
-                    if (allImages.size > 1) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "📷${allImages.size}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AppColors.TextTertiary,
-                        )
-                    }
+                val stockDisplay = if (currentStock == currentStock.toLong().toDouble()) {
+                    currentStock.toLong().toString()
+                } else {
+                    currentStock.toString()
                 }
+                val skuUnit = buildString {
+                    append("SKU: ${product.sku} · $stockDisplay ${product.unit}")
+                    if (allImages.size > 1) append("  📷${allImages.size}")
+                }
+                Text(
+                    skuUnit,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            Column(horizontalAlignment = Alignment.End) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.widthIn(max = 130.dp)) {
                 Text(
                     CurrencyFormatter.format(product.sellingPrice),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.Primary,
+                    maxLines = 1,
                 )
                 if (product.costPrice > 0) {
                     Text(
-                        "Vốn: ${CurrencyFormatter.format(product.costPrice)}",
+                        stringResource(R.string.cost_prefix, CurrencyFormatter.format(product.costPrice)),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextTertiary,
+                        maxLines = 1,
                     )
                 }
             }
-            IconButton(onClick = { showDeleteConfirm = true }) {
-                Icon(Icons.Default.Delete, contentDescription = "Xóa", tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
+            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete_label), tint = AppColors.TextTertiary, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -301,22 +326,26 @@ private fun ProductFormSheet(
     categories: List<com.minipos.domain.model.Category>,
     isEditing: Boolean,
     productId: String,
+    variants: List<com.minipos.domain.model.ProductVariant>,
     onFieldChange: (ProductFormState.() -> ProductFormState) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     onScanBarcode: () -> Unit,
     onGenerateBarcode: () -> Unit,
+    onAddVariant: () -> Unit,
+    onEditVariant: (com.minipos.domain.model.ProductVariant) -> Unit,
+    onDeleteVariant: (com.minipos.domain.model.ProductVariant) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEditing) "Sửa sản phẩm" else "Thêm sản phẩm") },
+        title = { Text(if (isEditing) stringResource(R.string.edit_product_title) else stringResource(R.string.add_product_title)) },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     OutlinedTextField(
                         value = formState.name,
                         onValueChange = { v -> onFieldChange { copy(name = v) } },
-                        label = { Text("Tên sản phẩm *") },
+                        label = { Text(stringResource(R.string.product_name_required)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
@@ -335,17 +364,17 @@ private fun ProductFormSheet(
                         OutlinedTextField(
                             value = formState.barcode,
                             onValueChange = { v -> onFieldChange { copy(barcode = v) } },
-                            label = { Text("Mã vạch") },
+                            label = { Text(stringResource(R.string.product_barcode_label)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(8.dp),
                             trailingIcon = {
                                 Row {
                                     IconButton(onClick = onGenerateBarcode, modifier = Modifier.size(24.dp)) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = "Tạo mã vạch", tint = AppColors.Accent, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.generate_barcode_cd), tint = AppColors.Accent, modifier = Modifier.size(18.dp))
                                     }
                                     IconButton(onClick = onScanBarcode, modifier = Modifier.size(24.dp)) {
-                                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Quét mã vạch", tint = AppColors.Primary, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_barcode_cd), tint = AppColors.Primary, modifier = Modifier.size(18.dp))
                                     }
                                 }
                             },
@@ -378,14 +407,14 @@ private fun ProductFormSheet(
                 }
                 item {
                     // Category dropdown as filter chips
-                    Text("Danh mục", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Text(stringResource(R.string.category_label), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                     Spacer(modifier = Modifier.height(4.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         item {
                             FilterChip(
                                 selected = formState.categoryId == null,
                                 onClick = { onFieldChange { copy(categoryId = null) } },
-                                label = { Text("Không") },
+                                label = { Text(stringResource(R.string.no_category_chip)) },
                             )
                         }
                         items(categories) { cat ->
@@ -402,21 +431,21 @@ private fun ProductFormSheet(
                         OutlinedTextField(
                             value = formState.costPrice,
                             onValueChange = { v -> onFieldChange { copy(costPrice = v.filter { it.isDigit() }) } },
-                            label = { Text("Giá vốn") },
+                            label = { Text(stringResource(R.string.cost_price_label)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            suffix = { Text("đ") },
+                            suffix = { Text(stringResource(R.string.currency_symbol)) },
                             shape = RoundedCornerShape(8.dp),
                         )
                         OutlinedTextField(
                             value = formState.sellingPrice,
                             onValueChange = { v -> onFieldChange { copy(sellingPrice = v.filter { it.isDigit() }) } },
-                            label = { Text("Giá bán *") },
+                            label = { Text(stringResource(R.string.selling_price_label)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            suffix = { Text("đ") },
+                            suffix = { Text(stringResource(R.string.currency_symbol)) },
                             shape = RoundedCornerShape(8.dp),
                         )
                     }
@@ -426,7 +455,7 @@ private fun ProductFormSheet(
                         OutlinedTextField(
                             value = formState.unit,
                             onValueChange = { v -> onFieldChange { copy(unit = v) } },
-                            label = { Text("Đơn vị") },
+                            label = { Text(stringResource(R.string.unit_label)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(8.dp),
@@ -434,7 +463,7 @@ private fun ProductFormSheet(
                         OutlinedTextField(
                             value = formState.minStock,
                             onValueChange = { v -> onFieldChange { copy(minStock = v.filter { it.isDigit() }) } },
-                            label = { Text("Tồn kho tối thiểu") },
+                            label = { Text(stringResource(R.string.min_stock_label)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -448,11 +477,64 @@ private fun ProductFormSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Theo dõi tồn kho")
+                        Text(stringResource(R.string.track_inventory))
                         Switch(
                             checked = formState.trackInventory,
                             onCheckedChange = { v -> onFieldChange { copy(trackInventory = v) } },
                         )
+                    }
+                }
+                // Has Variants toggle
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.has_variants_label))
+                        Switch(
+                            checked = formState.hasVariants,
+                            onCheckedChange = { v -> onFieldChange { copy(hasVariants = v) } },
+                        )
+                    }
+                }
+                // Variants list
+                if (formState.hasVariants) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(R.string.variants_label),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            TextButton(onClick = onAddVariant) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.add_variant))
+                            }
+                        }
+                    }
+                    if (variants.isEmpty()) {
+                        item {
+                            Text(
+                                stringResource(R.string.no_variants_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextTertiary,
+                                modifier = Modifier.padding(vertical = 4.dp),
+                            )
+                        }
+                    } else {
+                        items(variants) { variant ->
+                            VariantItem(
+                                variant = variant,
+                                onEdit = { onEditVariant(variant) },
+                                onDelete = { onDeleteVariant(variant) },
+                            )
+                        }
                     }
                 }
                 item {
@@ -480,12 +562,173 @@ private fun ProductFormSheet(
                 if (formState.isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text("Lưu")
+                    Text(stringResource(R.string.save_btn))
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Hủy") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel_btn_label)) }
+        },
+    )
+}
+
+@Composable
+private fun VariantItem(
+    variant: ProductVariant,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.delete_variant_title)) },
+            text = { Text(stringResource(R.string.delete_variant_confirm, variant.variantName)) },
+            confirmButton = {
+                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
+                    Text(stringResource(R.string.delete_label), color = AppColors.Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel_btn_label)) }
+            },
+        )
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onEdit),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Style,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = AppColors.Accent,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    variant.variantName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                val details = buildString {
+                    append("SKU: ${variant.sku}")
+                    variant.sellingPrice?.let { append(" · ${CurrencyFormatter.format(it)}") }
+                }
+                Text(
+                    details,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary,
+                )
+            }
+            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete_label), tint = AppColors.TextTertiary, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun VariantFormDialog(
+    formState: VariantFormState,
+    isEditing: Boolean,
+    onFieldChange: (VariantFormState.() -> VariantFormState) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isEditing) stringResource(R.string.edit_variant_title) else stringResource(R.string.add_variant_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = formState.variantName,
+                    onValueChange = { v -> onFieldChange { copy(variantName = v) } },
+                    label = { Text(stringResource(R.string.variant_name_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = formState.sku,
+                        onValueChange = { v -> onFieldChange { copy(sku = v) } },
+                        label = { Text("SKU") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    OutlinedTextField(
+                        value = formState.barcode,
+                        onValueChange = { v -> onFieldChange { copy(barcode = v) } },
+                        label = { Text(stringResource(R.string.product_barcode_label)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = formState.costPrice,
+                        onValueChange = { v -> onFieldChange { copy(costPrice = v.filter { it.isDigit() }) } },
+                        label = { Text(stringResource(R.string.cost_price_label)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        suffix = { Text(stringResource(R.string.currency_symbol)) },
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    OutlinedTextField(
+                        value = formState.sellingPrice,
+                        onValueChange = { v -> onFieldChange { copy(sellingPrice = v.filter { it.isDigit() }) } },
+                        label = { Text(stringResource(R.string.selling_price_label)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        suffix = { Text(stringResource(R.string.currency_symbol)) },
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                }
+                OutlinedTextField(
+                    value = formState.attributes,
+                    onValueChange = { v -> onFieldChange { copy(attributes = v) } },
+                    label = { Text(stringResource(R.string.variant_attributes_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text(stringResource(R.string.variant_attributes_hint)) },
+                )
+                if (formState.error != null) {
+                    Text(formState.error, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                enabled = !formState.isSaving,
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                if (formState.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text(stringResource(R.string.save_btn))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel_btn_label)) }
         },
     )
 }

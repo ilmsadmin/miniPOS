@@ -15,15 +15,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.minipos.core.theme.AppColors
+import com.minipos.R
 import com.minipos.ui.navigation.Screen
 
 private data class ManagementItem(
     val icon: ImageVector,
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val route: String,
     val iconBgColor: Color,
     val iconTint: Color,
@@ -38,40 +40,40 @@ fun StoreManagementScreen(
     val catalogItems = listOf(
         ManagementItem(
             icon = Icons.Default.Category,
-            title = "Danh mục",
-            subtitle = "Quản lý nhóm sản phẩm",
+            titleRes = R.string.mgmt_categories,
+            subtitleRes = R.string.mgmt_categories_desc,
             route = Screen.CategoryList.route,
             iconBgColor = Color(0xFFFFF7ED),
             iconTint = Color(0xFFD97706),
         ),
         ManagementItem(
             icon = Icons.Default.Inventory2,
-            title = "Sản phẩm",
-            subtitle = "Quản lý sản phẩm, giá bán",
+            titleRes = R.string.mgmt_products,
+            subtitleRes = R.string.mgmt_products_desc,
             route = Screen.ProductList.route,
             iconBgColor = Color(0xFFF3E8FF),
             iconTint = Color(0xFF8B5CF6),
         ),
         ManagementItem(
             icon = Icons.Default.People,
-            title = "Khách hàng",
-            subtitle = "Quản lý thông tin khách hàng",
+            titleRes = R.string.mgmt_customers,
+            subtitleRes = R.string.mgmt_customers_desc,
             route = Screen.CustomerList.route,
             iconBgColor = Color(0xFFFFF1F2),
             iconTint = Color(0xFFE11D48),
         ),
         ManagementItem(
             icon = Icons.Default.LocalShipping,
-            title = "Nhà cung cấp",
-            subtitle = "Quản lý nhà cung cấp",
+            titleRes = R.string.mgmt_suppliers,
+            subtitleRes = R.string.mgmt_suppliers_desc,
             route = Screen.SupplierList.route,
             iconBgColor = Color(0xFFECFEFF),
             iconTint = Color(0xFF0891B2),
         ),
         ManagementItem(
             icon = Icons.Default.BarChart,
-            title = "Báo cáo",
-            subtitle = "Thống kê doanh thu, lợi nhuận",
+            titleRes = R.string.mgmt_reports,
+            subtitleRes = R.string.mgmt_reports_desc,
             route = Screen.Reports.route,
             iconBgColor = Color(0xFFECFDF5),
             iconTint = Color(0xFF059669),
@@ -81,32 +83,32 @@ fun StoreManagementScreen(
     val operationItems = listOf(
         ManagementItem(
             icon = Icons.Default.MoveToInbox,
-            title = "Nhập hàng",
-            subtitle = "Nhập hàng từ nhà cung cấp",
+            titleRes = R.string.mgmt_purchase,
+            subtitleRes = R.string.mgmt_purchase_desc,
             route = Screen.PurchaseOrder.route,
             iconBgColor = Color(0xFFECFDF5),
             iconTint = Color(0xFF059669),
         ),
         ManagementItem(
             icon = Icons.Default.Receipt,
-            title = "Lịch sử đơn hàng",
-            subtitle = "Xem, tìm kiếm đơn hàng",
+            titleRes = R.string.mgmt_orders,
+            subtitleRes = R.string.mgmt_orders_desc,
             route = Screen.OrderList.route,
             iconBgColor = Color(0xFFF3E8FF),
             iconTint = Color(0xFF7C3AED),
         ),
         ManagementItem(
             icon = Icons.Default.Inventory,
-            title = "Quản lý kho & Kiểm kho",
-            subtitle = "Tồn kho, nhập/xuất, kiểm kê",
+            titleRes = R.string.mgmt_inventory,
+            subtitleRes = R.string.mgmt_inventory_desc,
             route = Screen.InventoryOverview.route,
             iconBgColor = Color(0xFFFEF3C7),
             iconTint = Color(0xFFD97706),
         ),
         ManagementItem(
             icon = Icons.Default.QrCode,
-            title = "Mã vạch (Barcode)",
-            subtitle = "Tạo, in mã vạch sản phẩm",
+            titleRes = R.string.mgmt_barcode,
+            subtitleRes = R.string.mgmt_barcode_desc,
             route = Screen.BarcodeManagement.route,
             iconBgColor = Color(0xFFF1F5F9),
             iconTint = Color(0xFF374151),
@@ -117,11 +119,11 @@ fun StoreManagementScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Quản lý cửa hàng", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.store_management_title), fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Surface),
@@ -139,7 +141,7 @@ fun StoreManagementScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Section: Danh mục & sản phẩm ──
-            SectionHeader(title = "Danh mục & Sản phẩm")
+            SectionHeader(title = stringResource(R.string.section_catalog))
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
@@ -166,7 +168,7 @@ fun StoreManagementScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // ── Section: Kho hàng & Vận hành ──
-            SectionHeader(title = "Kho hàng & Vận hành")
+            SectionHeader(title = stringResource(R.string.section_operations))
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
@@ -239,13 +241,13 @@ private fun ManagementRow(
         // Text
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                item.title,
+                stringResource(item.titleRes),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = AppColors.TextPrimary,
             )
             Text(
-                item.subtitle,
+                stringResource(item.subtitleRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.TextSecondary,
             )

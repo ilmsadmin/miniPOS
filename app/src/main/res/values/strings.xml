@@ -4,154 +4,845 @@
 
     <!-- Onboarding -->
     <string name="welcome_title">miniPOS</string>
-    <string name="welcome_subtitle">Hệ thống bán hàng đơn giản\ncho cửa hàng của bạn</string>
-    <string name="create_store">Tạo cửa hàng mới</string>
-    <string name="join_store">Tham gia cửa hàng</string>
-    <string name="restore_from_gdrive">Khôi phục từ Google Drive</string>
+    <string name="welcome_subtitle">Simple point-of-sale system\nfor your store</string>
+    <string name="create_store">Create New Store</string>
+    <string name="join_store">Join a Store</string>
+    <string name="restore_from_gdrive">Restore from Google Drive</string>
 
     <!-- Create Store -->
-    <string name="create_store_title">Tạo cửa hàng</string>
-    <string name="store_name">Tên cửa hàng</string>
-    <string name="store_code">Mã cửa hàng</string>
-    <string name="store_code_hint">Dùng để kết nối thiết bị</string>
-    <string name="store_address">Địa chỉ</string>
-    <string name="store_phone">Số điện thoại</string>
-    <string name="next">Tiếp theo</string>
-    <string name="back">Quay lại</string>
-    <string name="step_format">Bước %1$d/%2$d</string>
+    <string name="create_store_title">Create Store</string>
+    <string name="store_name">Store Name</string>
+    <string name="store_code">Store Code</string>
+    <string name="store_code_hint">Used to connect devices</string>
+    <string name="store_address">Address</string>
+    <string name="store_phone">Phone Number</string>
+    <string name="next">Next</string>
+    <string name="back">Back</string>
+    <string name="step_format">Step %1$d/%2$d</string>
 
     <!-- Create Account -->
-    <string name="create_account_title">Tạo tài khoản</string>
-    <string name="display_name">Tên hiển thị</string>
-    <string name="pin_label">PIN đăng nhập (4–6 số)</string>
-    <string name="admin_password">Mật khẩu quản trị</string>
-    <string name="confirm_password">Xác nhận mật khẩu</string>
-    <string name="create">Tạo cửa hàng</string>
+    <string name="create_account_title">Create Account</string>
+    <string name="display_name">Display Name</string>
+    <string name="pin_label">Login PIN (4–6 digits)</string>
+    <string name="admin_password">Admin Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="create">Create Store</string>
 
     <!-- Login -->
-    <string name="login_title">Đăng nhập</string>
-    <string name="enter_pin">Nhập PIN</string>
-    <string name="pin_error">PIN không đúng</string>
-    <string name="account_locked">Tài khoản bị khóa. Thử lại sau %1$d phút</string>
-    <string name="use_biometric">Đăng nhập bằng vân tay</string>
+    <string name="login_title">Login</string>
+    <string name="enter_pin">Enter PIN</string>
+    <string name="pin_error">Incorrect PIN</string>
+    <string name="account_locked">Account locked. Try again in %1$d minutes</string>
+    <string name="use_biometric">Login with fingerprint</string>
 
     <!-- Home -->
-    <string name="home_title">Trang chủ</string>
-    <string name="today_revenue">Doanh thu hôm nay</string>
-    <string name="today_orders">Đơn hàng hôm nay</string>
-    <string name="card_pos">Bán hàng (POS)</string>
-    <string name="card_inventory">Quản lý kho</string>
-    <string name="card_purchase">Nhập hàng</string>
-    <string name="card_products">Sản phẩm</string>
-    <string name="card_suppliers">Nhà cung cấp</string>
-    <string name="card_customers">Khách hàng</string>
-    <string name="card_reports">Báo cáo</string>
-    <string name="card_orders">Lịch sử đơn hàng</string>
-    <string name="card_settings">Cài đặt</string>
-    <string name="low_stock_alert">%1$d sản phẩm sắp hết hàng</string>
+    <string name="home_title">Home</string>
+    <string name="today_revenue">Today\'s Revenue</string>
+    <string name="today_orders">Today\'s Orders</string>
+    <string name="card_pos">Point of Sale (POS)</string>
+    <string name="card_inventory">Inventory</string>
+    <string name="card_purchase">Purchase</string>
+    <string name="card_products">Products</string>
+    <string name="card_suppliers">Suppliers</string>
+    <string name="card_customers">Customers</string>
+    <string name="card_reports">Reports</string>
+    <string name="card_orders">Order History</string>
+    <string name="card_settings">Settings</string>
+    <string name="low_stock_alert">%1$d products are running low</string>
+    <string name="low_stock_alert_label">Low stock alert</string>
 
     <!-- POS -->
-    <string name="pos_title">Bán hàng</string>
-    <string name="step1_select_products">Chọn sản phẩm</string>
-    <string name="step2_quantity_price">Số lượng &amp; Giá</string>
-    <string name="step3_customer">Khách hàng</string>
-    <string name="step4_payment">Thanh toán</string>
-    <string name="step5_receipt">Hoá đơn</string>
-    <string name="search_product">Tìm sản phẩm…</string>
-    <string name="scan_barcode">Quét mã vạch</string>
-    <string name="all_categories">Tất cả</string>
-    <string name="items_selected">%1$d sản phẩm</string>
-    <string name="subtotal">Tạm tính</string>
-    <string name="discount">Giảm giá</string>
-    <string name="tax">Thuế</string>
-    <string name="total">Tổng cộng</string>
-    <string name="walk_in_customer">Khách lẻ</string>
-    <string name="select_customer">Chọn khách hàng</string>
-    <string name="create_customer_quick">Tạo khách hàng mới</string>
-    <string name="payment_cash">Tiền mặt</string>
-    <string name="payment_transfer">Chuyển khoản</string>
-    <string name="payment_ewallet">Ví điện tử</string>
-    <string name="amount_received">Tiền khách đưa</string>
-    <string name="change_amount">Tiền thừa</string>
-    <string name="confirm_payment">Xác nhận thanh toán</string>
-    <string name="payment_success">Thanh toán thành công!</string>
-    <string name="print_receipt">In hoá đơn</string>
-    <string name="share_receipt">Chia sẻ hoá đơn</string>
-    <string name="new_order">Tạo đơn mới</string>
-    <string name="go_home">Về trang chủ</string>
+    <string name="pos_title">Point of Sale</string>
+    <string name="step1_select_products">Select Products</string>
+    <string name="step2_quantity_price">Quantity &amp; Price</string>
+    <string name="step3_customer">Customer</string>
+    <string name="step4_payment">Payment</string>
+    <string name="step5_receipt">Receipt</string>
+    <string name="search_product">Search products…</string>
+    <string name="scan_barcode">Scan Barcode</string>
+    <string name="all_categories">All</string>
+    <string name="items_selected">%1$d items</string>
+    <string name="subtotal">Subtotal</string>
+    <string name="discount">Discount</string>
+    <string name="tax">Tax</string>
+    <string name="total">Total</string>
+    <string name="walk_in_customer">Walk-in Customer</string>
+    <string name="select_customer">Select Customer</string>
+    <string name="create_customer_quick">Create New Customer</string>
+    <string name="payment_cash">Cash</string>
+    <string name="payment_transfer">Bank Transfer</string>
+    <string name="payment_ewallet">E-Wallet</string>
+    <string name="amount_received">Amount Received</string>
+    <string name="change_amount">Change</string>
+    <string name="confirm_payment">Confirm Payment</string>
+    <string name="payment_success">Payment Successful!</string>
+    <string name="print_receipt">Print Receipt</string>
+    <string name="share_receipt">Share Receipt</string>
+    <string name="new_order">New Order</string>
+    <string name="go_home">Go to Home</string>
 
     <!-- Products -->
-    <string name="products_title">Sản phẩm</string>
-    <string name="add_product">Thêm sản phẩm</string>
-    <string name="edit_product">Sửa sản phẩm</string>
-    <string name="product_name">Tên sản phẩm</string>
-    <string name="product_sku">Mã sản phẩm</string>
-    <string name="product_barcode">Mã vạch</string>
-    <string name="cost_price">Giá nhập</string>
-    <string name="selling_price">Giá bán</string>
-    <string name="unit">Đơn vị tính</string>
-    <string name="category">Danh mục</string>
-    <string name="supplier">Nhà cung cấp</string>
-    <string name="track_inventory">Quản lý tồn kho</string>
-    <string name="save">Lưu</string>
-    <string name="delete">Xoá</string>
-    <string name="cancel">Huỷ</string>
+    <string name="products_title">Products</string>
+    <string name="add_product">Add Product</string>
+    <string name="edit_product">Edit Product</string>
+    <string name="product_name">Product Name</string>
+    <string name="product_sku">Product SKU</string>
+    <string name="product_barcode">Barcode</string>
+    <string name="cost_price">Cost Price</string>
+    <string name="selling_price">Selling Price</string>
+    <string name="unit">Unit</string>
+    <string name="category">Category</string>
+    <string name="supplier">Supplier</string>
+    <string name="track_inventory">Track Inventory</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
 
     <!-- Categories -->
-    <string name="categories_title">Danh mục</string>
-    <string name="add_category">Thêm danh mục</string>
-    <string name="category_name">Tên danh mục</string>
-    <string name="uncategorized">Chưa phân loại</string>
+    <string name="categories_title">Categories</string>
+    <string name="add_category">Add Category</string>
+    <string name="category_name">Category Name</string>
+    <string name="uncategorized">Uncategorized</string>
 
     <!-- Suppliers -->
-    <string name="suppliers_title">Nhà cung cấp</string>
-    <string name="add_supplier">Thêm nhà cung cấp</string>
-    <string name="contact_person">Người liên hệ</string>
+    <string name="suppliers_title">Suppliers</string>
+    <string name="add_supplier">Add Supplier</string>
+    <string name="contact_person">Contact Person</string>
 
     <!-- Customers -->
-    <string name="customers_title">Khách hàng</string>
-    <string name="add_customer">Thêm khách hàng</string>
-    <string name="customer_name">Tên khách hàng</string>
-    <string name="customer_phone">Số điện thoại</string>
-    <string name="total_spent">Tổng chi tiêu</string>
-    <string name="visit_count">Số lần mua</string>
+    <string name="customers_title">Customers</string>
+    <string name="add_customer">Add Customer</string>
+    <string name="customer_name">Customer Name</string>
+    <string name="customer_phone">Phone Number</string>
+    <string name="total_spent">Total Spent</string>
+    <string name="visit_count">Visits</string>
 
     <!-- Inventory -->
-    <string name="inventory_title">Kho hàng</string>
-    <string name="stock_overview">Tổng quan tồn kho</string>
-    <string name="purchase_in">Nhập kho</string>
-    <string name="stock_check">Kiểm kho</string>
+    <string name="inventory_title">Inventory</string>
+    <string name="stock_overview">Stock Overview</string>
+    <string name="purchase_in">Stock In</string>
+    <string name="stock_check">Stock Check</string>
 
     <!-- Orders -->
-    <string name="orders_title">Lịch sử đơn hàng</string>
-    <string name="order_detail">Chi tiết đơn hàng</string>
-    <string name="refund">Trả hàng / Hoàn tiền</string>
+    <string name="orders_title">Order History</string>
+    <string name="order_detail">Order Details</string>
+    <string name="refund">Return / Refund</string>
 
     <!-- Reports -->
-    <string name="reports_title">Báo cáo</string>
-    <string name="sales_report">Doanh thu</string>
-    <string name="product_report">Sản phẩm</string>
-    <string name="staff_report">Nhân viên</string>
+    <string name="reports_title">Reports</string>
+    <string name="sales_report">Sales</string>
+    <string name="product_report">Products</string>
+    <string name="staff_report">Staff</string>
 
     <!-- Settings -->
-    <string name="settings_title">Cài đặt</string>
-    <string name="store_settings">Thông tin cửa hàng</string>
-    <string name="user_management">Quản lý nhân viên</string>
-    <string name="device_management">Quản lý thiết bị</string>
-    <string name="printer_setup">Cài đặt máy in</string>
-    <string name="backup_restore">Sao lưu &amp; Khôi phục</string>
-    <string name="about">Về ứng dụng</string>
-    <string name="logout">Đăng xuất</string>
+    <string name="settings_title">Settings</string>
+    <string name="store_settings">Store Information</string>
+    <string name="user_management">Staff Management</string>
+    <string name="device_management">Device Management</string>
+    <string name="printer_setup">Printer Setup</string>
+    <string name="backup_restore">Backup &amp; Restore</string>
+    <string name="about">About</string>
+    <string name="logout">Logout</string>
 
     <!-- Common -->
-    <string name="error_required">Trường này không được để trống</string>
-    <string name="error_pin_length">PIN phải từ 4–6 chữ số</string>
-    <string name="error_password_length">Mật khẩu tối thiểu 6 ký tự</string>
-    <string name="error_password_mismatch">Mật khẩu không khớp</string>
-    <string name="loading">Đang tải…</string>
-    <string name="no_data">Không có dữ liệu</string>
-    <string name="confirm_delete">Bạn có chắc chắn muốn xoá?</string>
-    <string name="yes">Có</string>
-    <string name="no">Không</string>
+    <string name="error_required">This field is required</string>
+    <string name="error_pin_length">PIN must be 4–6 digits</string>
+    <string name="error_password_length">Password must be at least 6 characters</string>
+    <string name="error_password_mismatch">Passwords do not match</string>
+    <string name="loading">Loading…</string>
+    <string name="no_data">No data</string>
+    <string name="confirm_delete">Are you sure you want to delete?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
     <string name="currency_format">%1$,.0fđ</string>
+
+    <!-- POS Step 2 -->
+    <string name="step2_title">Step 2: Review Cart</string>
+    <string name="order_discount_label">Order Discount</string>
+    <string name="add_label">Add</string>
+    <string name="cart_empty">Cart is empty</string>
+    <string name="back_to_products">← Back to select products</string>
+    <string name="unit_price_label">Unit Price</string>
+    <string name="order_discount_dialog_title">Order Discount</string>
+    <string name="percent_label">Percentage (%)</string>
+    <string name="fixed_amount_label">Fixed Amount (đ)</string>
+    <string name="percent_field">Percentage</string>
+    <string name="amount_field">Amount</string>
+    <string name="apply">Apply</string>
+    <string name="remove_discount">Remove Discount</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_decrease">Decrease</string>
+    <string name="cd_increase">Increase</string>
+    <string name="cd_add_image">Add Image</string>
+
+    <!-- Receipt -->
+    <string name="receipt_phone_prefix">Tel: %1$s</string>
+    <string name="receipt_title">SALES RECEIPT</string>
+    <string name="receipt_code">Code: %1$s</string>
+    <string name="receipt_date">Date: %1$s</string>
+    <string name="receipt_customer_prefix">Customer: %1$s</string>
+    <string name="receipt_discount_label">Discount:</string>
+    <string name="receipt_discount_percent_label">Discount (%1$d%%):</string>
+    <string name="receipt_subtotal">Subtotal:</string>
+    <string name="receipt_tax">Tax:</string>
+    <string name="receipt_grand_total">TOTAL:</string>
+    <string name="receipt_received">Received:</string>
+    <string name="receipt_change">Change:</string>
+    <string name="receipt_notes">Notes: %1$s</string>
+    <string name="receipt_html_title">Sales Receipt</string>
+    <string name="receipt_html_discount_label">Discount</string>
+    <string name="receipt_html_discount_percent_label">Discount (%1$d%%)</string>
+
+    <!-- Share -->
+    <string name="share_receipt_subject">Receipt %1$s</string>
+    <string name="share_receipt_text">Receipt %1$s from miniPOS</string>
+    <string name="share_receipt_chooser">Share Receipt</string>
+    <string name="share_barcode_subject">Product Barcode - miniPOS</string>
+    <string name="share_barcode_chooser">Share Barcode</string>
+    <string name="print_barcode_chooser">Print Barcode</string>
+
+    <!-- Image picker -->
+    <string name="pick_image_title">Choose Image</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="take_photo_desc">Use camera to capture</string>
+    <string name="pick_from_gallery">Choose from Gallery</string>
+    <string name="pick_from_gallery_desc">Pick an existing photo</string>
+    <string name="close">Close</string>
+    <string name="product_images">Product Images</string>
+    <string name="main_image_label">Main Image</string>
+    <string name="image_n_label">Image %1$d</string>
+    <string name="primary_badge">Primary</string>
+
+    <!-- Scan to POS -->
+    <string name="error_no_store">No store information found</string>
+    <string name="error_product_not_found">Product not found for barcode: %1$s</string>
+    <string name="added_product">Added: %1$s</string>
+    <string name="error_no_products_selected">No products selected</string>
+
+    <!-- Report -->
+    <string name="report_today">Today</string>
+    <string name="report_7days">7 days</string>
+    <string name="report_30days">30 days</string>
+    <string name="report_orders_count">%1$d orders</string>
+    <string name="report_order_count_label">Orders</string>
+    <string name="report_avg_order_label">Avg/Order</string>
+    <string name="report_today_orders">Today\'s Orders</string>
+
+    <!-- Payment method -->
+    <string name="payment_method_cash">Cash</string>
+    <string name="payment_method_transfer">Bank Transfer</string>
+    <string name="payment_method_ewallet">E-Wallet</string>
+    <string name="payment_method_other">Other</string>
+
+    <!-- Receipt defaults -->
+    <string name="default_receipt_header">Thank you for your purchase!</string>
+    <string name="default_receipt_footer">See you again!</string>
+
+    <!-- Default unit -->
+    <string name="default_unit">pcs</string>
+
+    <!-- Error messages (repository) -->
+    <string name="error_store_code_exists">Store code already exists</string>
+    <string name="error_create_store">Failed to create store</string>
+    <string name="error_account_locked_minutes">Account locked. Try again in %1$d minutes</string>
+    <string name="error_account_not_found">Account not found</string>
+    <string name="error_account_disabled">Account has been disabled</string>
+    <string name="error_account_locked_5min">Account locked for 5 minutes after 5 failed attempts</string>
+    <string name="error_wrong_pin_attempts">Incorrect PIN. %1$d attempts remaining</string>
+    <string name="error_login">Login failed</string>
+    <string name="error_store_not_found">Store not found</string>
+    <string name="error_update_store">Failed to update store</string>
+    <string name="error_create_user">Failed to create user</string>
+    <string name="error_user_not_found">User not found</string>
+    <string name="error_update_user">Failed to update user</string>
+    <string name="error_delete_user">Failed to delete user</string>
+    <string name="error_reset_pin">Failed to reset PIN</string>
+    <string name="error_create_category">Failed to create category</string>
+    <string name="error_category_not_found">Category not found</string>
+    <string name="error_update_category">Failed to update category</string>
+    <string name="error_category_has_products">Cannot delete category with %1$d products</string>
+    <string name="error_delete_category">Failed to delete category</string>
+    <string name="error_create_product">Failed to create product</string>
+    <string name="error_product_not_found_repo">Product not found</string>
+    <string name="error_update_product">Failed to update product</string>
+    <string name="error_delete_product">Failed to delete product</string>
+    <string name="error_create_supplier">Failed to create supplier</string>
+    <string name="error_supplier_not_found">Supplier not found</string>
+    <string name="error_update_supplier">Failed to update supplier</string>
+    <string name="error_delete_supplier">Failed to delete supplier</string>
+    <string name="error_create_customer">Failed to create customer</string>
+    <string name="error_customer_not_found">Customer not found</string>
+    <string name="error_update_customer">Failed to update customer</string>
+    <string name="error_delete_customer">Failed to delete customer</string>
+    <string name="error_insufficient_stock">\"%1$s\" only has %2$d %3$s in stock, not enough for %4$d</string>
+    <string name="error_create_order">Failed to create order</string>
+    <string name="error_inventory_not_found">Product inventory not found</string>
+    <string name="error_adjust_inventory">Failed to adjust inventory</string>
+
+    <!-- POS Step 4 -->
+    <string name="step4_title">Step 4: Payment</string>
+    <string name="order_summary">Order Summary</string>
+    <string name="grand_total">TOTAL</string>
+    <string name="customer_prefix">Customer: %1$s</string>
+    <string name="payment_method_label">Payment Method</string>
+    <string name="amount_received_label">Amount Received</string>
+    <string name="change_label">Change</string>
+    <string name="notes_label">Notes</string>
+    <string name="confirm_payment_btn">Confirm Payment</string>
+    <string name="currency_suffix">đ</string>
+
+    <!-- POS Step 3 -->
+    <string name="step3_title">Step 3: Customer</string>
+    <string name="deselect">Deselect</string>
+    <string name="skip_walk_in">Skip (Walk-in)</string>
+    <string name="next_step">Next</string>
+    <string name="search_customer">Search customer…</string>
+    <string name="add_new_customer">Add new customer</string>
+    <string name="recent_customers">Recent customers</string>
+    <string name="visit_count_format">%1$d visits</string>
+    <string name="add_new_customer_title">Add New Customer</string>
+    <string name="customer_name_required">Customer Name *</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="add_btn">Add</string>
+
+    <!-- Order Detail Screen -->
+    <string name="order_detail_title">Order Details</string>
+    <string name="order_info_title">Order Information</string>
+    <string name="order_code_label">Order Code</string>
+    <string name="time_label">Time</string>
+    <string name="status_label">Status</string>
+    <string name="customer_label">Customer</string>
+    <string name="products_label">Products</string>
+    <string name="payment_label">Payment</string>
+    <string name="change_prefix">Change: %1$s</string>
+    <string name="print_receipt_btn">Print Receipt</string>
+    <string name="share_btn">Share</string>
+    <string name="select_printer">Select Printer</string>
+    <string name="no_bluetooth_devices">No Bluetooth devices found.\nPlease pair a printer in Bluetooth settings.</string>
+    <string name="select_paired_printer">Select a paired Bluetooth printer:</string>
+    <string name="unknown_device">Unknown</string>
+    <string name="share_receipt_title">Share Receipt</string>
+    <string name="select_share_format">Select share format:</string>
+    <string name="share_pdf">Share PDF</string>
+    <string name="share_pdf_desc">Send receipt as a beautiful PDF file</string>
+    <string name="share_text">Share Text</string>
+    <string name="share_text_desc">Send via Zalo, SMS, Messenger…</string>
+    <string name="order_not_found">Order not found</string>
+
+    <!-- Supplier Screen -->
+    <string name="supplier_title">Suppliers</string>
+    <string name="add_supplier_cd">Add Supplier</string>
+    <string name="no_suppliers">No suppliers yet</string>
+    <string name="add_supplier_btn">Add Supplier</string>
+    <string name="delete_supplier_title">Delete Supplier?</string>
+    <string name="delete_confirm_msg">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="edit_supplier">Edit Supplier</string>
+    <string name="supplier_name_required">Supplier Name *</string>
+    <string name="contact_label">Contact Person</string>
+    <string name="address_label">Address</string>
+    <string name="tax_code_label">Tax Code</string>
+
+    <!-- Customer Screen -->
+    <string name="customer_title">Customers</string>
+    <string name="add_customer_cd">Add Customer</string>
+    <string name="search_customer_hint">Search customer…</string>
+    <string name="no_customers">No customers yet</string>
+    <string name="add_customer_btn">Add Customer</string>
+    <string name="delete_customer_title">Delete Customer?</string>
+    <string name="edit_customer">Edit Customer</string>
+    <string name="visit_purchases_format">%1$d purchases</string>
+    <string name="total_spent_format">Total spent: %1$s</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_subtitle">Simple point-of-sale system\nfor your store</string>
+    <string name="create_store_emoji">🏪  Create New Store</string>
+    <string name="join_store_emoji">🔗  Join a Store</string>
+    <string name="or_label">or</string>
+    <string name="restore_gdrive_emoji">📥  Restore from Google Drive</string>
+    <string name="create_store_step1">Create Store (1/2)</string>
+    <string name="create_account_step2">Create Account (2/2)</string>
+    <string name="store_name_required">Store Name *</string>
+    <string name="store_code_required">Store Code *</string>
+    <string name="store_code_supporting">4–8 characters, used to connect devices</string>
+    <string name="next_arrow">Next →</string>
+    <string name="display_name_required">Display Name *</string>
+    <string name="pin_label_required">Login PIN * (4–6 digits)</string>
+    <string name="pin_new_label">New PIN (4–6 digits)</string>
+    <string name="pin_leave_blank">Leave blank to keep current / no PIN</string>
+    <string name="pin_confirm_label">Confirm new PIN</string>
+    <string name="pin_mismatch_error">PINs do not match</string>
+    <string name="pin_current_label">Current PIN</string>
+    <string name="pin_current_hint">Enter current PIN to change</string>
+    <string name="pin_section_title">Security PIN</string>
+    <string name="pin_length_error">PIN must be 4–6 digits</string>
+    <string name="pin_enter_to_continue">Enter your PIN to continue</string>
+    <string name="pin_unlock_btn">Unlock</string>
+    <string name="pin_forgot_btn">Forgot PIN?</string>
+    <string name="pin_forgot_title">Forgot PIN</string>
+    <string name="pin_forgot_msg">This will remove your PIN and let you in immediately. You can set a new PIN in Settings afterwards.</string>
+    <string name="pin_remove_and_enter">Remove PIN &amp; Enter</string>
+    <string name="admin_password_required">Admin Password *</string>
+    <string name="admin_password_hint">At least 6 characters, for sensitive operations</string>
+    <string name="confirm_password_required">Confirm Password *</string>
+    <string name="create_store_btn">🏪  Create Store</string>
+
+    <!-- Join Store -->
+    <string name="join_store_title">Join a Store</string>
+    <string name="feature_in_development">Feature In Development</string>
+    <string name="join_store_desc">Join store via P2P will be available in the next version.</string>
+    <string name="go_back">← Go Back</string>
+
+    <!-- Login -->
+    <string name="select_account">Select Account</string>
+    <string name="login_btn">Login</string>
+    <string name="select_other_account">← Select another account</string>
+    <string name="data_error">Data Error</string>
+
+    <!-- Barcode Scanner -->
+    <string name="scan_barcode_qr">Scan Barcode / QR</string>
+    <string name="camera_permission_needed">Camera Permission Required</string>
+    <string name="camera_permission_desc">Please grant Camera permission to scan barcodes</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="scan_success">Scanned successfully!</string>
+    <string name="scan_guide">Place barcode in the frame</string>
+    <string name="flash_cd">Flash</string>
+    <string name="scan_again">Scan Again</string>
+    <string name="done">Done</string>
+
+    <!-- Barcode Screen -->
+    <string name="barcode_title">Create &amp; Print Barcodes</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="search_product_hint">Search products…</string>
+    <string name="filter_all">All</string>
+    <string name="filter_no_barcode">No Barcode</string>
+    <string name="filter_has_barcode">Has Barcode</string>
+    <string name="select_all_format">Select All (%1$d products)</string>
+    <string name="no_products_found">No products found</string>
+    <string name="no_barcode_yet">No barcode yet</string>
+    <string name="selected_count">Selected: %1$d</string>
+    <string name="generate_barcodes">Generate</string>
+    <string name="barcode_preview">Barcode Preview</string>
+    <string name="share_pdf_label">Share PDF</string>
+    <string name="share_image_label">Share Image</string>
+    <string name="printing">Printing…</string>
+    <string name="select_printer_title">Select Printer</string>
+    <string name="no_printer_found">No printer found.\nPlease pair a Bluetooth printer in Settings.</string>
+    <string name="unknown_name">Unknown</string>
+
+    <!-- Barcode ViewModel -->
+    <string name="no_products_need_barcode">No products need barcode generation</string>
+    <string name="barcodes_generated">Generated %1$d barcodes</string>
+    <string name="error_generate_barcode">Error generating barcodes: %1$s</string>
+    <string name="select_products_with_barcode">Please select products with barcodes</string>
+    <string name="error_sharing">Sharing error: %1$s</string>
+    <string name="print_success">Print successful!</string>
+
+    <!-- OrderDetail / PosStep5 ViewModel -->
+    <string name="bluetooth_not_enabled">Bluetooth is not enabled. Please enable Bluetooth and pair a printer.</string>
+    <string name="no_bluetooth_devices_found">No Bluetooth devices found. Please pair a printer first.</string>
+    <string name="print_receipt_success">Receipt printed successfully!</string>
+    <string name="error_print_receipt">Error printing receipt</string>
+    <string name="no_order_data_print">No order data to print</string>
+    <string name="no_order_data_share">No order data to share</string>
+    <string name="error_create_pdf">Error creating PDF: %1$s</string>
+
+    <!-- ReceiptPrintHelper -->
+    <string name="error_printer_connection">Printer connection error: %1$s</string>
+    <string name="error_bluetooth_permission">No Bluetooth permission: %1$s</string>
+    <string name="error_print">Receipt printing error: %1$s</string>
+
+    <!-- ProductListViewModel -->
+    <string name="error_name_price_required">Please enter product name and selling price</string>
+
+    <!-- CreateStoreViewModel -->
+    <string name="error_store_code_format">Store code must be 4–8 alphanumeric characters</string>
+
+    <!-- PosCartHolder -->
+    <string name="error_stock_limit">"%1$s" only has %2$d %3$s in stock</string>
+
+    <!-- Inventory Screen -->
+    <string name="inventory_manage_title">Inventory</string>
+    <string name="tab_overview">Overview</string>
+    <string name="tab_stock_check">Stock Check</string>
+    <string name="tab_history">History</string>
+    <string name="stat_total_products">Total Products</string>
+    <string name="stat_low_stock">Low Stock</string>
+    <string name="stat_out_of_stock">Out of Stock</string>
+    <string name="inventory_value">Inventory Value</string>
+    <string name="stock_in_label">Stock In</string>
+    <string name="stock_out_label">Stock Out</string>
+    <string name="top_products_stock">Top Products by Stock</string>
+    <string name="low_stock_warning">⚠️ Products Running Low</string>
+    <string name="out_of_stock_warning">🚫 Out of Stock Products</string>
+    <string name="search_stock">Search by name, SKU, barcode…</string>
+    <string name="clear_cd">Clear</string>
+    <string name="filter_all_stock">All</string>
+    <string name="filter_low">Low Stock</string>
+    <string name="filter_out">Out of Stock</string>
+    <string name="stock_check_empty">No products to track</string>
+    <string name="stock_check_not_found">Product not found</string>
+    <string name="sku_unit_format">SKU: %1$s · Unit: %2$s</string>
+    <string name="adjust_cd">Adjust</string>
+    <string name="history_all">All</string>
+    <string name="history_stock_in">Stock In</string>
+    <string name="history_stock_out">Stock Out</string>
+    <string name="no_stock_history">No stock in/out history yet</string>
+    <string name="movement_purchase_in">Purchase In</string>
+    <string name="movement_sale_out">Sale Out</string>
+    <string name="movement_return_in">Return (In)</string>
+    <string name="movement_return_out">Return (Out)</string>
+    <string name="movement_adjustment_in">Adjustment (In)</string>
+    <string name="movement_adjustment_out">Adjustment (Out)</string>
+    <string name="movement_damage_out">Damaged</string>
+    <string name="movement_transfer">Transfer</string>
+    <string name="close_btn">Close</string>
+    <string name="quantity_unit_format">%1$s%2$d units</string>
+    <string name="detail_product">Product</string>
+    <string name="detail_stock_change">Stock Change</string>
+    <string name="detail_unit_cost">Unit Cost</string>
+    <string name="detail_total_value">Total Value</string>
+    <string name="detail_supplier">Supplier</string>
+    <string name="ref_order">Order Code</string>
+    <string name="ref_purchase">Purchase Code</string>
+    <string name="ref_return">Return Code</string>
+    <string name="ref_other">Reference Code</string>
+    <string name="detail_notes">Notes</string>
+    <string name="detail_performed_by">Performed By</string>
+    <string name="detail_time">Time</string>
+    <string name="detail_transaction_id">Transaction ID</string>
+
+    <!-- ImageViewer -->
+    <string name="close_cd_img">Close</string>
+
+    <!-- Settings Screen -->
+    <string name="logout_title">Logout?</string>
+    <string name="logout_confirm_msg">Are you sure you want to logout?</string>
+    <string name="logout_btn">Logout</string>
+    <string name="delete_user_title">Delete Staff?</string>
+    <string name="delete_user_confirm_msg">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
+    <string name="delete_btn">Delete</string>
+    <string name="backup_title">Backup Data</string>
+    <string name="backup_msg">Google Drive backup will be available in the next version.</string>
+    <string name="backup_msg_note">Your data is currently stored safely on this device.</string>
+    <string name="understood">Understood</string>
+    <string name="restore_title">Restore Data</string>
+    <string name="restore_msg">Google Drive restore will be available in the next version.</string>
+    <string name="restore_msg_note">Please ensure you have backed up your data before restoring.</string>
+    <string name="settings_label">Settings</string>
+    <string name="store_code_format">Code: %1$s</string>
+    <string name="store_phone_format">Phone: %1$s</string>
+    <string name="role_label">Role: %1$s</string>
+    <string name="role_owner">Owner</string>
+    <string name="role_manager">Manager</string>
+    <string name="role_cashier">Cashier</string>
+    <string name="section_store">Store</string>
+    <string name="store_info_label">Store Information</string>
+    <string name="store_info_desc">Edit name, address, phone</string>
+    <string name="staff_label">Staff</string>
+    <string name="staff_count">%1$d users</string>
+    <string name="sales_settings_label">Sales Settings</string>
+    <string name="tax_enabled_format">Tax %1$s%%</string>
+    <string name="tax_disabled">Tax: off</string>
+    <string name="auto_print">Auto print</string>
+    <string name="manual_print">Manual print</string>
+    <string name="section_data">Data</string>
+    <string name="backup_label">Backup</string>
+    <string name="backup_desc">Backup data to Google Drive</string>
+    <string name="restore_label">Restore</string>
+    <string name="restore_desc">Restore from backup</string>
+    <string name="p2p_sync_label">P2P Sync</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="section_app">Application</string>
+    <string name="version_label">Version</string>
+    <string name="version_value">miniPOS v1.0.0</string>
+    <string name="store_info_title">Store Information</string>
+    <string name="store_name_label">Store Name *</string>
+    <string name="name_empty_error">Name cannot be empty</string>
+    <string name="store_phone_label">Phone Number</string>
+    <string name="sales_settings_title">Sales Settings</string>
+    <string name="enable_tax">Enable Tax</string>
+    <string name="tax_rate_label">Tax Rate (%)</string>
+    <string name="auto_print_receipt">Auto Print Receipt</string>
+    <string name="user_management_title">Staff Management</string>
+    <string name="no_staff_yet">No staff members yet</string>
+    <string name="add_staff">Add Staff</string>
+    <string name="admin">Admin</string>
+    <string name="you_label">(You)</string>
+    <string name="edit_label">Edit</string>
+    <string name="reset_pin_label">Reset PIN</string>
+    <string name="add_staff_title">Add Staff</string>
+    <string name="staff_name_label">Staff Name</string>
+    <string name="pin_4_6_label">Login PIN (4–6 digits)</string>
+    <string name="role_selection">Role</string>
+    <string name="edit_staff_title">Edit Staff</string>
+    <string name="edit_staff_name">Staff Name</string>
+    <string name="active_label">Active</string>
+    <string name="reset_pin_title">Reset PIN</string>
+    <string name="reset_pin_for">Reset PIN for %1$s</string>
+    <string name="new_pin_label">New PIN (4–6 digits)</string>
+    <string name="reset_btn">Reset</string>
+    <string name="store_info_dialog_title">Store Information</string>
+    <string name="sales_settings_dialog_title">Sales Settings</string>
+    <string name="device_info_title">Device Information</string>
+
+    <!-- Settings ViewModel messages -->
+    <string name="msg_store_updated">Store information updated</string>
+    <string name="msg_sales_settings_updated">Sales settings updated</string>
+    <string name="msg_staff_added">Added staff %1$s</string>
+    <string name="msg_staff_updated">Staff updated</string>
+    <string name="msg_pin_reset">PIN has been reset</string>
+    <string name="msg_staff_deleted">Staff deleted</string>
+    <string name="msg_pin_incorrect">Current PIN is incorrect</string>
+    <string name="msg_pin_updated">PIN updated</string>
+
+    <!-- Home Screen -->
+    <string name="home_greeting">Hello, %1$s! 👋</string>
+    <string name="home_logout_cd">Logout</string>
+    <string name="home_orders_label">Orders</string>
+    <string name="home_pos_label">POS</string>
+    <string name="home_scan_label">Scan</string>
+    <string name="home_barcode_label">Barcode</string>
+    <string name="home_p2p_title">P2P Multi-device Sync</string>
+    <string name="home_p2p_desc">Sync data between devices via LAN</string>
+    <string name="home_low_stock_alert">Low Stock Alert</string>
+    <string name="home_low_stock_msg">%1$d products are running low</string>
+    <string name="home_quick_actions">Quick Actions</string>
+    <string name="home_scan_barcode">Scan Barcode</string>
+    <string name="home_scan_and_sell">Scan &amp; sell</string>
+    <string name="home_pos">POS Sales</string>
+    <string name="home_create_order">Create order</string>
+    <string name="home_management">Management</string>
+    <string name="home_your_store">Your store</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_customize">Customize system</string>
+    <string name="home_coming_soon">Coming Soon</string>
+    <string name="home_new_features_desc">New features in the next version</string>
+    <string name="home_gdrive_title">Google Drive Backup &amp; Restore</string>
+    <string name="home_gdrive_desc">Auto backup to Google Drive, restore when switching devices</string>
+    <string name="home_ai_title">AI Invoice Reader</string>
+    <string name="home_ai_desc">Take a photo of an invoice, AI auto-recognizes and imports the order</string>
+    <string name="home_orders_count">%1$d orders</string>
+
+    <!-- Common -->
+    <string name="back_cd">Back</string>
+    <string name="save_btn">Save</string>
+    <string name="cancel_btn_label">Cancel</string>
+    <string name="delete_label">Delete</string>
+    <string name="add_product_cd">Add Product</string>
+    <string name="scan_barcode_title">Scan Barcode</string>
+
+    <!-- Order List Screen -->
+    <string name="order_list_title">Orders</string>
+
+    <!-- Product List Screen -->
+    <string name="product_search_hint">Search products…</string>
+    <string name="no_products">No products yet</string>
+    <string name="add_product_btn">Add Product</string>
+    <string name="edit_product_title">Edit Product</string>
+    <string name="add_product_title">Add Product</string>
+    <string name="product_name_required">Product Name *</string>
+    <string name="product_sku_label">SKU</string>
+    <string name="product_barcode_label">Barcode</string>
+    <string name="scan_cd">Scan</string>
+    <string name="cost_price_label">Cost Price</string>
+    <string name="selling_price_label">Selling Price *</string>
+    <string name="unit_label">Unit</string>
+    <string name="category_label">Category</string>
+    <string name="no_category">None</string>
+    <string name="supplier_label">Supplier</string>
+    <string name="no_supplier">None</string>
+    <string name="track_inventory_label">Track Inventory</string>
+    <string name="min_stock_label">Minimum Stock</string>
+    <string name="initial_stock_label">Initial Stock</string>
+    <string name="product_images_label">Product Images</string>
+    <string name="delete_product_title">Delete Product?</string>
+    <string name="delete_product_confirm">Are you sure you want to delete \"%1$s\"?</string>
+
+    <!-- POS Step 1 Screen -->
+    <string name="pos_step1_title">Step 1: Select Products</string>
+    <string name="cart_items_count">%1$d items</string>
+
+    <!-- POS Step 5 Screen -->
+    <string name="step5_success_title">Payment Successful!</string>
+    <string name="order_saved_msg">Order has been saved successfully.</string>
+    <string name="order_code_display">Order code: %1$s</string>
+    <string name="print_via_bluetooth">Print via Bluetooth</string>
+    <string name="share_receipt_btn">Share Receipt</string>
+    <string name="new_order_btn">New Order</string>
+    <string name="back_to_home">Back to Home</string>
+    <string name="print_bluetooth_label">Print via Bluetooth</string>
+
+    <!-- Scan To POS Screen -->
+    <string name="scan_product_barcode">Scan Product Barcode</string>
+    <string name="scanned_products">Scanned Products</string>
+    <string name="product_count_format">%1$d products</string>
+    <string name="scan_more">Scan More</string>
+    <string name="selected_summary">Selected: %1$d items · %2$d units</string>
+    <string name="transfer_to_pos">Transfer to POS</string>
+    <string name="no_scanned_products">No products scanned yet</string>
+    <string name="scan_instruction">Press \"Scan More\" to start scanning product barcodes</string>
+    <string name="start_scan">Start Scan</string>
+    <string name="stock_display">Stock: %1$d %2$s</string>
+    <string name="decrease_cd">Decrease</string>
+    <string name="increase_cd">Increase</string>
+    <string name="subtotal_format">Subtotal: %1$s</string>
+    <string name="remove_cd">Remove</string>
+
+    <!-- Category List Screen -->
+    <string name="category_list_title">Categories</string>
+    <string name="add_category_cd">Add Category</string>
+    <string name="no_categories">No categories yet</string>
+    <string name="add_category_btn">Add Category</string>
+    <string name="product_count_category">%1$d products</string>
+    <string name="delete_category_title">Delete Category?</string>
+    <string name="delete_category_confirm">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="edit_category_title">Edit Category</string>
+    <string name="add_category_title">Add Category</string>
+    <string name="category_name_required">Category Name *</string>
+    <string name="category_icon_label">Icon (emoji)</string>
+    <string name="description_label">Description</string>
+
+    <!-- Store Management Screen -->
+    <string name="store_management_title">Manage Store</string>
+
+    <!-- Inventory Adjust Dialog -->
+    <string name="adjust_stock_title">Adjust Stock</string>
+    <string name="quantity_label">Quantity</string>
+    <string name="confirm_btn">Confirm</string>
+    <string name="movement_purchase_in_label">Purchase In</string>
+    <string name="movement_adj_in_label">Adjustment (In)</string>
+    <string name="movement_adj_out_label">Adjustment (Out)</string>
+    <string name="movement_damage_label">Damaged</string>
+    <string name="movement_return_in_label">Return (In)</string>
+    <string name="supplier_select">Select supplier</string>
+    <string name="supplier_none">-- None --</string>
+    <string name="supplier_select_label">Supplier</string>
+
+    <!-- Currency formatter -->
+    <string name="currency_symbol">đ</string>
+    <string name="currency_compact_billion">%1$sB</string>
+    <string name="currency_compact_million">%1$sM</string>
+    <string name="currency_compact_thousand">%1$sk</string>
+
+    <!-- POS Step 2 discount suffix -->
+    <string name="discount_suffix_currency">đ</string>
+
+    <!-- Email label -->
+    <string name="email_label">Email</string>
+    <string name="notes">Notes</string>
+    <string name="tax_code">Tax Code</string>
+
+    <!-- Order List Screen filters/status -->
+    <string name="filter_completed">Completed</string>
+    <string name="filter_refunded">Refunded</string>
+    <string name="filter_cancelled">Cancelled</string>
+    <string name="no_orders">No orders yet</string>
+    <string name="order_customer_prefix">C: %1$s</string>
+    <string name="status_completed">Completed</string>
+    <string name="status_refunded">Refunded</string>
+    <string name="status_partially_refunded">Partially Refunded</string>
+    <string name="status_cancelled">Cancelled</string>
+
+    <!-- Product List Screen extras -->
+    <string name="add_first_product">Add First Product</string>
+    <string name="cost_prefix">Cost: %1$s</string>
+    <string name="product_form_barcode_cd">Barcode</string>
+    <string name="generate_barcode_cd">Generate barcode</string>
+    <string name="scan_barcode_cd">Scan barcode</string>
+    <string name="no_category_chip">None</string>
+    <string name="scan_product_barcode_title">Scan Product Barcode</string>
+
+    <!-- POS Step 1 Screen extras -->
+    <string name="cart_summary_format">%1$d items · %2$d units</string>
+    <string name="next_label">Next</string>
+    <string name="filter_all_products">All</string>
+    <string name="no_products_pos">No products</string>
+    <string name="out_of_stock_label">Out of stock</string>
+    <string name="stock_prefix">Stock: %1$d</string>
+
+    <!-- Category List Screen extras -->
+    <string name="category_empty_desc">Create categories to organize your products</string>
+    <string name="create_first_category">Create First Category</string>
+
+    <!-- Store Management Screen sections & items -->
+    <string name="section_catalog">Categories &amp; Products</string>
+    <string name="section_operations">Warehouse &amp; Operations</string>
+    <string name="mgmt_categories">Categories</string>
+    <string name="mgmt_categories_desc">Manage product groups</string>
+    <string name="mgmt_products">Products</string>
+    <string name="mgmt_products_desc">Manage products, prices</string>
+    <string name="mgmt_customers">Customers</string>
+    <string name="mgmt_customers_desc">Manage customer information</string>
+    <string name="mgmt_suppliers">Suppliers</string>
+    <string name="mgmt_suppliers_desc">Manage suppliers</string>
+    <string name="mgmt_reports">Reports</string>
+    <string name="mgmt_reports_desc">Revenue, profit statistics</string>
+    <string name="mgmt_purchase">Purchase Orders</string>
+    <string name="mgmt_purchase_desc">Purchase from suppliers</string>
+    <string name="mgmt_orders">Order History</string>
+    <string name="mgmt_orders_desc">View, search orders</string>
+    <string name="mgmt_inventory">Inventory &amp; Stock Check</string>
+    <string name="mgmt_inventory_desc">Stock, in/out, audit</string>
+    <string name="mgmt_barcode">Barcode</string>
+    <string name="mgmt_barcode_desc">Create, print product barcodes</string>
+
+    <!-- Default units list -->
+    <string name="units_list">pcs,item,box,pack,kg,g,L,mL,bottle,can,bag,case,set</string>
+
+    <!-- Purchase Screen -->
+    <string name="purchase_title">Purchase Stock</string>
+    <string name="purchase_supplier_label">Supplier (optional)</string>
+    <string name="purchase_no_supplier">No supplier</string>
+    <string name="purchase_add_product">Add product</string>
+    <string name="purchase_empty">No products added yet.\nTap the + button to add products.</string>
+    <string name="purchase_confirm_btn">Confirm Purchase</string>
+    <string name="purchase_confirm_title">Confirm Purchase</string>
+    <string name="purchase_confirm_msg">You will import %1$d product(s) with total %2$d units into stock.\n\nConfirm purchase?</string>
+    <string name="purchase_pick_product_title">Select Product</string>
+    <string name="purchase_search_hint">Search product, SKU, barcode…</string>
+    <string name="purchase_no_products">No products found</string>
+    <string name="purchase_stock_current">Stock: %1$s</string>
+    <string name="purchase_summary">%1$d item(s) · Total: %2$d</string>
+    <string name="purchase_notes_hint">Notes (optional)</string>
+    <string name="purchase_qty_label">Qty</string>
+
+    <!-- Receipt Preview -->
+    <string name="receipt_preview_title">Receipt Preview</string>
+    <string name="receipt_preview_loading">Loading receipt…</string>
+
+    <!-- Product Variants -->
+    <string name="has_variants_label">Has variants</string>
+    <string name="variants_label">Variants</string>
+    <string name="add_variant">Add variant</string>
+    <string name="no_variants_hint">No variants added yet. Tap \"Add variant\" to create one.</string>
+    <string name="add_variant_title">Add Variant</string>
+    <string name="edit_variant_title">Edit Variant</string>
+    <string name="delete_variant_title">Delete Variant</string>
+    <string name="delete_variant_confirm">Are you sure you want to delete variant \"%1$s\"?</string>
+    <string name="variant_name_label">Variant name *</string>
+    <string name="variant_attributes_label">Attributes</string>
+    <string name="variant_attributes_hint">e.g. Size: L, Color: Red</string>
+
+    <!-- Purchase Cost Price -->
+    <string name="cost_price_input_label">Cost price</string>
+
+    <!-- Variant POS -->
+    <string name="has_variants_badge">Variants</string>
+    <string name="select_variant_hint">Select a variant to add to cart</string>
+    <string name="variant_label_badge">Variant</string>
+    <string name="select_all_items_format">Select All (%1$d items)</string>
+
+    <!-- ViewModel messages (for localization) -->
+    <string name="msg_purchase_no_items">No items to import</string>
+    <string name="msg_user_not_found">User not found</string>
+    <string name="msg_purchase_item_error">Error importing %1$s: %2$s</string>
+    <string name="msg_purchase_success">Successfully imported %1$.0f products (%2$d items)!</string>
+    <string name="error_variant_name_required">Please enter variant name</string>
+    <string name="msg_barcode_not_found">Product not found for barcode: %1$s</string>
+    <string name="msg_pin_locked">Account locked. Try again in %1$d minutes.</string>
+    <string name="msg_pin_locked_5min">Incorrect PIN 5 times. Account locked for 5 minutes.</string>
+    <string name="msg_pin_wrong">Incorrect PIN. %1$d attempts remaining.</string>
 </resources>

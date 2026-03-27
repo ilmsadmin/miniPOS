@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -26,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.PaymentMethod
+import com.minipos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +43,10 @@ fun PosStep4Screen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bước 4: Thanh toán") },
+                title = { Text(stringResource(R.string.step4_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -63,7 +66,7 @@ fun PosStep4Screen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Tóm tắt đơn hàng", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.order_summary), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.height(12.dp))
                         cart.items.forEach { item ->
                             Row(
@@ -87,19 +90,19 @@ fun PosStep4Screen(
                             }
                         }
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        SummaryRow("Tạm tính", CurrencyFormatter.format(cart.subtotal))
+                        SummaryRow(stringResource(R.string.subtotal), CurrencyFormatter.format(cart.subtotal))
                         if (cart.orderDiscountAmount > 0) {
-                            SummaryRow("Giảm giá", "-${CurrencyFormatter.format(cart.orderDiscountAmount)}", color = AppColors.Error)
+                            SummaryRow(stringResource(R.string.discount), "-${CurrencyFormatter.format(cart.orderDiscountAmount)}", color = AppColors.Error)
                         }
                         if (cart.taxAmount > 0) {
-                            SummaryRow("Thuế", CurrencyFormatter.format(cart.taxAmount))
+                            SummaryRow(stringResource(R.string.tax), CurrencyFormatter.format(cart.taxAmount))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("TỔNG CỘNG", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.grand_total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
                                 CurrencyFormatter.format(cart.grandTotal),
                                 style = MaterialTheme.typography.titleLarge,
@@ -112,7 +115,7 @@ fun PosStep4Screen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = AppColors.TextSecondary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Khách: ${cart.customer!!.name}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Text(stringResource(R.string.customer_prefix, cart.customer!!.name), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                             }
                         }
                     }
@@ -121,7 +124,7 @@ fun PosStep4Screen(
 
             // Payment method selection
             item {
-                Text("Phương thức thanh toán", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.payment_method_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
             }
             item {
                 Row(
@@ -160,7 +163,7 @@ fun PosStep4Screen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Tiền khách đưa", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.amount_received_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = state.receivedAmountText,
@@ -168,7 +171,7 @@ fun PosStep4Screen(
                                 modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                suffix = { Text("đ") },
+                                suffix = { Text(stringResource(R.string.currency_suffix)) },
                                 textStyle = MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.End,
@@ -225,7 +228,7 @@ fun PosStep4Screen(
                                         .padding(12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
-                                    Text("Tiền thừa", style = MaterialTheme.typography.titleSmall, color = AppColors.Secondary)
+                                    Text(stringResource(R.string.change_label), style = MaterialTheme.typography.titleSmall, color = AppColors.Secondary)
                                     Text(
                                         CurrencyFormatter.format(state.changeAmount),
                                         style = MaterialTheme.typography.titleMedium,
@@ -244,7 +247,7 @@ fun PosStep4Screen(
                 OutlinedTextField(
                     value = state.notes,
                     onValueChange = { viewModel.updateNotes(it) },
-                    label = { Text("Ghi chú") },
+                    label = { Text(stringResource(R.string.notes_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3,
                     shape = RoundedCornerShape(12.dp),
@@ -272,7 +275,7 @@ fun PosStep4Screen(
                     } else {
                         Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Xác nhận thanh toán", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.confirm_payment_btn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -316,14 +319,15 @@ private fun PaymentMethodChip(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            val context = LocalContext.current
             Icon(
                 icon,
-                contentDescription = method.displayName(),
+                contentDescription = method.displayName(context),
                 tint = if (selected) AppColors.Primary else AppColors.TextSecondary,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                method.displayName(),
+                method.displayName(context),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                 color = if (selected) AppColors.Primary else AppColors.TextSecondary,

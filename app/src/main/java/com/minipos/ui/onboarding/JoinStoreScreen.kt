@@ -8,8 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,10 +22,10 @@ fun JoinStoreScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tham gia cửa hàng") },
+                title = { Text(stringResource(R.string.join_store_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -43,13 +45,13 @@ fun JoinStoreScreen(
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                "Tính năng đang phát triển",
+                stringResource(R.string.feature_in_development),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "Chức năng tham gia cửa hàng qua P2P sẽ được cập nhật trong phiên bản tiếp theo.",
+                stringResource(R.string.join_store_desc),
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.TextSecondary,
                 textAlign = TextAlign.Center,
@@ -59,7 +61,7 @@ fun JoinStoreScreen(
                 onClick = onBack,
                 shape = RoundedCornerShape(16.dp),
             ) {
-                Text("← Quay lại")
+                Text(stringResource(R.string.go_back))
             }
         }
     }

@@ -16,10 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
+import com.minipos.core.receipt.ReceiptPreviewDialog
 import com.minipos.core.theme.AppColors
 
 @SuppressLint("MissingPermission")
@@ -33,11 +36,13 @@ fun PosStep5Screen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Show messages
-    LaunchedEffect(state.message) {
-        state.message?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessage()
+    // Show messages (only when receipt preview is NOT open)
+    LaunchedEffect(state.message, state.showReceiptPreview) {
+        if (!state.showReceiptPreview) {
+            state.message?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.clearMessage()
+            }
         }
     }
 
@@ -45,7 +50,7 @@ fun PosStep5Screen(
     if (state.showPrinterDialog) {
         PosStep5PrinterDialog(
             devices = state.pairedDevices,
-            onSelect = { viewModel.printToDevice(it) },
+            onSelect = { viewModel.printToDevice(context, it) },
             onDismiss = { viewModel.dismissPrinterDialog() },
         )
     }
@@ -56,6 +61,21 @@ fun PosStep5Screen(
             onSharePdf = { viewModel.shareAsPdf(context) },
             onShareText = { viewModel.shareAsText(context) },
             onDismiss = { viewModel.dismissShareOptions() },
+        )
+    }
+
+    // Receipt preview dialog
+    if (state.showReceiptPreview && state.store != null && state.orderDetail != null) {
+        ReceiptPreviewDialog(
+            store = state.store!!,
+            orderDetail = state.orderDetail!!,
+            isPrinting = state.isPrinting,
+            isSharing = state.isSharing,
+            errorMessage = state.message,
+            onPrint = { viewModel.onPrintClick(context) },
+            onShare = { viewModel.shareAsPdf(context) },
+            onDismiss = { viewModel.dismissReceiptPreview() },
+            onErrorShown = { viewModel.clearMessage() },
         )
     }
 
@@ -93,7 +113,7 @@ fun PosStep5Screen(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.CheckCircle,
-                        contentDescription = "Thành công",
+                        contentDescription = stringResource(R.string.payment_success),
                         modifier = Modifier.size(64.dp),
                         tint = AppColors.Secondary,
                     )
@@ -103,7 +123,7 @@ fun PosStep5Screen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                "Thanh toán thành công!",
+                stringResource(R.string.step5_success_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.Secondary,
@@ -112,7 +132,7 @@ fun PosStep5Screen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                "Đơn hàng đã được lưu thành công.",
+                stringResource(R.string.order_saved_msg),
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.TextSecondary,
                 textAlign = TextAlign.Center,
@@ -131,7 +151,7 @@ fun PosStep5Screen(
             ) {
                 Icon(Icons.Default.AddShoppingCart, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Tạo đơn hàng mới", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.new_order_btn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -145,7 +165,7 @@ fun PosStep5Screen(
             ) {
                 Icon(Icons.Default.Home, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Về trang chủ", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.back_to_home), style = MaterialTheme.typography.titleMedium)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -156,24 +176,15 @@ fun PosStep5Screen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 TextButton(
-                    onClick = { viewModel.onPrintClick(context) },
-                    enabled = !state.isPrinting,
+                    onClick = { viewModel.showReceiptPreview() },
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (state.isPrinting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = AppColors.TextSecondary,
-                            )
-                        } else {
-                            Icon(Icons.Default.Print, contentDescription = null, tint = AppColors.TextSecondary)
-                        }
-                        Text("In hóa đơn", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                        Icon(Icons.Default.Receipt, contentDescription = null, tint = AppColors.TextSecondary)
+                        Text(stringResource(R.string.print_receipt), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                     }
                 }
                 TextButton(
-                    onClick = { viewModel.onShareClick() },
+                    onClick = { viewModel.onShareClick(context) },
                     enabled = !state.isSharing,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -186,7 +197,7 @@ fun PosStep5Screen(
                         } else {
                             Icon(Icons.Default.Share, contentDescription = null, tint = AppColors.TextSecondary)
                         }
-                        Text("Chia sẻ", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                        Text(stringResource(R.string.share_receipt), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                     }
                 }
             }
@@ -204,11 +215,11 @@ private fun PosStep5PrinterDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Print, contentDescription = null, tint = AppColors.Primary) },
-        title = { Text("Chọn máy in") },
+        title = { Text(stringResource(R.string.select_printer)) },
         text = {
             Column {
                 Text(
-                    "Chọn máy in Bluetooth đã ghép nối:",
+                    stringResource(R.string.select_paired_printer),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary,
                 )
@@ -234,7 +245,7 @@ private fun PosStep5PrinterDialog(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    device.name ?: "Không rõ tên",
+                                    device.name ?: stringResource(R.string.unknown_device),
                                     fontWeight = FontWeight.Medium,
                                 )
                                 Text(
@@ -251,7 +262,7 @@ private fun PosStep5PrinterDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Đóng") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
     )
 }
@@ -265,11 +276,11 @@ private fun PosStep5ShareDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Share, contentDescription = null, tint = AppColors.Primary) },
-        title = { Text("Chia sẻ hóa đơn") },
+        title = { Text(stringResource(R.string.share_receipt_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Chọn định dạng chia sẻ:",
+                    stringResource(R.string.select_share_format),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary,
                 )
@@ -283,8 +294,8 @@ private fun PosStep5ShareDialog(
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = AppColors.Error, modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Chia sẻ PDF", fontWeight = FontWeight.Medium)
-                            Text("Gửi hóa đơn dạng file PDF", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            Text(stringResource(R.string.share_pdf), fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.share_pdf_desc), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                         }
                     }
                 }
@@ -297,8 +308,8 @@ private fun PosStep5ShareDialog(
                         Icon(Icons.AutoMirrored.Filled.TextSnippet, contentDescription = null, tint = AppColors.Secondary, modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Chia sẻ văn bản", fontWeight = FontWeight.Medium)
-                            Text("Gửi qua Zalo, SMS, Messenger...", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            Text(stringResource(R.string.share_text), fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.share_text_desc), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                         }
                     }
                 }
@@ -306,7 +317,7 @@ private fun PosStep5ShareDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Đóng") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
     )
 }

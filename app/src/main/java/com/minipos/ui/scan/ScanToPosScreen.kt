@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.ui.scanner.BarcodeScannerScreen
@@ -64,7 +66,7 @@ fun ScanToPosScreen(
                         viewModel.stopScanning()
                     }
                 },
-                title = "Quét mã vạch sản phẩm",
+                title = stringResource(R.string.scan_product_barcode),
             )
 
             // Scanned products count badge
@@ -158,7 +160,7 @@ fun ScanToPosScreen(
                         modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { viewModel.clearError() }, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Đóng", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -186,9 +188,9 @@ private fun ScannedProductListView(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Sản phẩm đã quét", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.scanned_products), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "${state.scannedProducts.size} sản phẩm",
+                            stringResource(R.string.product_count_format, state.scannedProducts.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = AppColors.TextSecondary,
                         )
@@ -196,7 +198,7 @@ private fun ScannedProductListView(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.Close, contentDescription = "Đóng")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 },
                 actions = {
@@ -211,7 +213,7 @@ private fun ScannedProductListView(
                     ) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Quét tiếp")
+                        Text(stringResource(R.string.scan_more))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Surface),
@@ -237,7 +239,7 @@ private fun ScannedProductListView(
                         ) {
                             Column {
                                 Text(
-                                    "Đã chọn: $selectedCount SP · $selectedTotalQuantity đơn vị",
+                                    stringResource(R.string.selected_summary, selectedCount, selectedTotalQuantity),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = AppColors.TextSecondary,
                                 )
@@ -289,13 +291,13 @@ private fun ScannedProductListView(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Chưa quét sản phẩm nào",
+                    stringResource(R.string.no_scanned_products),
                     style = MaterialTheme.typography.titleMedium,
                     color = AppColors.TextSecondary,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Nhấn \"Quét tiếp\" để bắt đầu quét mã vạch sản phẩm",
+                    stringResource(R.string.scan_instruction),
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.TextTertiary,
                     textAlign = TextAlign.Center,
@@ -307,7 +309,7 @@ private fun ScannedProductListView(
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Bắt đầu quét")
+                    Text(stringResource(R.string.start_scan))
                 }
             }
         } else {
@@ -392,7 +394,7 @@ private fun ScannedProductCard(
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Xóa",
+                    contentDescription = stringResource(R.string.remove_cd),
                     tint = AppColors.TextTertiary,
                     modifier = Modifier.size(16.dp),
                 )
@@ -519,7 +521,7 @@ private fun ScannedProductCard(
                             )
                             if (item.product.trackInventory && item.currentStock != Double.MAX_VALUE) {
                                 Text(
-                                    "Tồn kho: ${item.currentStock.toLong()} ${item.product.unit}",
+                                    stringResource(R.string.stock_display, item.currentStock.toLong(), item.product.unit),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (item.currentStock < item.quantity) AppColors.Error else AppColors.TextTertiary,
                                 )
@@ -544,7 +546,7 @@ private fun ScannedProductCard(
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Default.Remove,
-                                            contentDescription = "Giảm",
+                                            contentDescription = stringResource(R.string.decrease_cd),
                                             modifier = Modifier.size(16.dp),
                                             tint = if (item.quantity > 1) AppColors.Primary else AppColors.TextTertiary,
                                         )
@@ -569,7 +571,7 @@ private fun ScannedProductCard(
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Default.Add,
-                                            contentDescription = "Tăng",
+                                            contentDescription = stringResource(R.string.increase_cd),
                                             modifier = Modifier.size(16.dp),
                                             tint = AppColors.Primary,
                                         )
@@ -583,7 +585,7 @@ private fun ScannedProductCard(
                     if (item.quantity > 1) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Thành tiền: ${CurrencyFormatter.format(item.product.sellingPrice * item.quantity)}",
+                            stringResource(R.string.subtotal_format, CurrencyFormatter.format(item.product.sellingPrice * item.quantity)),
                             style = MaterialTheme.typography.labelSmall,
                             color = AppColors.TextSecondary,
                             fontWeight = FontWeight.Medium,

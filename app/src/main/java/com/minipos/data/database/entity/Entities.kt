@@ -124,7 +124,7 @@ data class ProductEntity(
     @ColumnInfo(name = "description") val description: String? = null,
     @ColumnInfo(name = "cost_price") val costPrice: Double = 0.0,
     @ColumnInfo(name = "selling_price") val sellingPrice: Double = 0.0,
-    @ColumnInfo(name = "unit") val unit: String = "cái",
+    @ColumnInfo(name = "unit") val unit: String = "pcs",
     @ColumnInfo(name = "image_path") val imagePath: String? = null,
     @ColumnInfo(name = "additional_images") val additionalImages: String? = null,
     @ColumnInfo(name = "min_stock") val minStock: Int = 0,
@@ -133,6 +133,37 @@ data class ProductEntity(
     @ColumnInfo(name = "track_inventory") val trackInventory: Boolean = true,
     @ColumnInfo(name = "tax_rate") val taxRate: Double = 0.0,
     @ColumnInfo(name = "has_variants") val hasVariants: Boolean = false,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "is_deleted") val isDeleted: Boolean = false,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @ColumnInfo(name = "sync_version") val syncVersion: Int = 0,
+    @ColumnInfo(name = "device_id") val deviceId: String,
+)
+
+@Entity(
+    tableName = "product_variants",
+    foreignKeys = [
+        ForeignKey(entity = StoreEntity::class, parentColumns = ["id"], childColumns = ["store_id"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = ProductEntity::class, parentColumns = ["id"], childColumns = ["product_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [
+        Index(value = ["store_id"]),
+        Index(value = ["product_id"]),
+        Index(value = ["barcode"]),
+    ]
+)
+data class ProductVariantEntity(
+    @PrimaryKey val id: String,
+    @ColumnInfo(name = "store_id") val storeId: String,
+    @ColumnInfo(name = "product_id") val productId: String,
+    @ColumnInfo(name = "variant_name") val variantName: String,
+    @ColumnInfo(name = "sku") val sku: String,
+    @ColumnInfo(name = "barcode") val barcode: String? = null,
+    @ColumnInfo(name = "cost_price") val costPrice: Double? = null,
+    @ColumnInfo(name = "selling_price") val sellingPrice: Double? = null,
+    @ColumnInfo(name = "attributes") val attributes: String = "{}",
+    @ColumnInfo(name = "is_active") val isActive: Boolean = true,
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
     @ColumnInfo(name = "is_deleted") val isDeleted: Boolean = false,

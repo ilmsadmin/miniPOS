@@ -1,5 +1,7 @@
 package com.minipos.data.repository
 
+import android.content.Context
+import com.minipos.R
 import com.minipos.core.constants.AppConstants
 import com.minipos.core.utils.DateUtils
 import com.minipos.core.utils.HashUtils
@@ -9,6 +11,7 @@ import com.minipos.data.database.entity.*
 import com.minipos.data.preferences.AppPreferences
 import com.minipos.domain.model.*
 import com.minipos.domain.repository.*
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -18,6 +21,7 @@ import javax.inject.Singleton
 
 @Singleton
 class StoreRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val storeDao: StoreDao
 ) : StoreRepository {
     override suspend fun getStore(): Store? = storeDao.getStore()?.toDomain()
@@ -26,7 +30,7 @@ class StoreRepositoryImpl @Inject constructor(
 
     override suspend fun updateStore(store: Store): Result<Store> {
         return try {
-            val entity = storeDao.getStore() ?: return Result.Error(ErrorCode.INVALID_INPUT, "Cửa hàng không tồn tại")
+            val entity = storeDao.getStore() ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_store_not_found))
             val settingsJson = try {
                 com.google.gson.Gson().toJson(store.settings)
             } catch (_: Exception) { entity.settings }
@@ -40,7 +44,7 @@ class StoreRepositoryImpl @Inject constructor(
             storeDao.update(updated)
             Result.Success(updated.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi cập nhật cửa hàng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_update_store))
         }
     }
 }
@@ -49,6 +53,7 @@ class StoreRepositoryImpl @Inject constructor(
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val userDao: UserDao,
     private val prefs: AppPreferences,
 ) : UserRepository {
@@ -70,13 +75,13 @@ class UserRepositoryImpl @Inject constructor(
             userDao.insert(entity)
             Result.Success(entity.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi tạo người dùng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_create_user))
         }
     }
 
     override suspend fun updateUser(user: User): Result<User> {
         return try {
-            val entity = userDao.getById(user.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy người dùng")
+            val entity = userDao.getById(user.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_user_not_found))
             val updated = entity.copy(
                 displayName = user.displayName,
                 role = user.role.name.lowercase(),
@@ -86,7 +91,7 @@ class UserRepositoryImpl @Inject constructor(
             userDao.update(updated)
             Result.Success(updated.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi cập nhật người dùng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_update_user))
         }
     }
 
@@ -95,7 +100,7 @@ class UserRepositoryImpl @Inject constructor(
             userDao.softDelete(userId, DateUtils.now())
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi xoá người dùng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_delete_user))
         }
     }
 
@@ -109,7 +114,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun resetPin(userId: String, newPin: String): Result<Unit> {
         return try {
-            val entity = userDao.getById(userId) ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy người dùng")
+            val entity = userDao.getById(userId) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_user_not_found))
             val updated = entity.copy(
                 pinHash = HashUtils.hashPin(newPin),
                 updatedAt = DateUtils.now(),
@@ -117,8 +122,28 @@ class UserRepositoryImpl @Inject constructor(
             userDao.update(updated)
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi reset PIN")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_reset_pin))
         }
+    }
+
+    override suspend fun clearPin(userId: String): Result<Unit> {
+        return try {
+            val entity = userDao.getById(userId) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_user_not_found))
+            userDao.update(entity.copy(pinHash = "", updatedAt = DateUtils.now()))
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_reset_pin))
+        }
+    }
+
+    override suspend fun hasPin(userId: String): Boolean {
+        return userDao.getById(userId)?.pinHash?.isNotBlank() == true
+    }
+
+    override suspend fun verifyPin(userId: String, pin: String): Boolean {
+        val entity = userDao.getById(userId) ?: return false
+        if (entity.pinHash.isBlank()) return false
+        return HashUtils.verifyPin(pin, entity.pinHash)
     }
 }
 
@@ -126,6 +151,7 @@ class UserRepositoryImpl @Inject constructor(
 
 @Singleton
 class CategoryRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val categoryDao: CategoryDao,
     private val prefs: AppPreferences,
 ) : CategoryRepository {
@@ -148,16 +174,17 @@ class CategoryRepositoryImpl @Inject constructor(
             categoryDao.insert(entity)
             Result.Success(entity.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi tạo danh mục")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_create_category))
         }
     }
 
     override suspend fun update(category: Category): Result<Category> {
         return try {
-            val entity = categoryDao.getById(category.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy danh mục")
+            val entity = categoryDao.getById(category.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_category_not_found))
             val updated = entity.copy(
                 name = category.name,
                 description = category.description,
+                parentId = category.parentId,
                 icon = category.icon,
                 color = category.color,
                 sortOrder = category.sortOrder,
@@ -166,7 +193,7 @@ class CategoryRepositoryImpl @Inject constructor(
             categoryDao.update(updated)
             Result.Success(updated.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi cập nhật danh mục")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_update_category))
         }
     }
 
@@ -174,12 +201,12 @@ class CategoryRepositoryImpl @Inject constructor(
         return try {
             val count = categoryDao.getProductCount(categoryId)
             if (count > 0) {
-                return Result.Error(ErrorCode.CATEGORY_HAS_PRODUCTS, "Không thể xoá danh mục đang có $count sản phẩm")
+                return Result.Error(ErrorCode.CATEGORY_HAS_PRODUCTS, context.getString(R.string.error_category_has_products, count))
             }
             categoryDao.softDelete(categoryId, DateUtils.now())
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi xoá danh mục")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_delete_category))
         }
     }
 
@@ -194,7 +221,9 @@ class CategoryRepositoryImpl @Inject constructor(
 
 @Singleton
 class ProductRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val productDao: ProductDao,
+    private val productVariantDao: ProductVariantDao,
     private val inventoryDao: InventoryDao,
     private val prefs: AppPreferences,
 ) : ProductRepository {
@@ -243,13 +272,13 @@ class ProductRepositoryImpl @Inject constructor(
             }
             Result.Success(entity.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi tạo sản phẩm")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_create_product))
         }
     }
 
     override suspend fun update(product: Product): Result<Product> {
         return try {
-            val entity = productDao.getById(product.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy sản phẩm")
+            val entity = productDao.getById(product.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_product_not_found_repo))
             val updated = entity.copy(
                 name = product.name,
                 categoryId = product.categoryId,
@@ -265,12 +294,13 @@ class ProductRepositoryImpl @Inject constructor(
                 maxStock = product.maxStock,
                 trackInventory = product.trackInventory,
                 taxRate = product.taxRate,
+                hasVariants = product.hasVariants,
                 updatedAt = DateUtils.now(),
             )
             productDao.update(updated)
             Result.Success(updated.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi cập nhật sản phẩm")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_update_product))
         }
     }
 
@@ -279,7 +309,7 @@ class ProductRepositoryImpl @Inject constructor(
             productDao.softDelete(productId, DateUtils.now())
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi xoá sản phẩm")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_delete_product))
         }
     }
 
@@ -302,12 +332,80 @@ class ProductRepositoryImpl @Inject constructor(
         val maxNum = productDao.getMaxSkuNumber(storeId) ?: 0
         return "SP${(maxNum + 1).toString().padStart(4, '0')}"
     }
+
+    // ---- Variants ----
+
+    override suspend fun createVariant(variant: ProductVariant): Result<ProductVariant> {
+        return try {
+            val now = DateUtils.now()
+            val deviceId = prefs.getDeviceIdSync()
+            val entity = ProductVariantEntity(
+                id = variant.id,
+                storeId = variant.storeId,
+                productId = variant.productId,
+                variantName = variant.variantName,
+                sku = variant.sku,
+                barcode = variant.barcode,
+                costPrice = variant.costPrice,
+                sellingPrice = variant.sellingPrice,
+                attributes = variant.attributes,
+                isActive = variant.isActive,
+                createdAt = now,
+                updatedAt = now,
+                deviceId = deviceId,
+            )
+            productVariantDao.insert(entity)
+            Result.Success(entity.toDomain())
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Error creating variant")
+        }
+    }
+
+    override suspend fun updateVariant(variant: ProductVariant): Result<ProductVariant> {
+        return try {
+            val entity = productVariantDao.getById(variant.id)
+                ?: return Result.Error(ErrorCode.INVALID_INPUT, "Variant not found")
+            val updated = entity.copy(
+                variantName = variant.variantName,
+                sku = variant.sku,
+                barcode = variant.barcode,
+                costPrice = variant.costPrice,
+                sellingPrice = variant.sellingPrice,
+                attributes = variant.attributes,
+                isActive = variant.isActive,
+                updatedAt = DateUtils.now(),
+            )
+            productVariantDao.update(updated)
+            Result.Success(updated.toDomain())
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Error updating variant")
+        }
+    }
+
+    override suspend fun deleteVariant(variantId: String): Result<Unit> {
+        return try {
+            productVariantDao.softDelete(variantId, DateUtils.now())
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Error deleting variant")
+        }
+    }
+
+    override fun observeVariants(productId: String): Flow<List<ProductVariant>> =
+        productVariantDao.observeByProductId(productId).map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getVariants(productId: String): List<ProductVariant> =
+        productVariantDao.getByProductId(productId).map { it.toDomain() }
+
+    override suspend fun getVariantByBarcode(storeId: String, barcode: String): ProductVariant? =
+        productVariantDao.getByBarcode(storeId, barcode)?.toDomain()
 }
 
 // ============ Supplier Repository ============
 
 @Singleton
 class SupplierRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val supplierDao: SupplierDao,
     private val prefs: AppPreferences,
 ) : SupplierRepository {
@@ -332,13 +430,13 @@ class SupplierRepositoryImpl @Inject constructor(
             supplierDao.insert(entity)
             Result.Success(entity.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi tạo nhà cung cấp")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_create_supplier))
         }
     }
 
     override suspend fun update(supplier: Supplier): Result<Supplier> {
         return try {
-            val entity = supplierDao.getById(supplier.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy nhà cung cấp")
+            val entity = supplierDao.getById(supplier.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_supplier_not_found))
             val updated = entity.copy(
                 name = supplier.name,
                 contactPerson = supplier.contactPerson,
@@ -352,7 +450,7 @@ class SupplierRepositoryImpl @Inject constructor(
             supplierDao.update(updated)
             Result.Success(updated.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi cập nhật nhà cung cấp")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_update_supplier))
         }
     }
 
@@ -361,7 +459,7 @@ class SupplierRepositoryImpl @Inject constructor(
             supplierDao.softDelete(supplierId, DateUtils.now())
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi xoá nhà cung cấp")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_delete_supplier))
         }
     }
 
@@ -376,6 +474,7 @@ class SupplierRepositoryImpl @Inject constructor(
 
 @Singleton
 class CustomerRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val customerDao: CustomerDao,
     private val prefs: AppPreferences,
 ) : CustomerRepository {
@@ -398,13 +497,13 @@ class CustomerRepositoryImpl @Inject constructor(
             customerDao.insert(entity)
             Result.Success(entity.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi tạo khách hàng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_create_customer))
         }
     }
 
     override suspend fun update(customer: Customer): Result<Customer> {
         return try {
-            val entity = customerDao.getById(customer.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy khách hàng")
+            val entity = customerDao.getById(customer.id) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_customer_not_found))
             val updated = entity.copy(
                 name = customer.name,
                 phone = customer.phone,
@@ -416,7 +515,7 @@ class CustomerRepositoryImpl @Inject constructor(
             customerDao.update(updated)
             Result.Success(updated.toDomain())
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi cập nhật khách hàng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_update_customer))
         }
     }
 
@@ -425,7 +524,7 @@ class CustomerRepositoryImpl @Inject constructor(
             customerDao.softDelete(customerId, DateUtils.now())
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi xoá khách hàng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_delete_customer))
         }
     }
 
@@ -443,6 +542,7 @@ class CustomerRepositoryImpl @Inject constructor(
 
 @Singleton
 class OrderRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val orderDao: OrderDao,
     private val inventoryDao: InventoryDao,
     private val customerDao: CustomerDao,
@@ -462,7 +562,7 @@ class OrderRepositoryImpl @Inject constructor(
                     if (item.quantity > available) {
                         return Result.Error(
                             ErrorCode.INSUFFICIENT_STOCK,
-                            "\"${item.product.name}\" chỉ còn ${available.toLong()} ${item.product.unit} trong kho, không đủ ${item.quantity.toLong()}"
+                            context.getString(R.string.error_insufficient_stock, item.product.name, available.toLong(), item.product.unit, item.quantity.toLong())
                         )
                     }
                 }
@@ -508,7 +608,7 @@ class OrderRepositoryImpl @Inject constructor(
                     variantName = item.variant?.variantName,
                     quantity = item.quantity,
                     unitPrice = item.unitPrice,
-                    costPrice = item.product.costPrice,
+                    costPrice = item.variant?.costPrice ?: item.product.costPrice,
                     discountType = item.discount?.type,
                     discountValue = item.discount?.value ?: 0.0,
                     discountAmount = item.discountAmount,
@@ -593,7 +693,7 @@ class OrderRepositoryImpl @Inject constructor(
             )
             Result.Success(order)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi tạo đơn hàng")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_create_order))
         }
     }
 
@@ -643,6 +743,7 @@ class OrderRepositoryImpl @Inject constructor(
 
 @Singleton
 class InventoryRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val inventoryDao: InventoryDao,
     private val orderDao: OrderDao,
     private val prefs: AppPreferences,
@@ -661,7 +762,7 @@ class InventoryRepositoryImpl @Inject constructor(
         return try {
             val now = DateUtils.now()
             val inv = inventoryDao.getByProduct(storeId, productId)
-                ?: return Result.Error(ErrorCode.INVALID_INPUT, "Không tìm thấy tồn kho sản phẩm")
+                ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_inventory_not_found))
             val before = inv.quantity
             inventoryDao.adjustQuantity(inv.id, amount, now)
             orderDao.insertStockMovement(
@@ -683,7 +784,7 @@ class InventoryRepositoryImpl @Inject constructor(
             )
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Lỗi điều chỉnh tồn kho")
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_adjust_inventory))
         }
     }
 
@@ -787,6 +888,12 @@ fun ProductEntity.toDomain() = Product(
     minStock = minStock, maxStock = maxStock, isActive = isActive,
     trackInventory = trackInventory, taxRate = taxRate, hasVariants = hasVariants,
     createdAt = createdAt, updatedAt = updatedAt,
+)
+
+fun ProductVariantEntity.toDomain() = ProductVariant(
+    id = id, storeId = storeId, productId = productId, variantName = variantName,
+    sku = sku, barcode = barcode, costPrice = costPrice, sellingPrice = sellingPrice,
+    attributes = attributes, isActive = isActive, createdAt = createdAt, updatedAt = updatedAt,
 )
 
 fun SupplierEntity.toDomain() = Supplier(

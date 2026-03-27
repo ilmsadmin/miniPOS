@@ -1,14 +1,17 @@
 package com.minipos.ui.barcode
 
+import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.R
 import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.barcode.BarcodePrintHelper
 import com.minipos.core.receipt.ReceiptPrintHelper
 import com.minipos.domain.model.Product
+import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.model.Result
 import com.minipos.domain.repository.ProductRepository
 import com.minipos.domain.repository.StoreRepository
@@ -21,10 +24,23 @@ import javax.inject.Inject
 
 data class BarcodeProductItem(
     val product: Product,
+    val variant: ProductVariant? = null,
     val isSelected: Boolean = false,
     val hasBarcode: Boolean = false,
     val generatedBarcode: String? = null,
-)
+) {
+    /** Unique key: product id for standalone products, product:variant for variant items */
+    val itemId: String get() = if (variant != null) "${product.id}:${variant.id}" else product.id
+
+    /** Display name: includes variant name if applicable */
+    val displayName: String get() = if (variant != null) "${product.name} › ${variant.variantName}" else product.name
+
+    /** Display SKU */
+    val displaySku: String get() = variant?.sku ?: product.sku
+
+    /** Current barcode value */
+    val currentBarcode: String? get() = generatedBarcode ?: variant?.barcode ?: product.barcode
+}
 
 data class BarcodeScreenState(
     val products: List<BarcodeProductItem> = emptyList(),
@@ -36,7 +52,7 @@ data class BarcodeScreenState(
 
     // Generation
     val isGenerating: Boolean = false,
-    val generatedBarcodes: Map<String, String> = emptyMap(), // productId -> barcode
+    val generatedBarcodes: Map<String, String> = emptyMap(), // itemId -> barcode
 
     // Preview & Print
     val showPreview: Boolean = false,
@@ -54,16 +70,20 @@ data class BarcodeScreenState(
 )
 
 enum class BarcodeFilterMode(val label: String) {
-    ALL("Tất cả"),
-    NO_BARCODE("Chưa có mã"),
-    HAS_BARCODE("Đã có mã"),
+    ALL("All"),
+    NO_BARCODE("No Barcode"),
+    HAS_BARCODE("Has Barcode"),
 }
 
 @HiltViewModel
 class BarcodeViewModel @Inject constructor(
+    private val app: Application,
     private val storeRepository: StoreRepository,
     private val productRepository: ProductRepository,
 ) : ViewModel() {
+
+    private fun str(resId: Int) = app.getString(resId)
+    private fun str(resId: Int, vararg args: Any) = app.getString(resId, *args)
 
     private val _state = MutableStateFlow(BarcodeScreenState())
     val state: StateFlow<BarcodeScreenState> = _state
@@ -79,12 +99,41 @@ class BarcodeViewModel @Inject constructor(
             storeId = store.id
             storeCode = store.code
             val products = productRepository.getAll(storeId)
-            val items = products.map { product ->
-                BarcodeProductItem(
-                    product = product,
-                    hasBarcode = !product.barcode.isNullOrBlank(),
-                )
+            val items = mutableListOf<BarcodeProductItem>()
+
+            for (product in products) {
+                if (product.hasVariants) {
+                    // Expand variants as separate barcode items
+                    val variants = productRepository.getVariants(product.id)
+                    if (variants.isNotEmpty()) {
+                        for (variant in variants) {
+                            items.add(
+                                BarcodeProductItem(
+                                    product = product,
+                                    variant = variant,
+                                    hasBarcode = !variant.barcode.isNullOrBlank(),
+                                )
+                            )
+                        }
+                    } else {
+                        // Product marked hasVariants but no variants yet — show as regular product
+                        items.add(
+                            BarcodeProductItem(
+                                product = product,
+                                hasBarcode = !product.barcode.isNullOrBlank(),
+                            )
+                        )
+                    }
+                } else {
+                    items.add(
+                        BarcodeProductItem(
+                            product = product,
+                            hasBarcode = !product.barcode.isNullOrBlank(),
+                        )
+                    )
+                }
             }
+
             _state.update {
                 it.copy(
                     products = items,
@@ -118,17 +167,17 @@ class BarcodeViewModel @Inject constructor(
             }
             .filter { item ->
                 if (query.isBlank()) true
-                else item.product.name.lowercase().contains(query) ||
-                        item.product.sku.lowercase().contains(query) ||
-                        (item.product.barcode?.lowercase()?.contains(query) == true)
+                else item.displayName.lowercase().contains(query) ||
+                        item.displaySku.lowercase().contains(query) ||
+                        (item.currentBarcode?.lowercase()?.contains(query) == true)
             }
         _state.update { it.copy(filteredProducts = filtered) }
     }
 
-    fun toggleProduct(productId: String) {
+    fun toggleProduct(itemId: String) {
         _state.update { st ->
             val updated = st.products.map { item ->
-                if (item.product.id == productId) item.copy(isSelected = !item.isSelected)
+                if (item.itemId == itemId) item.copy(isSelected = !item.isSelected)
                 else item
             }
             st.copy(
@@ -140,11 +189,11 @@ class BarcodeViewModel @Inject constructor(
     }
 
     fun selectAllFiltered() {
-        val filteredIds = _state.value.filteredProducts.map { it.product.id }.toSet()
+        val filteredIds = _state.value.filteredProducts.map { it.itemId }.toSet()
         _state.update { st ->
             val allSelected = st.filteredProducts.all { it.isSelected }
             val updated = st.products.map { item ->
-                if (item.product.id in filteredIds) {
+                if (item.itemId in filteredIds) {
                     item.copy(isSelected = !allSelected)
                 } else item
             }
@@ -167,7 +216,7 @@ class BarcodeViewModel @Inject constructor(
     }
 
     /**
-     * Generate barcodes for all selected products that don't have one.
+     * Generate barcodes for all selected products/variants that don't have one.
      */
     fun generateBarcodes() {
         viewModelScope.launch {
@@ -176,43 +225,53 @@ class BarcodeViewModel @Inject constructor(
             try {
                 val selected = _state.value.products.filter { it.isSelected && !it.hasBarcode && it.generatedBarcode == null }
                 if (selected.isEmpty()) {
-                    _state.update { it.copy(isGenerating = false, message = "Không có sản phẩm nào cần tạo mã vạch") }
+                    _state.update { it.copy(isGenerating = false, message = str(R.string.no_products_need_barcode)) }
                     return@launch
                 }
 
-                // Get current max barcode sequence
+                // Get current max barcode sequence from all items (products + variants)
                 val existingBarcodes = _state.value.products
-                    .mapNotNull { it.product.barcode ?: it.generatedBarcode }
+                    .mapNotNull { it.currentBarcode }
                     .filter { it.startsWith("2") && it.length == 13 }
                 val maxSeq = existingBarcodes.maxOfOrNull { barcode ->
                     try { barcode.substring(3, 9).toInt() } catch (_: Exception) { 0 }
                 } ?: 0
 
-                val generatedMap = mutableMapOf<String, String>()
+                val generatedMap = mutableMapOf<String, String>() // itemId -> barcode
                 var seq = maxSeq
 
                 for (item in selected) {
                     seq++
                     val barcode = BarcodeGenerator.generateEan13(storeCode, seq)
-                    generatedMap[item.product.id] = barcode
+                    generatedMap[item.itemId] = barcode
 
-                    // Save barcode to database
-                    val updatedProduct = item.product.copy(
-                        barcode = barcode,
-                        updatedAt = System.currentTimeMillis(),
-                    )
-                    productRepository.update(updatedProduct)
+                    if (item.variant != null) {
+                        // Save barcode to variant
+                        val updatedVariant = item.variant.copy(
+                            barcode = barcode,
+                            updatedAt = System.currentTimeMillis(),
+                        )
+                        productRepository.updateVariant(updatedVariant)
+                    } else {
+                        // Save barcode to product
+                        val updatedProduct = item.product.copy(
+                            barcode = barcode,
+                            updatedAt = System.currentTimeMillis(),
+                        )
+                        productRepository.update(updatedProduct)
+                    }
                 }
 
                 // Update state with generated barcodes
                 _state.update { st ->
                     val updatedProducts = st.products.map { item ->
-                        val newBarcode = generatedMap[item.product.id]
+                        val newBarcode = generatedMap[item.itemId]
                         if (newBarcode != null) {
                             item.copy(
                                 hasBarcode = true,
                                 generatedBarcode = newBarcode,
-                                product = item.product.copy(barcode = newBarcode),
+                                product = if (item.variant == null) item.product.copy(barcode = newBarcode) else item.product,
+                                variant = item.variant?.copy(barcode = newBarcode),
                             )
                         } else item
                     }
@@ -220,18 +279,18 @@ class BarcodeViewModel @Inject constructor(
                         products = updatedProducts,
                         isGenerating = false,
                         generatedBarcodes = st.generatedBarcodes + generatedMap,
-                        message = "Đã tạo ${generatedMap.size} mã vạch",
+                        message = str(R.string.barcodes_generated, generatedMap.size),
                     )
                 }
                 applyFilter()
             } catch (e: Exception) {
-                _state.update { it.copy(isGenerating = false, error = "Lỗi tạo mã vạch: ${e.message}") }
+                _state.update { it.copy(isGenerating = false, error = str(R.string.error_generate_barcode, e.message ?: "")) }
             }
         }
     }
 
     /**
-     * Generate preview of all selected products' barcode labels.
+     * Generate preview of all selected products/variants barcode labels.
      */
     fun showBarcodePreview() {
         viewModelScope.launch {
@@ -242,16 +301,16 @@ class BarcodeViewModel @Inject constructor(
             }
 
             if (selectedWithBarcode.isEmpty()) {
-                _state.update { it.copy(isGenerating = false, error = "Vui lòng chọn sản phẩm có mã vạch") }
+                _state.update { it.copy(isGenerating = false, error = str(R.string.select_products_with_barcode)) }
                 return@launch
             }
 
             val labels = selectedWithBarcode.map { item ->
-                val barcode = item.generatedBarcode ?: item.product.barcode!!
+                val barcode = item.currentBarcode!!
                 BarcodeGenerator.generateLabelBitmap(
                     barcode = barcode,
-                    productName = item.product.name,
-                    sku = item.product.sku,
+                    productName = item.displayName,
+                    sku = item.displaySku,
                 )
             }
 
@@ -282,7 +341,7 @@ class BarcodeViewModel @Inject constructor(
                 val file = BarcodePrintHelper.saveLabelsPdf(context, bitmap, "barcodes_${System.currentTimeMillis()}")
                 BarcodePrintHelper.sharePdf(context, file)
             } catch (e: Exception) {
-                _state.update { it.copy(error = "Lỗi chia sẻ: ${e.message}") }
+                _state.update { it.copy(error = str(R.string.error_sharing, e.message ?: "")) }
             }
         }
     }
@@ -297,7 +356,7 @@ class BarcodeViewModel @Inject constructor(
                 val file = BarcodePrintHelper.saveLabelsImage(context, bitmap, "barcodes_${System.currentTimeMillis()}")
                 BarcodePrintHelper.shareImage(context, file)
             } catch (e: Exception) {
-                _state.update { it.copy(error = "Lỗi chia sẻ: ${e.message}") }
+                _state.update { it.copy(error = str(R.string.error_sharing, e.message ?: "")) }
             }
         }
     }
@@ -314,15 +373,15 @@ class BarcodeViewModel @Inject constructor(
         _state.update { it.copy(showPrinterPicker = false) }
     }
 
-    fun printViaBluetooth(device: BluetoothDevice) {
+    fun printViaBluetooth(context: Context, device: BluetoothDevice) {
         val bitmap = _state.value.previewBitmap ?: return
         viewModelScope.launch {
             _state.update { it.copy(isPrinting = true, showPrinterPicker = false) }
-            val result = ReceiptPrintHelper.printBitmap(device, bitmap)
+            val result = ReceiptPrintHelper.printBitmap(context, device, bitmap)
             _state.update {
                 it.copy(
                     isPrinting = false,
-                    message = if (result.isSuccess) "In thành công!" else null,
+                    message = if (result.isSuccess) str(R.string.print_success) else null,
                     error = if (result.isFailure) result.exceptionOrNull()?.message else null,
                 )
             }

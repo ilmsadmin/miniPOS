@@ -1,49 +1,109 @@
 package com.minipos.core.theme
 
+import android.app.Activity
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = AppColors.Primary,
+    primary = LightMiniPosColors.Primary,
     onPrimary = Color.White,
-    primaryContainer = AppColors.PrimaryContainer,
-    onPrimaryContainer = AppColors.PrimaryDark,
+    primaryContainer = LightMiniPosColors.PrimaryContainer,
+    onPrimaryContainer = LightMiniPosColors.PrimaryDark,
 
-    secondary = AppColors.Secondary,
+    secondary = LightMiniPosColors.Secondary,
     onSecondary = Color.White,
-    secondaryContainer = AppColors.SecondaryContainer,
-    onSecondaryContainer = AppColors.SecondaryDark,
+    secondaryContainer = LightMiniPosColors.SecondaryContainer,
+    onSecondaryContainer = LightMiniPosColors.SecondaryDark,
 
-    tertiary = AppColors.Accent,
+    tertiary = LightMiniPosColors.Accent,
     onTertiary = Color.White,
-    tertiaryContainer = AppColors.AccentContainer,
-    onTertiaryContainer = AppColors.AccentDark,
+    tertiaryContainer = LightMiniPosColors.AccentContainer,
+    onTertiaryContainer = LightMiniPosColors.AccentDark,
 
-    error = AppColors.Error,
+    error = LightMiniPosColors.Error,
     onError = Color.White,
-    errorContainer = AppColors.ErrorContainer,
-    onErrorContainer = AppColors.ErrorDark,
+    errorContainer = LightMiniPosColors.ErrorContainer,
+    onErrorContainer = LightMiniPosColors.ErrorDark,
 
-    background = AppColors.Background,
-    onBackground = AppColors.TextPrimary,
+    background = LightMiniPosColors.Background,
+    onBackground = LightMiniPosColors.TextPrimary,
 
-    surface = AppColors.Surface,
-    onSurface = AppColors.TextPrimary,
-    surfaceVariant = AppColors.SurfaceVariant,
-    onSurfaceVariant = AppColors.TextSecondary,
+    surface = LightMiniPosColors.Surface,
+    onSurface = LightMiniPosColors.TextPrimary,
+    surfaceVariant = LightMiniPosColors.SurfaceVariant,
+    onSurfaceVariant = LightMiniPosColors.TextSecondary,
 
-    outline = AppColors.Border,
-    outlineVariant = AppColors.Divider,
+    outline = LightMiniPosColors.Border,
+    outlineVariant = LightMiniPosColors.Divider,
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = DarkMiniPosColors.Primary,
+    onPrimary = Color(0xFF0F172A),
+    primaryContainer = DarkMiniPosColors.PrimaryContainer,
+    onPrimaryContainer = DarkMiniPosColors.PrimaryLight,
+
+    secondary = DarkMiniPosColors.Secondary,
+    onSecondary = Color(0xFF0F172A),
+    secondaryContainer = DarkMiniPosColors.SecondaryContainer,
+    onSecondaryContainer = DarkMiniPosColors.SecondaryLight,
+
+    tertiary = DarkMiniPosColors.Accent,
+    onTertiary = Color(0xFF0F172A),
+    tertiaryContainer = DarkMiniPosColors.AccentContainer,
+    onTertiaryContainer = DarkMiniPosColors.AccentLight,
+
+    error = DarkMiniPosColors.Error,
+    onError = Color(0xFF0F172A),
+    errorContainer = DarkMiniPosColors.ErrorContainer,
+    onErrorContainer = DarkMiniPosColors.ErrorLight,
+
+    background = DarkMiniPosColors.Background,
+    onBackground = DarkMiniPosColors.TextPrimary,
+
+    surface = DarkMiniPosColors.Surface,
+    onSurface = DarkMiniPosColors.TextPrimary,
+    surfaceVariant = DarkMiniPosColors.SurfaceVariant,
+    onSurfaceVariant = DarkMiniPosColors.TextSecondary,
+
+    outline = DarkMiniPosColors.Border,
+    outlineVariant = DarkMiniPosColors.Divider,
 )
 
 @Composable
 fun MiniPosTheme(
-    content: @Composable () -> Unit
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = LightColorScheme,
-        typography = AppTypography,
-        content = content
-    )
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val miniPosColors = if (darkTheme) DarkMiniPosColors else LightMiniPosColors
+
+    // Update status bar color
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = if (darkTheme) {
+                DarkMiniPosColors.Background.toArgb()
+            } else {
+                LightMiniPosColors.Background.toArgb()
+            }
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
+    }
+
+    CompositionLocalProvider(LocalMiniPosColors provides miniPosColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content,
+        )
+    }
 }

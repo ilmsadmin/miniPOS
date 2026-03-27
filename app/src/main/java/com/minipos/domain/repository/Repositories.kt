@@ -8,7 +8,9 @@ interface AuthRepository {
         storeName: String, storeCode: String, address: String?, phone: String?,
         ownerName: String, ownerPin: String, ownerPassword: String
     ): Result<Store>
+    suspend fun ensureDefaultStore()
     suspend fun login(userId: String, pin: String): Result<AuthSession>
+    suspend fun autoLogin()
     suspend fun logout()
     suspend fun getCurrentSession(): AuthSession?
     fun isOnboarded(): Flow<Boolean>
@@ -28,6 +30,9 @@ interface UserRepository {
     fun observeUsers(storeId: String): Flow<List<User>>
     suspend fun getActiveUsers(storeId: String): List<User>
     suspend fun resetPin(userId: String, newPin: String): Result<Unit>
+    suspend fun clearPin(userId: String): Result<Unit>
+    suspend fun hasPin(userId: String): Boolean
+    suspend fun verifyPin(userId: String, pin: String): Boolean
 }
 
 interface CategoryRepository {
@@ -48,6 +53,13 @@ interface ProductRepository {
     suspend fun search(storeId: String, query: String): List<Product>
     suspend fun getByBarcode(storeId: String, barcode: String): Product?
     suspend fun generateSku(storeId: String): String
+    // Variants
+    suspend fun createVariant(variant: ProductVariant): Result<ProductVariant>
+    suspend fun updateVariant(variant: ProductVariant): Result<ProductVariant>
+    suspend fun deleteVariant(variantId: String): Result<Unit>
+    fun observeVariants(productId: String): Flow<List<ProductVariant>>
+    suspend fun getVariants(productId: String): List<ProductVariant>
+    suspend fun getVariantByBarcode(storeId: String, barcode: String): ProductVariant?
 }
 
 interface SupplierRepository {

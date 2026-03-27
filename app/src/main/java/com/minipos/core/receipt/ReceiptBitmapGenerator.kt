@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import com.minipos.R
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
 import com.minipos.domain.model.OrderDetail
@@ -30,6 +31,7 @@ object ReceiptBitmapGenerator {
      * @param paperWidth Use RECEIPT_WIDTH_58MM or RECEIPT_WIDTH_80MM
      */
     fun generate(
+        context: Context,
         store: Store,
         detail: OrderDetail,
         paperWidth: Int = RECEIPT_WIDTH_58MM,
@@ -47,17 +49,21 @@ object ReceiptBitmapGenerator {
             lines.add(ReceiptLine(store.address, Style.CENTER, FONT_SIZE_SMALL))
         }
         if (!store.phone.isNullOrBlank()) {
-            lines.add(ReceiptLine("ĐT: ${store.phone}", Style.CENTER, FONT_SIZE_SMALL))
+            lines.add(ReceiptLine(context.getString(R.string.receipt_phone_prefix, store.phone), Style.CENTER, FONT_SIZE_SMALL))
+        }
+        // Custom receipt header
+        if (store.settings.receiptHeader.isNotBlank()) {
+            lines.add(ReceiptLine(store.settings.receiptHeader, Style.CENTER, FONT_SIZE_SMALL))
         }
         lines.add(ReceiptLine.DOUBLE_DIVIDER)
-        lines.add(ReceiptLine("HÓA ĐƠN BÁN HÀNG", Style.BOLD_CENTER, FONT_SIZE_LARGE))
+        lines.add(ReceiptLine(context.getString(R.string.receipt_title), Style.BOLD_CENTER, FONT_SIZE_LARGE))
         lines.add(ReceiptLine.DOUBLE_DIVIDER)
 
         // Order info
-        lines.add(ReceiptLine("Mã: ${order.orderCode}", Style.LEFT, FONT_SIZE_NORMAL))
-        lines.add(ReceiptLine("Ngày: ${DateUtils.formatDateTime(order.createdAt)}", Style.LEFT, FONT_SIZE_NORMAL))
+        lines.add(ReceiptLine(context.getString(R.string.receipt_code, order.orderCode), Style.LEFT, FONT_SIZE_NORMAL))
+        lines.add(ReceiptLine(context.getString(R.string.receipt_date, DateUtils.formatDateTime(order.createdAt)), Style.LEFT, FONT_SIZE_NORMAL))
         if (!order.customerName.isNullOrBlank()) {
-            lines.add(ReceiptLine("KH: ${order.customerName}", Style.LEFT, FONT_SIZE_NORMAL))
+            lines.add(ReceiptLine(context.getString(R.string.receipt_customer_prefix, order.customerName), Style.LEFT, FONT_SIZE_NORMAL))
         }
         lines.add(ReceiptLine.DIVIDER)
 
@@ -79,7 +85,7 @@ object ReceiptBitmapGenerator {
             ))
             if (item.discountAmount > 0) {
                 lines.add(ReceiptLine(
-                    "  Giảm giá:",
+                    "  ${context.getString(R.string.receipt_discount_label)}",
                     "-${CurrencyFormatter.format(item.discountAmount)}",
                     FONT_SIZE_SMALL,
                 ))
@@ -88,31 +94,31 @@ object ReceiptBitmapGenerator {
         lines.add(ReceiptLine.DIVIDER)
 
         // Totals
-        lines.add(ReceiptLine("Tạm tính:", CurrencyFormatter.format(order.subtotal), FONT_SIZE_NORMAL))
+        lines.add(ReceiptLine(context.getString(R.string.receipt_subtotal), CurrencyFormatter.format(order.subtotal), FONT_SIZE_NORMAL))
         if (order.discountAmount > 0) {
             val discountLabel = when (order.discountType) {
-                "percent" -> "Giảm (${order.discountValue.toLong()}%):"
-                else -> "Giảm giá:"
+                "percent" -> context.getString(R.string.receipt_discount_percent_label, order.discountValue.toLong().toInt())
+                else -> context.getString(R.string.receipt_discount_label)
             }
             lines.add(ReceiptLine(discountLabel, "-${CurrencyFormatter.format(order.discountAmount)}", FONT_SIZE_NORMAL))
         }
         if (order.taxAmount > 0) {
-            lines.add(ReceiptLine("Thuế:", CurrencyFormatter.format(order.taxAmount), FONT_SIZE_NORMAL))
+            lines.add(ReceiptLine(context.getString(R.string.receipt_tax), CurrencyFormatter.format(order.taxAmount), FONT_SIZE_NORMAL))
         }
         lines.add(ReceiptLine.DOUBLE_DIVIDER)
-        lines.add(ReceiptLine("TỔNG CỘNG:", CurrencyFormatter.format(order.totalAmount), FONT_SIZE_LARGE))
+        lines.add(ReceiptLine(context.getString(R.string.receipt_grand_total), CurrencyFormatter.format(order.totalAmount), FONT_SIZE_LARGE))
         lines.add(ReceiptLine.DOUBLE_DIVIDER)
 
         // Payments
         for (payment in payments) {
             lines.add(ReceiptLine(
-                "${payment.method.displayName()}:",
+                "${payment.method.displayName(context)}:",
                 CurrencyFormatter.format(payment.amount),
                 FONT_SIZE_NORMAL,
             ))
             if (payment.changeAmount > 0) {
                 lines.add(ReceiptLine(
-                    "  Tiền thừa:",
+                    "  ${context.getString(R.string.receipt_change)}",
                     CurrencyFormatter.format(payment.changeAmount),
                     FONT_SIZE_SMALL,
                 ))
@@ -124,13 +130,14 @@ object ReceiptBitmapGenerator {
 
         // Notes
         if (!order.notes.isNullOrBlank()) {
-            lines.add(ReceiptLine("Ghi chú: ${order.notes}", Style.LEFT, FONT_SIZE_SMALL))
+            lines.add(ReceiptLine(context.getString(R.string.receipt_notes, order.notes), Style.LEFT, FONT_SIZE_SMALL))
             lines.add(ReceiptLine.DIVIDER)
         }
 
         // Footer
-        lines.add(ReceiptLine(store.settings.receiptHeader, Style.CENTER, FONT_SIZE_NORMAL))
-        lines.add(ReceiptLine(store.settings.receiptFooter, Style.CENTER, FONT_SIZE_SMALL))
+        if (store.settings.receiptFooter.isNotBlank()) {
+            lines.add(ReceiptLine(store.settings.receiptFooter, Style.CENTER, FONT_SIZE_SMALL))
+        }
         lines.add(ReceiptLine("", Style.LEFT, FONT_SIZE_NORMAL)) // blank line at end
 
         // Calculate total height

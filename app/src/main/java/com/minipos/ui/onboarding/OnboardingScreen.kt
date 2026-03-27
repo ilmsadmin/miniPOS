@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.minipos.R
@@ -42,7 +43,7 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Hệ thống bán hàng đơn giản\ncho cửa hàng của bạn",
+            text = stringResource(R.string.onboarding_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.TextSecondary,
             textAlign = TextAlign.Center,
@@ -58,7 +59,7 @@ fun OnboardingScreen(
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
         ) {
-            Text("🏪  Tạo cửa hàng mới", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.create_store_emoji), style = MaterialTheme.typography.titleMedium)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -70,18 +71,18 @@ fun OnboardingScreen(
                 .height(56.dp),
             shape = RoundedCornerShape(16.dp),
         ) {
-            Text("🔗  Tham gia cửa hàng", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.join_store_emoji), style = MaterialTheme.typography.titleMedium)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
-        Text("hoặc", style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
+        Text(stringResource(R.string.or_label), style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary)
         Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(onClick = { /* TODO: Google Drive restore */ }) {
-            Text("📥  Khôi phục từ Google Drive", color = AppColors.TextSecondary)
+            Text(stringResource(R.string.restore_gdrive_emoji), color = AppColors.TextSecondary)
         }
     }
 }

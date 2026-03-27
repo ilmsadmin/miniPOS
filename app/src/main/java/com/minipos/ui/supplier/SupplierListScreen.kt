@@ -13,11 +13,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.Supplier
 
@@ -42,15 +44,15 @@ fun SupplierListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nhà cung cấp") },
+                title = { Text(stringResource(R.string.supplier_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.showCreateForm() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Thêm NCC")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_supplier_cd))
                     }
                 },
             )
@@ -65,10 +67,10 @@ fun SupplierListScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Chưa có nhà cung cấp", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                    Text(stringResource(R.string.no_suppliers), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = { viewModel.showCreateForm() }, shape = RoundedCornerShape(8.dp)) {
-                        Text("Thêm nhà cung cấp")
+                        Text(stringResource(R.string.add_supplier_btn))
                     }
                 }
             }
@@ -103,10 +105,10 @@ private fun SupplierItem(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Xóa nhà cung cấp?") },
-            text = { Text("Bạn có chắc muốn xóa \"${supplier.name}\"?") },
-            confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDelete() }) { Text("Xóa", color = AppColors.Error) } },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Hủy") } },
+            title = { Text(stringResource(R.string.delete_supplier_title)) },
+            text = { Text(stringResource(R.string.delete_confirm_msg, supplier.name)) },
+            confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDelete() }) { Text(stringResource(R.string.delete), color = AppColors.Error) } },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -135,7 +137,7 @@ private fun SupplierItem(
                 }
             }
             IconButton(onClick = { showDeleteConfirm = true }) {
-                Icon(Icons.Default.Delete, contentDescription = "Xóa", tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -157,29 +159,29 @@ private fun SupplierFormDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (editing != null) "Sửa nhà cung cấp" else "Thêm nhà cung cấp") },
+        title = { Text(if (editing != null) stringResource(R.string.edit_supplier) else stringResource(R.string.add_supplier_btn)) },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Tên NCC *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.supplier_name_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
                 }
                 item {
-                    OutlinedTextField(value = contact, onValueChange = { contact = it }, label = { Text("Người liên hệ") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = contact, onValueChange = { contact = it }, label = { Text(stringResource(R.string.contact_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
                 }
                 item {
-                    OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Số điện thoại") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.phone_number)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), shape = RoundedCornerShape(8.dp))
                 }
                 item {
-                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(8.dp))
                 }
                 item {
-                    OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Địa chỉ") }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text(stringResource(R.string.address_label)) }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
                 }
                 item {
-                    OutlinedTextField(value = taxCode, onValueChange = { taxCode = it }, label = { Text("Mã số thuế") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = taxCode, onValueChange = { taxCode = it }, label = { Text(stringResource(R.string.tax_code)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
                 }
                 item {
-                    OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Ghi chú") }, modifier = Modifier.fillMaxWidth(), maxLines = 3, shape = RoundedCornerShape(8.dp))
+                    OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(stringResource(R.string.notes)) }, modifier = Modifier.fillMaxWidth(), maxLines = 3, shape = RoundedCornerShape(8.dp))
                 }
             }
         },
@@ -190,8 +192,8 @@ private fun SupplierFormDialog(
                 },
                 enabled = name.isNotBlank(),
                 shape = RoundedCornerShape(8.dp),
-            ) { Text("Lưu") }
+            ) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

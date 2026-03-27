@@ -2,23 +2,23 @@ package com.minipos.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.minipos.data.preferences.AppPreferences
 import com.minipos.domain.repository.AuthRepository
-import com.minipos.domain.repository.StoreRepository
+import com.minipos.domain.repository.UserRepository
+import com.minipos.data.preferences.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class AppState {
-    Loading, Onboarding, Login, Home
+    Loading, Locked, Home
 }
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val storeRepository: StoreRepository,
-    private val prefs: AppPreferences,
+    private val userRepository: UserRepository,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
 
     private val _appState = MutableStateFlow(AppState.Loading)
@@ -26,23 +26,23 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            authRepository.isOnboarded().collect { onboarded ->
-                if (!onboarded) {
-                    _appState.value = AppState.Onboarding
-                } else {
-                    // Safety check: if onboarded but database was wiped (e.g. destructive migration),
-                    // reset to onboarding so user can re-create store
-                    val store = storeRepository.getStore()
-                    if (store == null) {
-                        prefs.clearAll()
-                        _appState.value = AppState.Onboarding
-                        return@collect
-                    }
-
-                    val session = authRepository.getCurrentSession()
-                    _appState.value = if (session != null) AppState.Home else AppState.Login
-                }
+            // Ensure store exists (creates default if first launch)
+            authRepository.ensureDefaultStore()
+            // Check if current user has a PIN — if so, require PIN entry
+            val userId = appPreferences.getCurrentUserIdSync()
+            if (userId != null && userRepository.hasPin(userId)) {
+                _appState.value = AppState.Locked
+            } else {
+                _appState.value = AppState.Home
             }
         }
+    }
+
+    fun unlock() {
+        _appState.value = AppState.Home
+    }
+
+    fun lock() {
+        _appState.value = AppState.Locked
     }
 }

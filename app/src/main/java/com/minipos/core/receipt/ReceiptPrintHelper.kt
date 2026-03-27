@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Build
+import com.minipos.R
 import com.minipos.domain.model.OrderDetail
 import com.minipos.domain.model.Store
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +92,7 @@ object ReceiptPrintHelper {
      */
     @SuppressLint("MissingPermission")
     suspend fun printReceipt(
+        context: Context,
         device: BluetoothDevice,
         store: Store,
         detail: OrderDetail,
@@ -102,7 +104,7 @@ object ReceiptPrintHelper {
             val output = socket.outputStream
 
             // Generate and send text receipt via ESC/POS
-            sendTextReceipt(output, store, detail)
+            sendTextReceipt(output, context, store, detail)
 
             // Feed and cut
             output.write(ESC_FEED)
@@ -111,11 +113,11 @@ object ReceiptPrintHelper {
 
             kotlin.Result.success(Unit)
         } catch (e: IOException) {
-            kotlin.Result.failure(Exception("Lỗi kết nối máy in: ${e.message}"))
+            kotlin.Result.failure(Exception(context.getString(R.string.error_printer_connection, e.message)))
         } catch (e: SecurityException) {
-            kotlin.Result.failure(Exception("Không có quyền Bluetooth: ${e.message}"))
+            kotlin.Result.failure(Exception(context.getString(R.string.error_bluetooth_permission, e.message)))
         } catch (e: Exception) {
-            kotlin.Result.failure(Exception("Lỗi in hóa đơn: ${e.message}"))
+            kotlin.Result.failure(Exception(context.getString(R.string.error_print, e.message)))
         } finally {
             try { socket?.close() } catch (_: Exception) {}
         }
@@ -126,6 +128,7 @@ object ReceiptPrintHelper {
      */
     @SuppressLint("MissingPermission")
     suspend fun printBitmap(
+        context: Context,
         device: BluetoothDevice,
         bitmap: Bitmap,
     ): kotlin.Result<Unit> = withContext(Dispatchers.IO) {
@@ -147,16 +150,16 @@ object ReceiptPrintHelper {
 
             kotlin.Result.success(Unit)
         } catch (e: IOException) {
-            kotlin.Result.failure(Exception("Lỗi kết nối máy in: ${e.message}"))
+            kotlin.Result.failure(Exception(context.getString(R.string.error_printer_connection, e.message)))
         } catch (e: Exception) {
-            kotlin.Result.failure(Exception("Lỗi in hóa đơn: ${e.message}"))
+            kotlin.Result.failure(Exception(context.getString(R.string.error_print, e.message)))
         } finally {
             try { socket?.close() } catch (_: Exception) {}
         }
     }
 
-    private fun sendTextReceipt(output: OutputStream, store: Store, detail: OrderDetail) {
-        val textReceipt = ReceiptGenerator.generateTextReceipt(store, detail)
+    private fun sendTextReceipt(output: OutputStream, context: Context, store: Store, detail: OrderDetail) {
+        val textReceipt = ReceiptGenerator.generateTextReceipt(context, store, detail)
 
         output.write(ESC_INIT)
 

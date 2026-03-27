@@ -22,12 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
@@ -66,10 +68,10 @@ fun InventoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Quản lý kho") },
+                title = { Text(stringResource(R.string.inventory_manage_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -89,19 +91,19 @@ fun InventoryScreen(
                 Tab(
                     selected = state.selectedTab == InventoryTab.OVERVIEW,
                     onClick = { viewModel.selectTab(InventoryTab.OVERVIEW) },
-                    text = { Text("Tổng quan") },
+                    text = { Text(stringResource(R.string.tab_overview)) },
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 )
                 Tab(
                     selected = state.selectedTab == InventoryTab.STOCK_CHECK,
                     onClick = { viewModel.selectTab(InventoryTab.STOCK_CHECK) },
-                    text = { Text("Kiểm kho") },
+                    text = { Text(stringResource(R.string.tab_stock_check)) },
                     icon = { Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 )
                 Tab(
                     selected = state.selectedTab == InventoryTab.HISTORY,
                     onClick = { viewModel.selectTab(InventoryTab.HISTORY) },
-                    text = { Text("Lịch sử") },
+                    text = { Text(stringResource(R.string.tab_history)) },
                     icon = { Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 )
             }
@@ -136,21 +138,21 @@ private fun OverviewTab(state: InventoryState) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SummaryCard(
-                    label = "Tổng SP",
+                    label = stringResource(R.string.stat_total_products),
                     value = summary.totalProducts.toString(),
                     icon = Icons.Default.Category,
                     color = AppColors.Primary,
                     modifier = Modifier.weight(1f),
                 )
                 SummaryCard(
-                    label = "Sắp hết",
+                    label = stringResource(R.string.stat_low_stock),
                     value = summary.lowStockCount.toString(),
                     icon = Icons.Default.Warning,
                     color = AppColors.Warning,
                     modifier = Modifier.weight(1f),
                 )
                 SummaryCard(
-                    label = "Hết hàng",
+                    label = stringResource(R.string.stat_out_of_stock),
                     value = summary.outOfStockCount.toString(),
                     icon = Icons.Default.RemoveShoppingCart,
                     color = AppColors.Error,
@@ -170,7 +172,7 @@ private fun OverviewTab(state: InventoryState) {
                         .fillMaxWidth()
                         .padding(16.dp),
                 ) {
-                    Text("Giá trị tồn kho", style = MaterialTheme.typography.titleSmall, color = AppColors.SecondaryDark)
+                    Text(stringResource(R.string.inventory_value), style = MaterialTheme.typography.titleSmall, color = AppColors.SecondaryDark)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         CurrencyFormatter.format(summary.totalStockValue),
@@ -181,7 +183,7 @@ private fun OverviewTab(state: InventoryState) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         Column {
-                            Text("Nhập kho", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            Text(stringResource(R.string.stock_in_label), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                             Text(
                                 "+${summary.totalStockIn.toLong()}",
                                 style = MaterialTheme.typography.titleSmall,
@@ -190,7 +192,7 @@ private fun OverviewTab(state: InventoryState) {
                             )
                         }
                         Column {
-                            Text("Xuất kho", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                            Text(stringResource(R.string.stock_out_label), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                             Text(
                                 "-${summary.totalStockOut.toLong()}",
                                 style = MaterialTheme.typography.titleSmall,
@@ -207,7 +209,7 @@ private fun OverviewTab(state: InventoryState) {
         if (state.overviewItems.isNotEmpty()) {
             item {
                 StockBarChart(
-                    title = "Top sản phẩm theo tồn kho",
+                    title = stringResource(R.string.top_products_stock),
                     items = state.overviewItems.sortedByDescending { it.currentStock }.take(10),
                 )
             }
@@ -218,7 +220,7 @@ private fun OverviewTab(state: InventoryState) {
         if (lowStockItems.isNotEmpty()) {
             item {
                 Text(
-                    "⚠️ Sản phẩm sắp hết hàng",
+                    stringResource(R.string.low_stock_warning),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.Warning,
@@ -234,7 +236,7 @@ private fun OverviewTab(state: InventoryState) {
         if (outOfStockItems.isNotEmpty()) {
             item {
                 Text(
-                    "🚫 Sản phẩm hết hàng",
+                    stringResource(R.string.out_of_stock_warning),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.Error,
@@ -353,14 +355,14 @@ private fun StockCheckTab(state: InventoryState, viewModel: InventoryViewModel) 
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Tìm theo tên, SKU, barcode...") },
+            placeholder = { Text(stringResource(R.string.search_stock)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             trailingIcon = {
                 if (state.stockCheckSearch.isNotEmpty()) {
                     IconButton(onClick = { viewModel.updateStockCheckSearch("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Xóa")
+                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_cd))
                     }
                 }
             },
@@ -377,9 +379,9 @@ private fun StockCheckTab(state: InventoryState, viewModel: InventoryViewModel) 
             val lowStock = state.stockCheckItems.count { it.currentStock > 0 && it.currentStock <= it.product.minStock }
             val outOfStock = state.stockCheckItems.count { it.currentStock <= 0 }
 
-            MiniStatChip(label = "Tất cả", value = totalProducts.toString(), color = AppColors.Primary)
-            MiniStatChip(label = "Sắp hết", value = lowStock.toString(), color = AppColors.Warning)
-            MiniStatChip(label = "Hết hàng", value = outOfStock.toString(), color = AppColors.Error)
+            MiniStatChip(label = stringResource(R.string.filter_all_stock), value = totalProducts.toString(), color = AppColors.Primary)
+            MiniStatChip(label = stringResource(R.string.filter_low), value = lowStock.toString(), color = AppColors.Warning)
+            MiniStatChip(label = stringResource(R.string.filter_out), value = outOfStock.toString(), color = AppColors.Error)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -390,7 +392,7 @@ private fun StockCheckTab(state: InventoryState, viewModel: InventoryViewModel) 
                     Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        if (state.stockCheckSearch.isNotEmpty()) "Không tìm thấy sản phẩm" else "Chưa có sản phẩm theo dõi tồn kho",
+                        if (state.stockCheckSearch.isNotEmpty()) stringResource(R.string.stock_check_not_found) else stringResource(R.string.stock_check_empty),
                         style = MaterialTheme.typography.titleMedium,
                         color = AppColors.TextSecondary,
                     )
@@ -455,7 +457,7 @@ private fun StockCheckProductCard(item: ProductStock, onAdjust: () -> Unit) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(item.product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        "SKU: ${item.product.sku} · Đơn vị: ${item.product.unit}",
+                        "SKU: ${item.product.sku} · ${stringResource(R.string.unit)}: ${item.product.unit}",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                     )
@@ -485,7 +487,7 @@ private fun StockCheckProductCard(item: ProductStock, onAdjust: () -> Unit) {
                         contentColor = AppColors.Primary,
                     ),
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Điều chỉnh", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.adjust_cd), modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -523,13 +525,13 @@ private fun HistoryTab(state: InventoryState, viewModel: InventoryViewModel) {
             FilterChip(
                 selected = state.historyFilterType == "all",
                 onClick = { viewModel.setHistoryFilterType("all") },
-                label = { Text("Tất cả") },
+                label = { Text(stringResource(R.string.history_all)) },
                 leadingIcon = if (state.historyFilterType == "all") { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
             )
             FilterChip(
                 selected = state.historyFilterType == "in",
                 onClick = { viewModel.setHistoryFilterType("in") },
-                label = { Text("Nhập kho") },
+                label = { Text(stringResource(R.string.history_stock_in)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AppColors.SecondaryContainer,
                     selectedLabelColor = AppColors.SecondaryDark,
@@ -539,7 +541,7 @@ private fun HistoryTab(state: InventoryState, viewModel: InventoryViewModel) {
             FilterChip(
                 selected = state.historyFilterType == "out",
                 onClick = { viewModel.setHistoryFilterType("out") },
-                label = { Text("Xuất kho") },
+                label = { Text(stringResource(R.string.history_stock_out)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AppColors.ErrorContainer,
                     selectedLabelColor = AppColors.ErrorDark,
@@ -577,7 +579,7 @@ private fun HistoryTab(state: InventoryState, viewModel: InventoryViewModel) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Chưa có lịch sử nhập/xuất kho", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                    Text(stringResource(R.string.no_stock_history), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                 }
             }
         } else {
@@ -613,7 +615,7 @@ private fun HistoryItemCard(item: StockHistoryItem, onClick: () -> Unit) {
     val isIncoming = item.type in listOf(
         StockMovementType.PURCHASE_IN, StockMovementType.RETURN_IN, StockMovementType.ADJUSTMENT_IN
     )
-    val typeInfo = getMovementTypeInfo(item.type)
+    val typeInfo = getMovementTypeInfoData(item.type)
 
     Card(
         shape = RoundedCornerShape(10.dp),
@@ -632,10 +634,10 @@ private fun HistoryItemCard(item: StockHistoryItem, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(typeInfo.second.copy(alpha = 0.12f)),
+                    .background(typeInfo.color.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(typeInfo.first, contentDescription = null, tint = typeInfo.second, modifier = Modifier.size(20.dp))
+                Icon(typeInfo.icon, contentDescription = null, tint = typeInfo.color, modifier = Modifier.size(20.dp))
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -643,7 +645,7 @@ private fun HistoryItemCard(item: StockHistoryItem, onClick: () -> Unit) {
             // Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(typeInfo.third, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                Text(stringResource(typeInfo.labelRes), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
                 if (!item.notes.isNullOrBlank()) {
                     Text(item.notes, style = MaterialTheme.typography.bodySmall, color = AppColors.TextTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -674,16 +676,19 @@ private fun HistoryItemCard(item: StockHistoryItem, onClick: () -> Unit) {
     }
 }
 
-private fun getMovementTypeInfo(type: StockMovementType): Triple<ImageVector, Color, String> {
+private data class MovementTypeInfo(val icon: ImageVector, val color: Color, val labelRes: Int)
+
+@Composable
+private fun getMovementTypeInfoData(type: StockMovementType): MovementTypeInfo {
     return when (type) {
-        StockMovementType.PURCHASE_IN -> Triple(Icons.Default.ShoppingCart, AppColors.Secondary, "Nhập hàng")
-        StockMovementType.SALE_OUT -> Triple(Icons.Default.PointOfSale, AppColors.Error, "Bán hàng")
-        StockMovementType.RETURN_IN -> Triple(Icons.AutoMirrored.Filled.AssignmentReturn, AppColors.Info, "Trả hàng (nhận)")
-        StockMovementType.RETURN_OUT -> Triple(Icons.AutoMirrored.Filled.Undo, AppColors.Warning, "Trả hàng (trả)")
-        StockMovementType.ADJUSTMENT_IN -> Triple(Icons.Default.AddCircle, AppColors.Secondary, "Điều chỉnh tăng")
-        StockMovementType.ADJUSTMENT_OUT -> Triple(Icons.Default.RemoveCircle, AppColors.Error, "Điều chỉnh giảm")
-        StockMovementType.DAMAGE_OUT -> Triple(Icons.Default.BrokenImage, AppColors.Error, "Hàng hỏng")
-        StockMovementType.TRANSFER -> Triple(Icons.Default.SwapHoriz, AppColors.Info, "Chuyển kho")
+        StockMovementType.PURCHASE_IN -> MovementTypeInfo(Icons.Default.ShoppingCart, AppColors.Secondary, R.string.movement_purchase_in)
+        StockMovementType.SALE_OUT -> MovementTypeInfo(Icons.Default.PointOfSale, AppColors.Error, R.string.movement_sale_out)
+        StockMovementType.RETURN_IN -> MovementTypeInfo(Icons.AutoMirrored.Filled.AssignmentReturn, AppColors.Info, R.string.movement_return_in)
+        StockMovementType.RETURN_OUT -> MovementTypeInfo(Icons.AutoMirrored.Filled.Undo, AppColors.Warning, R.string.movement_return_out)
+        StockMovementType.ADJUSTMENT_IN -> MovementTypeInfo(Icons.Default.AddCircle, AppColors.Secondary, R.string.movement_adjustment_in)
+        StockMovementType.ADJUSTMENT_OUT -> MovementTypeInfo(Icons.Default.RemoveCircle, AppColors.Error, R.string.movement_adjustment_out)
+        StockMovementType.DAMAGE_OUT -> MovementTypeInfo(Icons.Default.BrokenImage, AppColors.Error, R.string.movement_damage_out)
+        StockMovementType.TRANSFER -> MovementTypeInfo(Icons.Default.SwapHoriz, AppColors.Info, R.string.movement_transfer)
     }
 }
 
@@ -692,7 +697,7 @@ private fun HistoryDetailDialog(
     item: StockHistoryItem,
     onDismiss: () -> Unit,
 ) {
-    val typeInfo = getMovementTypeInfo(item.type)
+    val typeInfo = getMovementTypeInfoData(item.type)
     val isIncoming = item.type in listOf(
         StockMovementType.PURCHASE_IN, StockMovementType.RETURN_IN, StockMovementType.ADJUSTMENT_IN
     )
@@ -700,28 +705,28 @@ private fun HistoryDetailDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Đóng") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close_btn)) }
         },
         icon = {
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(typeInfo.second.copy(alpha = 0.12f)),
+                    .background(typeInfo.color.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(typeInfo.first, contentDescription = null, tint = typeInfo.second, modifier = Modifier.size(24.dp))
+                Icon(typeInfo.icon, contentDescription = null, tint = typeInfo.color, modifier = Modifier.size(24.dp))
             }
         },
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    typeInfo.third,
+                    stringResource(typeInfo.labelRes),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    "${if (isIncoming) "+" else "-"}${item.quantity.toLong()} đơn vị",
+                    stringResource(R.string.quantity_unit_format, if (isIncoming) "+" else "-", item.quantity.toLong()),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (isIncoming) AppColors.Secondary else AppColors.Error,
@@ -739,7 +744,7 @@ private fun HistoryDetailDialog(
                 // Product
                 DetailRow(
                     icon = Icons.Default.Inventory2,
-                    label = "Sản phẩm",
+                    label = stringResource(R.string.detail_product),
                     value = item.productName,
                 )
 
@@ -753,7 +758,7 @@ private fun HistoryDetailDialog(
                 // Stock change
                 DetailRow(
                     icon = Icons.Default.SwapVert,
-                    label = "Thay đổi tồn kho",
+                    label = stringResource(R.string.detail_stock_change),
                     value = "${item.quantityBefore.toLong()} → ${item.quantityAfter.toLong()}",
                 )
 
@@ -761,12 +766,12 @@ private fun HistoryDetailDialog(
                 if (item.unitCost != null && item.unitCost > 0) {
                     DetailRow(
                         icon = Icons.Default.AttachMoney,
-                        label = "Đơn giá nhập",
+                        label = stringResource(R.string.detail_unit_cost),
                         value = CurrencyFormatter.format(item.unitCost),
                     )
                     DetailRow(
                         icon = Icons.Default.Calculate,
-                        label = "Tổng giá trị",
+                        label = stringResource(R.string.detail_total_value),
                         value = CurrencyFormatter.format(item.unitCost * item.quantity),
                     )
                 }
@@ -775,7 +780,7 @@ private fun HistoryDetailDialog(
                 if (!item.supplierName.isNullOrBlank()) {
                     DetailRow(
                         icon = Icons.Default.LocalShipping,
-                        label = "Nhà cung cấp",
+                        label = stringResource(R.string.detail_supplier),
                         value = item.supplierName,
                     )
                 }
@@ -783,10 +788,10 @@ private fun HistoryDetailDialog(
                 // Reference
                 if (!item.referenceId.isNullOrBlank()) {
                     val refLabel = when (item.referenceType?.lowercase()) {
-                        "order" -> "Mã đơn hàng"
-                        "purchase" -> "Mã phiếu nhập"
-                        "return" -> "Mã trả hàng"
-                        else -> "Mã tham chiếu"
+                        "order" -> stringResource(R.string.ref_order)
+                        "purchase" -> stringResource(R.string.ref_purchase)
+                        "return" -> stringResource(R.string.ref_return)
+                        else -> stringResource(R.string.ref_other)
                     }
                     DetailRow(
                         icon = Icons.Default.Receipt,
@@ -799,7 +804,7 @@ private fun HistoryDetailDialog(
                 if (!item.notes.isNullOrBlank()) {
                     DetailRow(
                         icon = Icons.AutoMirrored.Filled.Notes,
-                        label = "Ghi chú",
+                        label = stringResource(R.string.detail_notes),
                         value = item.notes,
                     )
                 }
@@ -807,21 +812,21 @@ private fun HistoryDetailDialog(
                 // Created by
                 DetailRow(
                     icon = Icons.Default.Person,
-                    label = "Thực hiện bởi",
+                    label = stringResource(R.string.detail_performed_by),
                     value = item.createdBy,
                 )
 
                 // Timestamp
                 DetailRow(
                     icon = Icons.Default.AccessTime,
-                    label = "Thời gian",
+                    label = stringResource(R.string.detail_time),
                     value = DateUtils.formatDateTime(item.createdAt),
                 )
 
                 // Movement ID
                 DetailRow(
                     icon = Icons.Default.Fingerprint,
-                    label = "Mã giao dịch",
+                    label = stringResource(R.string.detail_transaction_id),
                     value = item.id.take(12) + "...",
                 )
             }
@@ -902,19 +907,19 @@ private fun StockAdjustDialog(
     var supplierExpanded by remember { mutableStateOf(false) }
 
     val types = listOf(
-        StockMovementType.PURCHASE_IN to "Nhập hàng",
-        StockMovementType.ADJUSTMENT_IN to "Điều chỉnh tăng",
-        StockMovementType.ADJUSTMENT_OUT to "Điều chỉnh giảm",
-        StockMovementType.DAMAGE_OUT to "Hàng hỏng",
-        StockMovementType.RETURN_IN to "Trả lại (nhận)",
+        StockMovementType.PURCHASE_IN to stringResource(R.string.movement_purchase_in_label),
+        StockMovementType.ADJUSTMENT_IN to stringResource(R.string.movement_adj_in_label),
+        StockMovementType.ADJUSTMENT_OUT to stringResource(R.string.movement_adj_out_label),
+        StockMovementType.DAMAGE_OUT to stringResource(R.string.movement_damage_label),
+        StockMovementType.RETURN_IN to stringResource(R.string.movement_return_in_label),
     )
 
     val isPurchaseIn = selectedType == StockMovementType.PURCHASE_IN
-    val selectedSupplierName = suppliers.find { it.id == selectedSupplierId }?.name ?: "Chọn nhà cung cấp"
+    val selectedSupplierName = suppliers.find { it.id == selectedSupplierId }?.name ?: stringResource(R.string.supplier_select)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Điều chỉnh tồn kho") },
+        title = { Text(stringResource(R.string.adjust_stock_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
@@ -945,7 +950,7 @@ private fun StockAdjustDialog(
                             value = selectedSupplierName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Nhà cung cấp") },
+                            label = { Text(stringResource(R.string.supplier_select_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supplierExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp),
@@ -956,7 +961,7 @@ private fun StockAdjustDialog(
                             onDismissRequest = { supplierExpanded = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("-- Không chọn --", color = AppColors.TextSecondary) },
+                                text = { Text(stringResource(R.string.supplier_none), color = AppColors.TextSecondary) },
                                 onClick = {
                                     selectedSupplierId = null
                                     supplierExpanded = false
@@ -978,7 +983,7 @@ private fun StockAdjustDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Số lượng") },
+                    label = { Text(stringResource(R.string.quantity_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
@@ -998,8 +1003,8 @@ private fun StockAdjustDialog(
                 },
                 enabled = (amount.toDoubleOrNull() ?: 0.0) > 0,
                 shape = RoundedCornerShape(8.dp),
-            ) { Text("Xác nhận") }
+            ) { Text(stringResource(R.string.confirm_btn)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

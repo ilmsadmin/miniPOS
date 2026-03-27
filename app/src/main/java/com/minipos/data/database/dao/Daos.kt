@@ -172,6 +172,33 @@ interface ProductDao {
 }
 
 @Dao
+interface ProductVariantDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(variant: ProductVariantEntity)
+
+    @Update
+    suspend fun update(variant: ProductVariantEntity)
+
+    @Query("SELECT * FROM product_variants WHERE id = :id AND is_deleted = 0")
+    suspend fun getById(id: String): ProductVariantEntity?
+
+    @Query("SELECT * FROM product_variants WHERE product_id = :productId AND is_deleted = 0 AND is_active = 1 ORDER BY variant_name")
+    fun observeByProductId(productId: String): Flow<List<ProductVariantEntity>>
+
+    @Query("SELECT * FROM product_variants WHERE product_id = :productId AND is_deleted = 0 AND is_active = 1 ORDER BY variant_name")
+    suspend fun getByProductId(productId: String): List<ProductVariantEntity>
+
+    @Query("SELECT * FROM product_variants WHERE barcode = :barcode AND store_id = :storeId AND is_deleted = 0 LIMIT 1")
+    suspend fun getByBarcode(storeId: String, barcode: String): ProductVariantEntity?
+
+    @Query("UPDATE product_variants SET is_deleted = 1, deleted_at = :timestamp, updated_at = :timestamp WHERE id = :variantId")
+    suspend fun softDelete(variantId: String, timestamp: Long)
+
+    @Query("UPDATE product_variants SET is_deleted = 1, deleted_at = :timestamp, updated_at = :timestamp WHERE product_id = :productId")
+    suspend fun softDeleteByProductId(productId: String, timestamp: Long)
+}
+
+@Dao
 interface CustomerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(customer: CustomerEntity)

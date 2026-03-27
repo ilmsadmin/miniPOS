@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,8 +35,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
+import com.minipos.R
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Product
+import com.minipos.domain.model.ProductVariant
 import com.minipos.ui.scanner.BarcodeScannerScreen
 import com.minipos.ui.scanner.ImageViewerScreen
 import java.io.File
@@ -55,9 +59,22 @@ fun PosStep1Screen(
         BarcodeScannerScreen(
             onBarcodeScanned = { value, _ -> viewModel.onBarcodeScanned(value) },
             onClose = { viewModel.dismissBarcodeScanner() },
-            title = "Quét mã vạch sản phẩm",
+            title = stringResource(R.string.scan_product_barcode_title),
         )
         return
+    }
+
+    // Variant picker dialog
+    if (state.showVariantPicker && state.variantPickerProduct != null) {
+        val pickerProduct = state.variantPickerProduct!!
+        VariantPickerDialog(
+            product = pickerProduct,
+            variants = state.variantPickerVariants,
+            onSelectVariant = { variant ->
+                viewModel.addVariantToCart(pickerProduct, variant)
+            },
+            onDismiss = { viewModel.dismissVariantPicker() },
+        )
     }
 
     // Show stock error as snackbar
@@ -72,10 +89,10 @@ fun PosStep1Screen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Bước 1: Chọn sản phẩm") },
+                title = { Text(stringResource(R.string.pos_step1_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
                     }
                 },
             )
@@ -97,7 +114,7 @@ fun PosStep1Screen(
                     ) {
                         Column {
                             Text(
-                                "${cart.itemCount} sản phẩm · ${cart.totalQuantity.toInt()} item",
+                                stringResource(R.string.cart_summary_format, cart.itemCount, cart.totalQuantity.toInt()),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.8f),
                             )
@@ -109,7 +126,7 @@ fun PosStep1Screen(
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Tiếp theo", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                            Text(stringResource(R.string.next_label), style = MaterialTheme.typography.titleMedium, color = Color.White)
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
                         }
                     }
@@ -126,14 +143,14 @@ fun PosStep1Screen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.search(it) },
-                placeholder = { Text("Tìm sản phẩm…") },
+                placeholder = { Text(stringResource(R.string.product_search_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { viewModel.showBarcodeScanner() }) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Quét mã vạch")
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_barcode_cd))
                     }
                 },
                 singleLine = true,
@@ -149,7 +166,7 @@ fun PosStep1Screen(
                     FilterChip(
                         selected = state.selectedCategory == null,
                         onClick = { viewModel.selectCategory(null) },
-                        label = { Text("Tất cả") },
+                        label = { Text(stringResource(R.string.filter_all_products)) },
                     )
                 }
                 items(state.categories) { category ->
@@ -169,7 +186,7 @@ fun PosStep1Screen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("Chưa có sản phẩm", color = AppColors.TextSecondary)
+                    Text(stringResource(R.string.no_products_pos), color = AppColors.TextSecondary)
                 }
             } else {
                 LazyVerticalGrid(
@@ -179,7 +196,7 @@ fun PosStep1Screen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(state.products) { product ->
-                        val qty = cart.items.firstOrNull { it.product.id == product.id }?.quantity?.toInt() ?: 0
+                        val qty = cart.items.filter { it.product.id == product.id }.sumOf { it.quantity }.toInt()
                         val availableStock = viewModel.cartHolder.getAvailableStock(product.id)
                         ProductGridItem(product = product, quantity = qty, availableStock = availableStock) {
                             viewModel.addToCart(product)
@@ -278,6 +295,13 @@ private fun ProductGridItem(product: Product, quantity: Int, availableStock: Dou
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
+                if (product.hasVariants) {
+                    Text(
+                        stringResource(R.string.has_variants_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.Accent,
+                    )
+                }
                 Text(
                     CurrencyFormatter.format(product.sellingPrice),
                     style = MaterialTheme.typography.labelSmall,
@@ -287,7 +311,7 @@ private fun ProductGridItem(product: Product, quantity: Int, availableStock: Dou
                 // Show stock info
                 if (product.trackInventory && availableStock != null) {
                     Text(
-                        if (isOutOfStock) "Hết hàng" else "Kho: ${availableStock.toLong()}",
+                        if (isOutOfStock) stringResource(R.string.out_of_stock_label) else stringResource(R.string.stock_prefix, availableStock.toLong().toInt()),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isOutOfStock) AppColors.Error else AppColors.TextTertiary,
                     )
@@ -305,4 +329,82 @@ private fun ProductGridItem(product: Product, quantity: Int, availableStock: Dou
             }
         }
     }
+}
+
+@Composable
+private fun VariantPickerDialog(
+    product: Product,
+    variants: List<ProductVariant>,
+    onSelectVariant: (ProductVariant) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.select_variant_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.TextSecondary,
+                )
+            }
+        },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(variants) { variant ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectVariant(variant) },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColors.SurfaceVariant),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Style,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = AppColors.Accent,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    variant.variantName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                if (variant.attributes != "{}" && variant.attributes.isNotBlank()) {
+                                    Text(
+                                        variant.attributes,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = AppColors.TextSecondary,
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                CurrencyFormatter.format(variant.sellingPrice ?: product.sellingPrice),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.Secondary,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel_btn_label)) }
+        },
+    )
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.minipos.R
 import com.minipos.domain.model.OrderDetail
 import com.minipos.domain.model.Store
 import java.io.File
@@ -26,11 +27,11 @@ object ReceiptShareHelper {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Hóa đơn $orderCode")
-            putExtra(Intent.EXTRA_TEXT, "Hóa đơn $orderCode từ miniPOS")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_receipt_subject, orderCode))
+            putExtra(Intent.EXTRA_TEXT, context.getString(R.string.share_receipt_text, orderCode))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(shareIntent, "Chia sẻ hóa đơn")
+        val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_receipt_chooser))
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }
@@ -39,13 +40,13 @@ object ReceiptShareHelper {
      * Share receipt as plain text (e.g., via messaging apps).
      */
     fun shareText(context: Context, store: Store, detail: OrderDetail) {
-        val text = ReceiptGenerator.generateTextReceipt(store, detail)
+        val text = ReceiptGenerator.generateTextReceipt(context, store, detail)
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "Hóa đơn ${detail.order.orderCode}")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_receipt_subject, detail.order.orderCode))
             putExtra(Intent.EXTRA_TEXT, text)
         }
-        val chooser = Intent.createChooser(shareIntent, "Chia sẻ hóa đơn")
+        val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_receipt_chooser))
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }
@@ -61,7 +62,7 @@ object ReceiptShareHelper {
         asPdf: Boolean = true,
     ) {
         if (asPdf) {
-            val html = ReceiptGenerator.generateHtmlReceipt(store, detail)
+            val html = ReceiptGenerator.generateHtmlReceipt(context, store, detail)
             val fileName = "receipt_${detail.order.orderCode.replace("-", "_")}"
             val pdfFile = ReceiptPdfGenerator.generatePdfSimple(context, html, fileName)
             sharePdf(context, pdfFile, detail.order.orderCode)

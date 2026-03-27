@@ -1,7 +1,9 @@
 package com.minipos.ui.scan
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.R
 import com.minipos.domain.model.Product
 import com.minipos.domain.repository.InventoryRepository
 import com.minipos.domain.repository.ProductRepository
@@ -32,11 +34,14 @@ data class ScanToPosState(
 
 @HiltViewModel
 class ScanToPosViewModel @Inject constructor(
+    application: Application,
     private val storeRepository: StoreRepository,
     private val productRepository: ProductRepository,
     private val inventoryRepository: InventoryRepository,
     val cartHolder: PosCartHolder,
-) : ViewModel() {
+) : AndroidViewModel(application) {
+
+    private val ctx get() = getApplication<Application>()
 
     private val _state = MutableStateFlow(ScanToPosState())
     val state: StateFlow<ScanToPosState> = _state
@@ -46,6 +51,8 @@ class ScanToPosViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             storeId = storeRepository.getStore()?.id
+            // Refresh store settings in cart holder (for tax calculation)
+            cartHolder.refreshStoreSettings()
         }
     }
 
@@ -61,15 +68,27 @@ class ScanToPosViewModel @Inject constructor(
 
         viewModelScope.launch {
             val sid = storeId ?: run {
-                _state.update { it.copy(errorMessage = "Chưa có thông tin cửa hàng") }
+                _state.update { it.copy(errorMessage = ctx.getString(R.string.error_no_store)) }
                 return@launch
             }
 
             val product = productRepository.getByBarcode(sid, barcode)
             if (product == null) {
+                // Check variant barcode
+                val variant = productRepository.getVariantByBarcode(sid, barcode)
+                if (variant != null) {
+                    // For scan-to-pos, we still add the parent product to the list
+                    // The variant info will be handled when transferring to cart
+                    val allProducts = productRepository.getAll(sid)
+                    val parentProduct = allProducts.firstOrNull { it.id == variant.productId }
+                    if (parentProduct != null) {
+                        addProductToScannedList(sid, parentProduct, barcode, variant.variantName)
+                        return@launch
+                    }
+                }
                 _state.update {
                     it.copy(
-                        errorMessage = "Không tìm thấy sản phẩm với mã: $barcode",
+                        errorMessage = ctx.getString(R.string.error_product_not_found, barcode),
                         lastScannedBarcode = barcode,
                         isScanning = false,
                     )
@@ -77,43 +96,47 @@ class ScanToPosViewModel @Inject constructor(
                 return@launch
             }
 
-            // Check if already in list
-            val existing = _state.value.scannedProducts.indexOfFirst { it.product.id == product.id }
-            if (existing >= 0) {
-                val items = _state.value.scannedProducts.toMutableList()
-                val item = items[existing]
-                items[existing] = item.copy(quantity = item.quantity + 1)
-                _state.update {
-                    it.copy(
-                        scannedProducts = items,
-                        lastScannedBarcode = barcode,
-                        isScanning = false,
-                        successMessage = "+1 ${product.name}",
-                        errorMessage = null,
-                    )
-                }
-            } else {
-                // Get stock info
-                val stock = if (product.trackInventory) {
-                    inventoryRepository.getStock(sid, product.id)?.quantity ?: 0.0
-                } else {
-                    Double.MAX_VALUE
-                }
+            addProductToScannedList(sid, product, barcode, null)
+        }
+    }
 
-                _state.update {
-                    it.copy(
-                        scannedProducts = it.scannedProducts + ScannedProduct(
-                            product = product,
-                            currentStock = stock,
-                            quantity = 1,
-                            isSelected = true,
-                        ),
-                        lastScannedBarcode = barcode,
-                        isScanning = false,
-                        successMessage = "Đã thêm: ${product.name}",
-                        errorMessage = null,
-                    )
-                }
+    private suspend fun addProductToScannedList(storeId: String, product: Product, barcode: String, variantInfo: String?) {
+        val displayName = if (variantInfo != null) "${product.name} ($variantInfo)" else product.name
+
+        // Check if already in list
+        val existing = _state.value.scannedProducts.indexOfFirst { it.product.id == product.id }
+        if (existing >= 0) {
+            val items = _state.value.scannedProducts.toMutableList()
+            val item = items[existing]
+            items[existing] = item.copy(quantity = item.quantity + 1)
+            _state.update {
+                it.copy(
+                    scannedProducts = items,
+                    lastScannedBarcode = barcode,
+                    isScanning = false,
+                    successMessage = "+1 $displayName",
+                    errorMessage = null,
+                )
+            }
+        } else {
+            val stock = if (product.trackInventory) {
+                inventoryRepository.getStock(storeId, product.id)?.quantity ?: 0.0
+            } else {
+                Double.MAX_VALUE
+            }
+            _state.update {
+                it.copy(
+                    scannedProducts = it.scannedProducts + ScannedProduct(
+                        product = product,
+                        currentStock = stock,
+                        quantity = 1,
+                        isSelected = true,
+                    ),
+                    lastScannedBarcode = barcode,
+                    isScanning = false,
+                    successMessage = ctx.getString(R.string.added_product, displayName),
+                    errorMessage = null,
+                )
             }
         }
     }
@@ -180,7 +203,7 @@ class ScanToPosViewModel @Inject constructor(
     fun transferToPos(): Boolean {
         val selected = _state.value.scannedProducts.filter { it.isSelected }
         if (selected.isEmpty()) {
-            _state.update { it.copy(errorMessage = "Chưa chọn sản phẩm nào") }
+            _state.update { it.copy(errorMessage = ctx.getString(R.string.error_no_products_selected)) }
             return false
         }
 

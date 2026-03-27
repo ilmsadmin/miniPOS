@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.core.barcode.BarcodeGenerator
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,7 +67,7 @@ fun BarcodeScreen(
     if (state.showPrinterPicker) {
         PrinterPickerDialog(
             devices = state.availablePrinters,
-            onSelect = { viewModel.printViaBluetooth(it) },
+            onSelect = { viewModel.printViaBluetooth(context, it) },
             onDismiss = { viewModel.dismissPrinterPicker() },
         )
     }
@@ -73,16 +75,16 @@ fun BarcodeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tạo & In mã vạch") },
+                title = { Text(stringResource(R.string.barcode_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
                     if (state.selectedCount > 0) {
                         TextButton(onClick = { viewModel.deselectAll() }) {
-                            Text("Bỏ chọn", color = AppColors.TextSecondary)
+                            Text(stringResource(R.string.deselect_all), color = AppColors.TextSecondary)
                         }
                     }
                 },
@@ -110,7 +112,7 @@ fun BarcodeScreen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.search(it) },
-                placeholder = { Text("Tìm sản phẩm…") },
+                placeholder = { Text(stringResource(R.string.search_product_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -153,7 +155,7 @@ fun BarcodeScreen(
                     onCheckedChange = { viewModel.selectAllFiltered() },
                 )
                 Text(
-                    "Chọn tất cả (${state.filteredProducts.size} sản phẩm)",
+                    stringResource(R.string.select_all_items_format, state.filteredProducts.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.TextSecondary,
                 )
@@ -170,7 +172,7 @@ fun BarcodeScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Không tìm thấy sản phẩm", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                        Text(stringResource(R.string.no_products_found), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                     }
                 }
             } else {
@@ -178,10 +180,10 @@ fun BarcodeScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    items(state.filteredProducts, key = { it.product.id }) { item ->
+                    items(state.filteredProducts, key = { it.itemId }) { item ->
                         BarcodeProductCard(
                             item = item,
-                            onToggle = { viewModel.toggleProduct(item.product.id) },
+                            onToggle = { viewModel.toggleProduct(item.itemId) },
                         )
                     }
                 }
@@ -195,7 +197,7 @@ private fun BarcodeProductCard(
     item: BarcodeProductItem,
     onToggle: () -> Unit,
 ) {
-    val barcode = item.generatedBarcode ?: item.product.barcode
+    val barcode = item.currentBarcode
     val barcodePreview = remember(barcode) {
         barcode?.let {
             try { BarcodeGenerator.generateBarcodeBitmap(it, width = 200, height = 60, showText = true) }
@@ -225,15 +227,49 @@ private fun BarcodeProductCard(
             )
 
             Column(modifier = Modifier.weight(1f)) {
+                if (item.variant != null) {
+                    // Show parent product name in smaller text
+                    Text(
+                        item.product.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.TextTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    // Show variant name as main title
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "↳ ${item.variant.variantName}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = AppColors.Accent.copy(alpha = 0.15f),
+                        ) {
+                            Text(
+                                stringResource(R.string.variant_label_badge),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.Accent,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        item.product.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
-                    item.product.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    "SKU: ${item.product.sku}",
+                    "SKU: ${item.displaySku}",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary,
                 )
@@ -254,7 +290,7 @@ private fun BarcodeProductCard(
                     }
                 } else {
                     Text(
-                        "Chưa có mã vạch",
+                        stringResource(R.string.no_barcode_yet),
                         style = MaterialTheme.typography.labelSmall,
                         color = AppColors.Warning,
                     )
@@ -290,51 +326,55 @@ private fun BottomActionBar(
         shadowElevation = 8.dp,
         color = AppColors.Surface,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                "Đã chọn: $selectedCount",
+                stringResource(R.string.selected_count, selectedCount),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = AppColors.Primary,
             )
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (!hasAllBarcodes) {
-                Button(
-                    onClick = onGenerate,
-                    enabled = !isGenerating,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent),
-                ) {
-                    if (isGenerating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Tạo mã")
-                }
-            }
-
-            Button(
-                onClick = onPreview,
-                enabled = !isGenerating && hasAllBarcodes,
-                shape = RoundedCornerShape(8.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Xem & In")
+                if (!hasAllBarcodes) {
+                    Button(
+                        onClick = onGenerate,
+                        enabled = !isGenerating,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent),
+                    ) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.generate_barcodes), maxLines = 1)
+                    }
+                }
+
+                Button(
+                    onClick = onPreview,
+                    enabled = !isGenerating && hasAllBarcodes,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.barcode_preview), maxLines = 1)
+                }
             }
         }
     }
@@ -360,10 +400,10 @@ private fun BarcodeLabelPreviewDialog(
             topBar = {
                 @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
-                    title = { Text("Xem trước mã vạch") },
+                    title = { Text(stringResource(R.string.barcode_preview)) },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Đóng")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                         }
                     },
                 )
@@ -387,7 +427,7 @@ private fun BarcodeLabelPreviewDialog(
                             ) {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Chia sẻ PDF")
+                                Text(stringResource(R.string.share_pdf_label))
                             }
                             OutlinedButton(
                                 onClick = onShareImage,
@@ -396,7 +436,7 @@ private fun BarcodeLabelPreviewDialog(
                             ) {
                                 Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Chia sẻ ảnh")
+                                Text(stringResource(R.string.share_image_label))
                             }
                         }
                         Button(
@@ -412,11 +452,11 @@ private fun BarcodeLabelPreviewDialog(
                                     strokeWidth = 2.dp,
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Đang in…")
+                                Text(stringResource(R.string.printing))
                             } else {
                                 Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("In qua Bluetooth")
+                                Text(stringResource(R.string.print_via_bluetooth))
                             }
                         }
                     }
@@ -461,7 +501,7 @@ private fun PrinterPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Chọn máy in") },
+        title = { Text(stringResource(R.string.select_printer_title)) },
         text = {
             if (devices.isEmpty()) {
                 Column(
@@ -471,7 +511,7 @@ private fun PrinterPickerDialog(
                     Icon(Icons.Default.BluetoothDisabled, contentDescription = null, modifier = Modifier.size(48.dp), tint = AppColors.TextTertiary)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Không tìm thấy máy in.\nVui lòng ghép nối (pair) máy in Bluetooth trong Cài đặt.",
+                        stringResource(R.string.no_printer_found),
                         style = MaterialTheme.typography.bodyMedium,
                         color = AppColors.TextSecondary,
                     )
@@ -479,7 +519,8 @@ private fun PrinterPickerDialog(
             } else {
                 LazyColumn {
                     items(devices) { device ->
-                        val deviceName = try { device.name ?: "Không tên" } catch (_: Exception) { "Không tên" }
+                        val unknownName = stringResource(R.string.unknown_name)
+                        val deviceName = try { device.name ?: unknownName } catch (_: Exception) { unknownName }
                         ListItem(
                             headlineContent = { Text(deviceName) },
                             supportingContent = { Text(device.address, style = MaterialTheme.typography.bodySmall) },
@@ -492,7 +533,7 @@ private fun PrinterPickerDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Đóng") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
     )
 }

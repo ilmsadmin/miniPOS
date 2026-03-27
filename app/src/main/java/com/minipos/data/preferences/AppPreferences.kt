@@ -77,8 +77,8 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun logout() {
+        // Only reset session state; keep current user ID so PIN screen knows which user to verify
         context.dataStore.edit {
-            it.remove(KEY_CURRENT_USER_ID)
             it[KEY_LOGIN_ATTEMPTS] = 0
             it[KEY_LOCK_UNTIL] = 0
         }

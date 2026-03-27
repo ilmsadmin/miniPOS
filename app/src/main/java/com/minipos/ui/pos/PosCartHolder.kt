@@ -15,12 +15,20 @@ import javax.inject.Singleton
 @Singleton
 class PosCartHolder @Inject constructor(
     private val inventoryRepository: InventoryRepository,
+    private val storeRepository: StoreRepository,
 ) {
     private val _cart = MutableStateFlow(Cart())
     val cart: StateFlow<Cart> = _cart
 
     // Cache for stock quantities: productId -> available quantity
     private val stockCache = mutableMapOf<String, Double>()
+
+    // Cached store settings for tax
+    private var cachedStoreSettings: StoreSettings? = null
+
+    suspend fun refreshStoreSettings() {
+        cachedStoreSettings = storeRepository.getStore()?.settings
+    }
 
     private val _stockError = MutableStateFlow<String?>(null)
     val stockError: StateFlow<String?> = _stockError
@@ -50,18 +58,33 @@ class PosCartHolder @Inject constructor(
     fun getAvailableStock(productId: String): Double? = stockCache[productId]
 
     fun addItem(product: Product): Boolean {
-        if (product.trackInventory) {
-            val available = stockCache[product.id] ?: 0.0
+        // If product has variants, this should not be called directly
+        // Use addItemWithVariant instead
+        return addItemWithVariant(product, null)
+    }
+
+    fun addItemWithVariant(product: Product, variant: ProductVariant?): Boolean {
+        // Apply store default tax rate if product has no specific rate
+        val effectiveProduct = applyStoreTaxRate(product)
+
+        if (effectiveProduct.trackInventory) {
+            val available = stockCache[effectiveProduct.id] ?: 0.0
             val currentInCart = _cart.value.items
-                .filter { it.product.id == product.id }
+                .filter { it.product.id == effectiveProduct.id }
                 .sumOf { it.quantity }
             if (currentInCart + 1 > available) {
-                _stockError.value = "\"${product.name}\" chỉ còn ${available.toLong()} ${product.unit} trong kho"
+                _stockError.value = "\"${effectiveProduct.name}\" only has ${available.toLong()} ${effectiveProduct.unit} in stock"
                 return false
             }
         }
+
+        // Determine price: variant price overrides product price
+        val unitPrice = variant?.sellingPrice ?: effectiveProduct.sellingPrice
+
         _cart.update { cart ->
-            val existingIndex = cart.items.indexOfFirst { it.product.id == product.id && it.variant == null }
+            val existingIndex = cart.items.indexOfFirst {
+                it.product.id == effectiveProduct.id && it.variant?.id == variant?.id
+            }
             val newItems = if (existingIndex >= 0) {
                 cart.items.toMutableList().apply {
                     val item = this[existingIndex]
@@ -69,15 +92,28 @@ class PosCartHolder @Inject constructor(
                 }
             } else {
                 cart.items + CartItem(
-                    product = product,
+                    product = effectiveProduct,
+                    variant = variant,
                     quantity = 1.0,
-                    unitPrice = product.sellingPrice,
-                    originalPrice = product.sellingPrice,
+                    unitPrice = unitPrice,
+                    originalPrice = unitPrice,
                 )
             }
             cart.copy(items = newItems)
         }
         return true
+    }
+
+    /**
+     * If the store has tax enabled and a default tax rate,
+     * apply it to products that don't have their own specific tax rate.
+     */
+    private fun applyStoreTaxRate(product: Product): Product {
+        val settings = cachedStoreSettings ?: return product
+        if (!settings.taxEnabled) return product
+        if (product.taxRate > 0.0) return product // product has its own rate
+        if (settings.defaultTaxRate <= 0.0) return product
+        return product.copy(taxRate = settings.defaultTaxRate)
     }
 
     fun updateItemQuantity(index: Int, quantity: Double): Boolean {
@@ -98,7 +134,7 @@ class PosCartHolder @Inject constructor(
             val available = stockCache[item.product.id] ?: 0.0
             val otherQty = cart.items.filterIndexed { i, it -> i != index && it.product.id == item.product.id }.sumOf { it.quantity }
             if (otherQty + quantity > available) {
-                _stockError.value = "\"${item.product.name}\" chỉ còn ${available.toLong()} ${item.product.unit} trong kho"
+                _stockError.value = "\"${item.product.name}\" only has ${available.toLong()} ${item.product.unit} in stock"
                 return false
             }
         }

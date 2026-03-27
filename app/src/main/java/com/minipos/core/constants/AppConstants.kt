@@ -32,9 +32,10 @@ object AppConstants {
     const val ORDER_CODE_PREFIX = "HD"
     const val PURCHASE_ORDER_CODE_PREFIX = "NK"
 
-    // Default units
+    // Default units - loaded from string resources at runtime
+    // See R.string.units_list
     val DEFAULT_UNITS = listOf(
-        "cái", "chiếc", "hộp", "gói", "kg", "g",
-        "lít", "ml", "chai", "lon", "túi", "bịch", "thùng", "bộ"
+        "pcs", "item", "box", "pack", "kg", "g",
+        "L", "mL", "bottle", "can", "bag", "case", "set"
     )
 }

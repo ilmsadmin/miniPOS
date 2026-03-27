@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.minipos.core.theme.MiniPosTheme
 import com.minipos.ui.navigation.MiniPosNavGraph
 import com.minipos.ui.navigation.Screen
+import com.minipos.ui.pinlock.PinLockScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -42,38 +43,16 @@ fun MiniPosApp() {
     val appState by viewModel.appState.collectAsState()
     val navController = rememberNavController()
 
-    // Wait until initial state is resolved
-    if (appState == AppState.Loading) return
-
-    // Remember the initial start destination so NavHost is only created once
-    val startDestination = remember {
-        when (appState) {
-            AppState.Loading -> Screen.Onboarding.route // fallback, won't reach here
-            AppState.Onboarding -> Screen.Onboarding.route
-            AppState.Login -> Screen.Login.route
-            AppState.Home -> Screen.Home.route
+    when (appState) {
+        AppState.Loading -> return
+        AppState.Locked -> {
+            PinLockScreen(onUnlocked = { viewModel.unlock() })
+        }
+        AppState.Home -> {
+            MiniPosNavGraph(
+                navController = navController,
+                startDestination = Screen.Home.route,
+            )
         }
     }
-
-    // React to appState changes AFTER initial composition by navigating
-    var previousState by remember { mutableStateOf(appState) }
-    LaunchedEffect(appState) {
-        if (appState != previousState) {
-            previousState = appState
-            val targetRoute = when (appState) {
-                AppState.Loading -> return@LaunchedEffect
-                AppState.Onboarding -> Screen.Onboarding.route
-                AppState.Login -> Screen.Login.route
-                AppState.Home -> Screen.Home.route
-            }
-            navController.navigate(targetRoute) {
-                popUpTo(0) { inclusive = true }
-            }
-        }
-    }
-
-    MiniPosNavGraph(
-        navController = navController,
-        startDestination = startDestination,
-    )
 }

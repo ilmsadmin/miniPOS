@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.minipos.R
 import java.io.File
 
 /**
@@ -89,7 +91,7 @@ fun ImageViewerScreen(
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Đóng",
+                    contentDescription = stringResource(R.string.close_cd_img),
                     tint = Color.White,
                 )
             }

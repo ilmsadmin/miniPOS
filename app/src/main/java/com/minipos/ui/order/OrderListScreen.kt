@@ -13,9 +13,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
@@ -34,10 +36,10 @@ fun OrderListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Đơn hàng") },
+                title = { Text(stringResource(R.string.order_list_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
                     }
                 },
             )
@@ -57,14 +59,18 @@ fun OrderListScreen(
                     FilterChip(
                         selected = state.filterStatus == null,
                         onClick = { viewModel.setFilter(null) },
-                        label = { Text("Tất cả") },
+                        label = { Text(stringResource(R.string.filter_all)) },
                     )
                 }
-                items(listOf("COMPLETED" to "Hoàn thành", "REFUNDED" to "Hoàn trả", "CANCELLED" to "Hủy")) { (status, label) ->
+                items(listOf(
+                    "COMPLETED" to R.string.filter_completed,
+                    "REFUNDED" to R.string.filter_refunded,
+                    "CANCELLED" to R.string.filter_cancelled,
+                )) { (status, labelRes) ->
                     FilterChip(
                         selected = state.filterStatus == status,
                         onClick = { viewModel.setFilter(status) },
-                        label = { Text(label) },
+                        label = { Text(stringResource(labelRes)) },
                     )
                 }
             }
@@ -78,7 +84,7 @@ fun OrderListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Chưa có đơn hàng", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                        Text(stringResource(R.string.no_orders), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                     }
                 }
             } else {
@@ -124,7 +130,7 @@ private fun OrderItem(order: Order, onClick: () -> Unit) {
                 )
                 if (!order.customerName.isNullOrBlank()) {
                     Text(
-                        "KH: ${order.customerName}",
+                        stringResource(R.string.order_customer_prefix, order.customerName),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                     )
@@ -142,18 +148,18 @@ private fun OrderItem(order: Order, onClick: () -> Unit) {
 
 @Composable
 private fun OrderStatusBadge(status: OrderStatus) {
-    val (color, text) = when (status) {
-        OrderStatus.COMPLETED -> AppColors.Secondary to "Hoàn thành"
-        OrderStatus.REFUNDED -> AppColors.Warning to "Hoàn trả"
-        OrderStatus.PARTIALLY_REFUNDED -> AppColors.Accent to "Hoàn trả 1 phần"
-        OrderStatus.CANCELLED -> AppColors.Error to "Hủy"
+    val (color, textRes) = when (status) {
+        OrderStatus.COMPLETED -> AppColors.Secondary to R.string.status_completed
+        OrderStatus.REFUNDED -> AppColors.Warning to R.string.status_refunded
+        OrderStatus.PARTIALLY_REFUNDED -> AppColors.Accent to R.string.status_partially_refunded
+        OrderStatus.CANCELLED -> AppColors.Error to R.string.status_cancelled
     }
     Surface(
         shape = RoundedCornerShape(4.dp),
         color = color.copy(alpha = 0.1f),
     ) {
         Text(
-            text,
+            stringResource(textRes),
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
             color = color,

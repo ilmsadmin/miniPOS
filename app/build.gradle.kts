@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "com.minipos"
-    compileSdk = 34
+    compileSdk = 35
 
     val localProperties = Properties()
     val localPropertiesFile = rootProject.file("local.properties")
@@ -23,14 +23,17 @@ android {
     defaultConfig {
         applicationId = "com.minipos"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 35
+        versionCode = 3
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Supported languages: English (default) and Vietnamese
+        resourceConfigurations += listOf("en", "vi")
 
         // Room schema export
         ksp {
@@ -130,10 +133,10 @@ dependencies {
     implementation("at.favre.lib:bcrypt:0.10.2")
 
     // Barcode scanning
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
-    implementation("androidx.camera:camera-camera2:1.3.1")
-    implementation("androidx.camera:camera-lifecycle:1.3.1")
-    implementation("androidx.camera:camera-view:1.3.1")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
 
     // Image processing
     implementation("androidx.exifinterface:exifinterface:1.3.7")

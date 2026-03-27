@@ -1,7 +1,9 @@
 package com.minipos.ui.settings
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.R
 import com.minipos.domain.model.*
 import com.minipos.domain.repository.AuthRepository
 import com.minipos.domain.repository.StoreRepository
@@ -18,6 +20,7 @@ import javax.inject.Inject
 data class SettingsState(
     val store: Store? = null,
     val currentUser: User? = null,
+    val currentUserHasPin: Boolean = false,
     val users: List<User> = emptyList(),
     val isLoading: Boolean = true,
     val message: String? = null,
@@ -36,11 +39,15 @@ data class SettingsState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    private val app: Application,
     private val storeRepository: StoreRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val appPreferences: AppPreferences,
 ) : ViewModel() {
+
+    private fun str(resId: Int) = app.getString(resId)
+    private fun str(resId: Int, vararg args: Any) = app.getString(resId, *args)
 
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state
@@ -52,9 +59,10 @@ class SettingsViewModel @Inject constructor(
             val store = storeRepository.getStore()
             val userId = appPreferences.currentUserId.first()
             val currentUser = userId?.let { userRepository.getUserById(it) }
+            val hasPin = userId?.let { userRepository.hasPin(it) } ?: false
             val users = store?.let { userRepository.getActiveUsers(it.id) } ?: emptyList()
             _state.update {
-                it.copy(store = store, currentUser = currentUser, users = users, isLoading = false)
+                it.copy(store = store, currentUser = currentUser, currentUserHasPin = hasPin, users = users, isLoading = false)
             }
         }
     }
@@ -74,7 +82,44 @@ class SettingsViewModel @Inject constructor(
             val updated = store.copy(name = name, address = address, phone = phone)
             when (val result = storeRepository.updateStore(updated)) {
                 is Result.Success -> {
-                    _state.update { it.copy(store = result.data, showStoreInfoDialog = false, message = "Đã cập nhật thông tin cửa hàng") }
+                    _state.update { it.copy(store = result.data, showStoreInfoDialog = false, message = str(R.string.msg_store_updated)) }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(message = result.message) }
+                }
+            }
+        }
+    }
+
+    fun updateOwnerName(name: String) {
+        viewModelScope.launch {
+            val user = _state.value.currentUser ?: return@launch
+            val updated = user.copy(displayName = name)
+            when (val result = userRepository.updateUser(updated)) {
+                is Result.Success -> {
+                    _state.update { it.copy(currentUser = result.data) }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(message = result.message) }
+                }
+            }
+        }
+    }
+
+    fun updateOwnerPin(currentPin: String, newPin: String) {
+        viewModelScope.launch {
+            val user = _state.value.currentUser ?: return@launch
+            // If user already has a PIN, verify the current one first
+            if (userRepository.hasPin(user.id)) {
+                val valid = userRepository.verifyPin(user.id, currentPin)
+                if (!valid) {
+                    _state.update { it.copy(message = str(R.string.msg_pin_incorrect)) }
+                    return@launch
+                }
+            }
+            when (val result = userRepository.resetPin(user.id, newPin)) {
+                is Result.Success -> {
+                    _state.update { it.copy(showStoreInfoDialog = false, message = str(R.string.msg_pin_updated)) }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(message = result.message) }
@@ -94,7 +139,7 @@ class SettingsViewModel @Inject constructor(
             val updated = store.copy(settings = settings)
             when (val result = storeRepository.updateStore(updated)) {
                 is Result.Success -> {
-                    _state.update { it.copy(store = result.data, showSalesSettingsDialog = false, message = "Đã cập nhật cài đặt bán hàng") }
+                    _state.update { it.copy(store = result.data, showSalesSettingsDialog = false, message = str(R.string.msg_sales_settings_updated)) }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(message = result.message) }
@@ -126,7 +171,7 @@ class SettingsViewModel @Inject constructor(
             when (val result = userRepository.createUser(storeId, name, pin, role)) {
                 is Result.Success -> {
                     val users = userRepository.getActiveUsers(storeId)
-                    _state.update { it.copy(users = users, showAddUserDialog = false, message = "Đã thêm nhân viên ${result.data.displayName}") }
+                    _state.update { it.copy(users = users, showAddUserDialog = false, message = str(R.string.msg_staff_added, result.data.displayName)) }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(message = result.message) }
@@ -141,7 +186,7 @@ class SettingsViewModel @Inject constructor(
             when (val result = userRepository.updateUser(user)) {
                 is Result.Success -> {
                     val users = userRepository.getActiveUsers(storeId)
-                    _state.update { it.copy(users = users, showEditUserDialog = null, message = "Đã cập nhật nhân viên") }
+                    _state.update { it.copy(users = users, showEditUserDialog = null, message = str(R.string.msg_staff_updated)) }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(message = result.message) }
@@ -154,7 +199,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = userRepository.resetPin(userId, newPin)) {
                 is Result.Success -> {
-                    _state.update { it.copy(showResetPinDialog = null, message = "Đã đặt lại PIN") }
+                    _state.update { it.copy(showResetPinDialog = null, message = str(R.string.msg_pin_reset)) }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(message = result.message) }
@@ -169,7 +214,7 @@ class SettingsViewModel @Inject constructor(
             when (val result = userRepository.deleteUser(userId)) {
                 is Result.Success -> {
                     val users = userRepository.getActiveUsers(storeId)
-                    _state.update { it.copy(users = users, showDeleteUserConfirm = null, message = "Đã xoá nhân viên") }
+                    _state.update { it.copy(users = users, showDeleteUserConfirm = null, message = str(R.string.msg_staff_deleted)) }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(message = result.message) }
@@ -186,12 +231,4 @@ class SettingsViewModel @Inject constructor(
     fun showRestoreDialog() { _state.update { it.copy(showRestoreDialog = true) } }
     fun dismissRestoreDialog() { _state.update { it.copy(showRestoreDialog = false) } }
 
-    // ============ Logout ============
-
-    fun logout(onDone: () -> Unit) {
-        viewModelScope.launch {
-            authRepository.logout()
-            onDone()
-        }
-    }
 }

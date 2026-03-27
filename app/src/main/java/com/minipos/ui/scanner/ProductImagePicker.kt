@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -31,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.ImageHelper
 import java.io.File
@@ -132,7 +134,7 @@ fun ProductImagePicker(
         AlertDialog(
             onDismissRequest = { showImageSourceDialog = false },
             icon = { Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = AppColors.Primary) },
-            title = { Text("Chọn ảnh") },
+            title = { Text(stringResource(R.string.pick_image_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Camera option
@@ -158,9 +160,9 @@ fun ProductImagePicker(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("Chụp ảnh", style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(R.string.take_photo), style = MaterialTheme.typography.bodyLarge)
                                 Text(
-                                    "Sử dụng camera để chụp",
+                                    stringResource(R.string.take_photo_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = AppColors.TextSecondary,
                                 )
@@ -191,9 +193,9 @@ fun ProductImagePicker(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("Chọn từ thư viện", style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(R.string.pick_from_gallery), style = MaterialTheme.typography.bodyLarge)
                                 Text(
-                                    "Chọn ảnh có sẵn trong điện thoại",
+                                    stringResource(R.string.pick_from_gallery_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = AppColors.TextSecondary,
                                 )
@@ -204,7 +206,7 @@ fun ProductImagePicker(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showImageSourceDialog = false }) { Text("Đóng") }
+                TextButton(onClick = { showImageSourceDialog = false }) { Text(stringResource(R.string.close)) }
             },
         )
     }
@@ -228,7 +230,7 @@ fun ProductImagePicker(
 
     Column {
         Text(
-            "Ảnh sản phẩm",
+            stringResource(R.string.product_images),
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.TextSecondary,
         )
@@ -241,7 +243,7 @@ fun ProductImagePicker(
             item {
                 ImageThumbnail(
                     imagePath = mainImagePath,
-                    label = "Ảnh đại diện",
+                    label = stringResource(R.string.main_image_label),
                     isMain = true,
                     onClick = {
                         if (mainImagePath != null) {
@@ -265,7 +267,7 @@ fun ProductImagePicker(
             itemsIndexed(additionalImages) { index, path ->
                 ImageThumbnail(
                     imagePath = path,
-                    label = "Ảnh ${index + 2}",
+                    label = stringResource(R.string.image_n_label, index + 2),
                     isMain = false,
                     onClick = {
                         // Open viewer at the correct index (offset by 1 if main image exists)
@@ -341,7 +343,7 @@ private fun ImageThumbnail(
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Xóa",
+                        contentDescription = stringResource(R.string.cd_delete),
                         modifier = Modifier.size(14.dp).padding(2.dp),
                         tint = Color.White,
                     )
@@ -358,7 +360,7 @@ private fun ImageThumbnail(
                     color = AppColors.Primary.copy(alpha = 0.9f),
                 ) {
                     Text(
-                        "Chính",
+                        stringResource(R.string.primary_badge),
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
@@ -381,7 +383,7 @@ private fun ImageThumbnail(
                 ) {
                     Icon(
                         Icons.Default.AddAPhoto,
-                        contentDescription = "Thêm ảnh",
+                        contentDescription = stringResource(R.string.cd_add_image),
                         modifier = Modifier.size(24.dp),
                         tint = AppColors.TextTertiary,
                     )
@@ -416,7 +418,7 @@ private fun AddImageButton(
         ) {
             Icon(
                 Icons.Default.Add,
-                contentDescription = "Thêm ảnh",
+                contentDescription = stringResource(R.string.cd_add_image),
                 modifier = Modifier.size(28.dp),
                 tint = AppColors.Primary,
             )

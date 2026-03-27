@@ -15,11 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.User
 
@@ -51,7 +53,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         if (state.selectedUser == null) {
-            Text("Chọn tài khoản", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+            Text(stringResource(R.string.select_account), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyVerticalGrid(
@@ -84,7 +86,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = state.pin,
                 onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) viewModel.updatePin(it) },
-                label = { Text("Nhập PIN") },
+                label = { Text(stringResource(R.string.enter_pin)) },
                 modifier = Modifier.width(200.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -108,14 +110,14 @@ fun LoginScreen(
                 if (state.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text("Đăng nhập")
+                    Text(stringResource(R.string.login_btn))
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(onClick = { viewModel.clearSelection() }) {
-                Text("← Chọn tài khoản khác")
+                Text(stringResource(R.string.select_other_account))
             }
         }
     }

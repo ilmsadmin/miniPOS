@@ -29,7 +29,7 @@ object AppModule {
             MiniPosDatabase::class.java,
             AppConstants.DB_NAME
         )
-            .addMigrations(MiniPosDatabase.MIGRATION_1_2, MiniPosDatabase.MIGRATION_2_3)
+            .addMigrations(MiniPosDatabase.MIGRATION_1_2, MiniPosDatabase.MIGRATION_2_3, MiniPosDatabase.MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -53,6 +53,7 @@ object AppModule {
     @Provides fun provideCategoryDao(db: MiniPosDatabase): CategoryDao = db.categoryDao()
     @Provides fun provideSupplierDao(db: MiniPosDatabase): SupplierDao = db.supplierDao()
     @Provides fun provideProductDao(db: MiniPosDatabase): ProductDao = db.productDao()
+    @Provides fun provideProductVariantDao(db: MiniPosDatabase): ProductVariantDao = db.productVariantDao()
     @Provides fun provideCustomerDao(db: MiniPosDatabase): CustomerDao = db.customerDao()
     @Provides fun provideInventoryDao(db: MiniPosDatabase): InventoryDao = db.inventoryDao()
     @Provides fun provideOrderDao(db: MiniPosDatabase): OrderDao = db.orderDao()
@@ -61,46 +62,71 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAuthRepository(
+        @ApplicationContext context: Context,
         storeDao: StoreDao, userDao: UserDao,
         inventoryDao: InventoryDao, prefs: AppPreferences
-    ): AuthRepository = AuthRepositoryImpl(storeDao, userDao, inventoryDao, prefs)
+    ): AuthRepository = AuthRepositoryImpl(context, storeDao, userDao, inventoryDao, prefs)
 
     @Provides
     @Singleton
-    fun provideStoreRepository(storeDao: StoreDao): StoreRepository = StoreRepositoryImpl(storeDao)
+    fun provideStoreRepository(
+        @ApplicationContext context: Context,
+        storeDao: StoreDao
+    ): StoreRepository = StoreRepositoryImpl(context, storeDao)
 
     @Provides
     @Singleton
-    fun provideUserRepository(userDao: UserDao, prefs: AppPreferences): UserRepository =
-        UserRepositoryImpl(userDao, prefs)
+    fun provideUserRepository(
+        @ApplicationContext context: Context,
+        userDao: UserDao, prefs: AppPreferences
+    ): UserRepository =
+        UserRepositoryImpl(context, userDao, prefs)
 
     @Provides
     @Singleton
-    fun provideCategoryRepository(categoryDao: CategoryDao, prefs: AppPreferences): CategoryRepository =
-        CategoryRepositoryImpl(categoryDao, prefs)
+    fun provideCategoryRepository(
+        @ApplicationContext context: Context,
+        categoryDao: CategoryDao, prefs: AppPreferences
+    ): CategoryRepository =
+        CategoryRepositoryImpl(context, categoryDao, prefs)
 
     @Provides
     @Singleton
-    fun provideProductRepository(productDao: ProductDao, inventoryDao: InventoryDao, prefs: AppPreferences): ProductRepository =
-        ProductRepositoryImpl(productDao, inventoryDao, prefs)
+    fun provideProductRepository(
+        @ApplicationContext context: Context,
+        productDao: ProductDao, productVariantDao: ProductVariantDao, inventoryDao: InventoryDao, prefs: AppPreferences
+    ): ProductRepository =
+        ProductRepositoryImpl(context, productDao, productVariantDao, inventoryDao, prefs)
 
     @Provides
     @Singleton
-    fun provideSupplierRepository(supplierDao: SupplierDao, prefs: AppPreferences): SupplierRepository =
-        SupplierRepositoryImpl(supplierDao, prefs)
+    fun provideSupplierRepository(
+        @ApplicationContext context: Context,
+        supplierDao: SupplierDao, prefs: AppPreferences
+    ): SupplierRepository =
+        SupplierRepositoryImpl(context, supplierDao, prefs)
 
     @Provides
     @Singleton
-    fun provideCustomerRepository(customerDao: CustomerDao, prefs: AppPreferences): CustomerRepository =
-        CustomerRepositoryImpl(customerDao, prefs)
+    fun provideCustomerRepository(
+        @ApplicationContext context: Context,
+        customerDao: CustomerDao, prefs: AppPreferences
+    ): CustomerRepository =
+        CustomerRepositoryImpl(context, customerDao, prefs)
 
     @Provides
     @Singleton
-    fun provideOrderRepository(orderDao: OrderDao, inventoryDao: InventoryDao, customerDao: CustomerDao, prefs: AppPreferences): OrderRepository =
-        OrderRepositoryImpl(orderDao, inventoryDao, customerDao, prefs)
+    fun provideOrderRepository(
+        @ApplicationContext context: Context,
+        orderDao: OrderDao, inventoryDao: InventoryDao, customerDao: CustomerDao, prefs: AppPreferences
+    ): OrderRepository =
+        OrderRepositoryImpl(context, orderDao, inventoryDao, customerDao, prefs)
 
     @Provides
     @Singleton
-    fun provideInventoryRepository(inventoryDao: InventoryDao, orderDao: OrderDao, prefs: AppPreferences): InventoryRepository =
-        InventoryRepositoryImpl(inventoryDao, orderDao, prefs)
+    fun provideInventoryRepository(
+        @ApplicationContext context: Context,
+        inventoryDao: InventoryDao, orderDao: OrderDao, prefs: AppPreferences
+    ): InventoryRepository =
+        InventoryRepositoryImpl(context, inventoryDao, orderDao, prefs)
 }

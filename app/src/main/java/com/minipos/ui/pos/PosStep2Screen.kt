@@ -18,15 +18,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.CartItem
 import com.minipos.domain.model.Discount
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,10 +53,10 @@ fun PosStep2Screen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Bước 2: Kiểm tra giỏ hàng") },
+                title = { Text(stringResource(R.string.step2_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -71,7 +73,7 @@ fun PosStep2Screen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Giảm giá đơn hàng", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.order_discount_label), style = MaterialTheme.typography.bodyMedium)
                         TextButton(onClick = { viewModel.showOrderDiscountDialog() }) {
                             Text(
                                 if (cart.orderDiscount != null) {
@@ -79,7 +81,7 @@ fun PosStep2Screen(
                                         "percent" -> "${cart.orderDiscount!!.value.toInt()}%"
                                         else -> CurrencyFormatter.format(cart.orderDiscount!!.value)
                                     }
-                                } else "Thêm",
+                                } else stringResource(R.string.add_label),
                                 color = AppColors.Primary,
                             )
                         }
@@ -90,7 +92,7 @@ fun PosStep2Screen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Tạm tính", style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
+                        Text(stringResource(R.string.subtotal), style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
                         Text(CurrencyFormatter.format(cart.subtotal), style = MaterialTheme.typography.bodyMedium)
                     }
                     if (cart.orderDiscountAmount > 0) {
@@ -98,7 +100,7 @@ fun PosStep2Screen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Giảm giá", style = MaterialTheme.typography.bodyMedium, color = AppColors.Error)
+                            Text(stringResource(R.string.discount), style = MaterialTheme.typography.bodyMedium, color = AppColors.Error)
                             Text("-${CurrencyFormatter.format(cart.orderDiscountAmount)}", color = AppColors.Error)
                         }
                     }
@@ -107,7 +109,7 @@ fun PosStep2Screen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Thuế", style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
+                            Text(stringResource(R.string.tax), style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
                             Text(CurrencyFormatter.format(cart.taxAmount))
                         }
                     }
@@ -116,7 +118,7 @@ fun PosStep2Screen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Tổng cộng", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
                             CurrencyFormatter.format(cart.grandTotal),
                             style = MaterialTheme.typography.titleLarge,
@@ -132,7 +134,7 @@ fun PosStep2Screen(
                         colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
                         enabled = !cart.isEmpty(),
                     ) {
-                        Text("Tiếp theo", modifier = Modifier.padding(vertical = 4.dp))
+                        Text(stringResource(R.string.next), modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
             }
@@ -161,9 +163,9 @@ fun PosStep2Screen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Giỏ hàng trống", style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                    Text(stringResource(R.string.cart_empty), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(onClick = onBack) { Text("← Quay lại chọn sản phẩm") }
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.back_to_products)) }
                 }
             }
         } else {
@@ -218,14 +220,22 @@ private fun CartItemCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    if (item.variant != null) {
+                        Text(
+                            item.variant.variantName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.Accent,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                     Text(
-                        "${item.product.unit} · SKU: ${item.product.sku}",
+                        "${item.product.unit} · SKU: ${item.variant?.sku ?: item.product.sku}",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                     )
                 }
                 IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Xóa", tint = AppColors.Error, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_delete), tint = AppColors.Error, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -245,7 +255,7 @@ private fun CartItemCard(
                             .clip(CircleShape)
                             .background(AppColors.SurfaceVariant),
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Giảm", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease), modifier = Modifier.size(16.dp))
                     }
                     Text(
                         if (item.quantity == item.quantity.toLong().toDouble()) item.quantity.toLong().toString()
@@ -261,7 +271,7 @@ private fun CartItemCard(
                             .clip(CircleShape)
                             .background(AppColors.SurfaceVariant),
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Tăng", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase), modifier = Modifier.size(16.dp))
                     }
                 }
 
@@ -288,7 +298,7 @@ private fun CartItemCard(
                 OutlinedTextField(
                     value = priceText,
                     onValueChange = { priceText = it.filter { c -> c.isDigit() } },
-                    label = { Text("Đơn giá") },
+                    label = { Text(stringResource(R.string.unit_price_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
@@ -317,26 +327,26 @@ private fun OrderDiscountDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Giảm giá đơn hàng") },
+        title = { Text(stringResource(R.string.order_discount_dialog_title)) },
         text = {
             Column {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = type == "percent",
                         onClick = { type = "percent" },
-                        label = { Text("Phần trăm (%)") },
+                        label = { Text(stringResource(R.string.percent_label)) },
                     )
                     FilterChip(
                         selected = type == "fixed",
                         onClick = { type = "fixed" },
-                        label = { Text("Số tiền (đ)") },
+                        label = { Text(stringResource(R.string.fixed_amount_label)) },
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text(if (type == "percent") "Phần trăm" else "Số tiền") },
+                    label = { Text(if (type == "percent") stringResource(R.string.percent_field) else stringResource(R.string.amount_field)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     suffix = { Text(if (type == "percent") "%" else "đ") },
@@ -352,12 +362,12 @@ private fun OrderDiscountDialog(
                 } else {
                     onApply(null)
                 }
-            }) { Text("Áp dụng") }
+            }) { Text(stringResource(R.string.apply)) }
         },
         dismissButton = {
             TextButton(onClick = {
                 onApply(null)
-            }) { Text("Xóa giảm giá") }
+            }) { Text(stringResource(R.string.remove_discount)) }
         },
     )
 }

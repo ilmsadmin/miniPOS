@@ -14,8 +14,8 @@ data class Store(
 )
 
 data class StoreSettings(
-    val receiptHeader: String = "Cảm ơn quý khách!",
-    val receiptFooter: String = "Hẹn gặp lại!",
+    val receiptHeader: String = "",
+    val receiptFooter: String = "",
     val taxEnabled: Boolean = false,
     val defaultTaxRate: Double = 0.0,
     val lowStockAlert: Boolean = true,

@@ -1,5 +1,8 @@
 package com.minipos.domain.model
 
+import android.content.Context
+import com.minipos.R
+
 data class Order(
     val id: String,
     val storeId: String,
@@ -74,11 +77,11 @@ enum class PaymentMethod {
         }
     }
 
-    fun displayName(): String = when (this) {
-        CASH -> "Tiền mặt"
-        TRANSFER -> "Chuyển khoản"
-        EWALLET -> "Ví điện tử"
-        OTHER -> "Khác"
+    fun displayName(context: Context): String = when (this) {
+        CASH -> context.getString(R.string.payment_method_cash)
+        TRANSFER -> context.getString(R.string.payment_method_transfer)
+        EWALLET -> context.getString(R.string.payment_method_ewallet)
+        OTHER -> context.getString(R.string.payment_method_other)
     }
 }
 

@@ -1,5 +1,7 @@
 package com.minipos.core.receipt
 
+import android.content.Context
+import com.minipos.R
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
 import com.minipos.domain.model.OrderDetail
@@ -17,7 +19,7 @@ object ReceiptGenerator {
     /**
      * Generate plain text receipt for thermal printing or sharing as text.
      */
-    fun generateTextReceipt(store: Store, detail: OrderDetail): String {
+    fun generateTextReceipt(context: Context, store: Store, detail: OrderDetail): String {
         val order = detail.order
         val items = detail.items
         val payments = detail.payments
@@ -29,17 +31,21 @@ object ReceiptGenerator {
                 appendLine(center(store.address))
             }
             if (!store.phone.isNullOrBlank()) {
-                appendLine(center("ĐT: ${store.phone}"))
+                appendLine(center(context.getString(R.string.receipt_phone_prefix, store.phone)))
+            }
+            // Custom receipt header (below store info)
+            if (store.settings.receiptHeader.isNotBlank()) {
+                appendLine(center(store.settings.receiptHeader))
             }
             appendLine(DOUBLE_LINE)
-            appendLine(center("HÓA ĐƠN BÁN HÀNG"))
+            appendLine(center(context.getString(R.string.receipt_title)))
             appendLine(DOUBLE_LINE)
 
             // Order info
-            appendLine("Mã: ${order.orderCode}")
-            appendLine("Ngày: ${DateUtils.formatDateTime(order.createdAt)}")
+            appendLine(context.getString(R.string.receipt_code, order.orderCode))
+            appendLine(context.getString(R.string.receipt_date, DateUtils.formatDateTime(order.createdAt)))
             if (!order.customerName.isNullOrBlank()) {
-                appendLine("KH: ${order.customerName}")
+                appendLine(context.getString(R.string.receipt_customer_prefix, order.customerName))
             }
             appendLine(LINE_SEPARATOR)
 
@@ -58,36 +64,36 @@ object ReceiptGenerator {
                 val totalStr = CurrencyFormatter.format(item.totalPrice)
                 appendLine(leftRight("  $priceStr", totalStr))
                 if (item.discountAmount > 0) {
-                    appendLine(leftRight("  Giảm giá:", "-${CurrencyFormatter.format(item.discountAmount)}"))
+                    appendLine(leftRight("  ${context.getString(R.string.receipt_discount_label)}", "-${CurrencyFormatter.format(item.discountAmount)}"))
                 }
             }
             appendLine(LINE_SEPARATOR)
 
             // Totals
-            appendLine(leftRight("Tạm tính:", CurrencyFormatter.format(order.subtotal)))
+            appendLine(leftRight(context.getString(R.string.receipt_subtotal), CurrencyFormatter.format(order.subtotal)))
             if (order.discountAmount > 0) {
                 val discountLabel = when (order.discountType) {
-                    "percent" -> "Giảm giá (${order.discountValue.toLong()}%):"
-                    else -> "Giảm giá:"
+                    "percent" -> context.getString(R.string.receipt_discount_percent_label, order.discountValue.toLong().toInt())
+                    else -> context.getString(R.string.receipt_discount_label)
                 }
                 appendLine(leftRight(discountLabel, "-${CurrencyFormatter.format(order.discountAmount)}"))
             }
             if (order.taxAmount > 0) {
-                appendLine(leftRight("Thuế:", CurrencyFormatter.format(order.taxAmount)))
+                appendLine(leftRight(context.getString(R.string.receipt_tax), CurrencyFormatter.format(order.taxAmount)))
             }
             appendLine(DOUBLE_LINE)
-            appendLine(leftRight("TỔNG CỘNG:", CurrencyFormatter.format(order.totalAmount)))
+            appendLine(leftRight(context.getString(R.string.receipt_grand_total), CurrencyFormatter.format(order.totalAmount)))
             appendLine(DOUBLE_LINE)
 
             // Payments
             if (payments.isNotEmpty()) {
                 for (payment in payments) {
-                    appendLine(leftRight(payment.method.displayName() + ":", CurrencyFormatter.format(payment.amount)))
+                    appendLine(leftRight(payment.method.displayName(context) + ":", CurrencyFormatter.format(payment.amount)))
                     if ((payment.receivedAmount ?: 0.0) > payment.amount) {
-                        appendLine(leftRight("  Nhận:", CurrencyFormatter.format(payment.receivedAmount ?: 0.0)))
+                        appendLine(leftRight("  ${context.getString(R.string.receipt_received)}", CurrencyFormatter.format(payment.receivedAmount ?: 0.0)))
                     }
                     if (payment.changeAmount > 0) {
-                        appendLine(leftRight("  Tiền thừa:", CurrencyFormatter.format(payment.changeAmount)))
+                        appendLine(leftRight("  ${context.getString(R.string.receipt_change)}", CurrencyFormatter.format(payment.changeAmount)))
                     }
                 }
                 appendLine(LINE_SEPARATOR)
@@ -95,13 +101,14 @@ object ReceiptGenerator {
 
             // Notes
             if (!order.notes.isNullOrBlank()) {
-                appendLine("Ghi chú: ${order.notes}")
+                appendLine(context.getString(R.string.receipt_notes, order.notes))
                 appendLine(LINE_SEPARATOR)
             }
 
             // Footer
-            appendLine(center(store.settings.receiptHeader))
-            appendLine(center(store.settings.receiptFooter))
+            if (store.settings.receiptFooter.isNotBlank()) {
+                appendLine(center(store.settings.receiptFooter))
+            }
             appendLine()
         }
     }
@@ -109,7 +116,7 @@ object ReceiptGenerator {
     /**
      * Generate HTML receipt for PDF generation with proper styling.
      */
-    fun generateHtmlReceipt(store: Store, detail: OrderDetail): String {
+    fun generateHtmlReceipt(context: Context, store: Store, detail: OrderDetail): String {
         val order = detail.order
         val items = detail.items
         val payments = detail.payments
@@ -158,18 +165,22 @@ object ReceiptGenerator {
                 append("""<div class="store-info">${escapeHtml(store.address)}</div>""")
             }
             if (!store.phone.isNullOrBlank()) {
-                append("""<div class="store-info">ĐT: ${escapeHtml(store.phone)}</div>""")
+                append("""<div class="store-info">${escapeHtml(context.getString(R.string.receipt_phone_prefix, store.phone))}</div>""")
+            }
+            // Custom receipt header
+            if (store.settings.receiptHeader.isNotBlank()) {
+                append("""<div class="store-info" style="margin-top:4px;font-style:italic">${escapeHtml(store.settings.receiptHeader)}</div>""")
             }
             append("</div>")
 
             // Title
-            append("""<hr class="double-divider"><div class="center title">Hóa đơn bán hàng</div><hr class="double-divider">""")
+            append("""<hr class="double-divider"><div class="center title">${escapeHtml(context.getString(R.string.receipt_html_title))}</div><hr class="double-divider">""")
 
             // Order info
-            append("""<div class="order-info"><strong>Mã:</strong> ${escapeHtml(order.orderCode)}</div>""")
-            append("""<div class="order-info"><strong>Ngày:</strong> ${DateUtils.formatDateTime(order.createdAt)}</div>""")
+            append("""<div class="order-info"><strong>${escapeHtml(context.getString(R.string.receipt_code, ""))}</strong> ${escapeHtml(order.orderCode)}</div>""")
+            append("""<div class="order-info"><strong>${escapeHtml(context.getString(R.string.receipt_date, ""))}</strong> ${DateUtils.formatDateTime(order.createdAt)}</div>""")
             if (!order.customerName.isNullOrBlank()) {
-                append("""<div class="order-info"><strong>KH:</strong> ${escapeHtml(order.customerName)}</div>""")
+                append("""<div class="order-info"><strong>${escapeHtml(context.getString(R.string.receipt_customer_prefix, ""))}</strong> ${escapeHtml(order.customerName)}</div>""")
             }
 
             // Items
@@ -189,41 +200,41 @@ object ReceiptGenerator {
                 append("""<tr><td class="item-detail">${CurrencyFormatter.format(item.unitPrice)} x $qty</td>""")
                 append("""<td class="item-total">${CurrencyFormatter.format(item.totalPrice)}</td></tr>""")
                 if (item.discountAmount > 0) {
-                    append("""<tr><td class="item-discount">Giảm: -${CurrencyFormatter.format(item.discountAmount)}</td><td></td></tr>""")
+                    append("""<tr><td class="item-discount">${context.getString(R.string.receipt_discount_label)} -${CurrencyFormatter.format(item.discountAmount)}</td><td></td></tr>""")
                 }
             }
             append("</table>")
 
             // Summary
             append("""<hr class="divider"><table class="summary-table">""")
-            append("""<tr><td class="label">Tạm tính</td><td class="value">${CurrencyFormatter.format(order.subtotal)}</td></tr>""")
+            append("""<tr><td class="label">${context.getString(R.string.receipt_subtotal)}</td><td class="value">${CurrencyFormatter.format(order.subtotal)}</td></tr>""")
             if (order.discountAmount > 0) {
                 val discountLabel = when (order.discountType) {
-                    "percent" -> "Giảm giá (${order.discountValue.toLong()}%)"
-                    else -> "Giảm giá"
+                    "percent" -> context.getString(R.string.receipt_html_discount_percent_label, order.discountValue.toLong().toInt())
+                    else -> context.getString(R.string.receipt_html_discount_label)
                 }
                 append("""<tr><td class="label">$discountLabel</td><td class="value" style="color:#e53935">-${CurrencyFormatter.format(order.discountAmount)}</td></tr>""")
             }
             if (order.taxAmount > 0) {
-                append("""<tr><td class="label">Thuế</td><td class="value">${CurrencyFormatter.format(order.taxAmount)}</td></tr>""")
+                append("""<tr><td class="label">${context.getString(R.string.receipt_tax)}</td><td class="value">${CurrencyFormatter.format(order.taxAmount)}</td></tr>""")
             }
             append("</table>")
 
             // Grand total
             append("""<hr class="double-divider"><table class="summary-table">""")
-            append("""<tr><td class="label grand-total">TỔNG CỘNG</td><td class="value grand-total">${CurrencyFormatter.format(order.totalAmount)}</td></tr>""")
+            append("""<tr><td class="label grand-total">${context.getString(R.string.receipt_grand_total)}</td><td class="value grand-total">${CurrencyFormatter.format(order.totalAmount)}</td></tr>""")
             append("""</table><hr class="double-divider">""")
 
             // Payments
             if (payments.isNotEmpty()) {
                 append("""<div class="payment-info">""")
                 for (payment in payments) {
-                    append("""<div><strong>${payment.method.displayName()}:</strong> ${CurrencyFormatter.format(payment.amount)}</div>""")
+                    append("""<div><strong>${payment.method.displayName(context)}:</strong> ${CurrencyFormatter.format(payment.amount)}</div>""")
                     if ((payment.receivedAmount ?: 0.0) > payment.amount) {
-                        append("""<div style="padding-left:8px">Nhận: ${CurrencyFormatter.format(payment.receivedAmount ?: 0.0)}</div>""")
+                        append("""<div style="padding-left:8px">${context.getString(R.string.receipt_received)} ${CurrencyFormatter.format(payment.receivedAmount ?: 0.0)}</div>""")
                     }
                     if (payment.changeAmount > 0) {
-                        append("""<div style="padding-left:8px">Tiền thừa: ${CurrencyFormatter.format(payment.changeAmount)}</div>""")
+                        append("""<div style="padding-left:8px">${context.getString(R.string.receipt_change)} ${CurrencyFormatter.format(payment.changeAmount)}</div>""")
                     }
                 }
                 append("""</div><hr class="divider">""")
@@ -231,14 +242,15 @@ object ReceiptGenerator {
 
             // Notes
             if (!order.notes.isNullOrBlank()) {
-                append("""<div class="order-info"><strong>Ghi chú:</strong> ${escapeHtml(order.notes)}</div><hr class="divider">""")
+                append("""<div class="order-info"><strong>${context.getString(R.string.receipt_notes, "")}</strong> ${escapeHtml(order.notes)}</div><hr class="divider">""")
             }
 
             // Footer
-            append("""<div class="center footer">""")
-            append("<div>${escapeHtml(store.settings.receiptHeader)}</div>")
-            append("<div>${escapeHtml(store.settings.receiptFooter)}</div>")
-            append("</div>")
+            if (store.settings.receiptFooter.isNotBlank()) {
+                append("""<div class="center footer">""")
+                append("<div>${escapeHtml(store.settings.receiptFooter)}</div>")
+                append("</div>")
+            }
 
             append("</div></body></html>")
         }

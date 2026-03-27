@@ -15,9 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.R
+import com.minipos.core.receipt.ReceiptPreviewDialog
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
@@ -35,11 +38,13 @@ fun OrderDetailScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Show messages
-    LaunchedEffect(state.message) {
-        state.message?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessage()
+    // Show messages (only when receipt preview is NOT open)
+    LaunchedEffect(state.message, state.showReceiptPreview) {
+        if (!state.showReceiptPreview) {
+            state.message?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.clearMessage()
+            }
         }
     }
 
@@ -47,7 +52,7 @@ fun OrderDetailScreen(
     if (state.showPrinterDialog) {
         PrinterSelectionDialog(
             devices = state.pairedDevices,
-            onSelect = { viewModel.printToDevice(it) },
+            onSelect = { viewModel.printToDevice(context, it) },
             onDismiss = { viewModel.dismissPrinterDialog() },
         )
     }
@@ -61,26 +66,34 @@ fun OrderDetailScreen(
         )
     }
 
+    // Receipt preview dialog
+    if (state.showReceiptPreview && state.store != null && state.detail != null) {
+        ReceiptPreviewDialog(
+            store = state.store!!,
+            orderDetail = state.detail!!,
+            isPrinting = state.isPrinting,
+            isSharing = state.isSharing,
+            errorMessage = state.message,
+            onPrint = { viewModel.onPrintClick(context) },
+            onShare = { viewModel.shareAsPdf(context) },
+            onDismiss = { viewModel.dismissReceiptPreview() },
+            onErrorShown = { viewModel.clearMessage() },
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(state.detail?.order?.orderCode ?: "Chi tiết đơn hàng") },
+                title = { Text(state.detail?.order?.orderCode ?: stringResource(R.string.order_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
-                    if (state.isPrinting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp).padding(end = 8.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        IconButton(onClick = { viewModel.onPrintClick(context) }) {
-                            Icon(Icons.Default.Print, contentDescription = "In")
-                        }
+                    IconButton(onClick = { viewModel.showReceiptPreview() }) {
+                        Icon(Icons.Default.Receipt, contentDescription = stringResource(R.string.receipt_preview_title))
                     }
                     if (state.isSharing) {
                         CircularProgressIndicator(
@@ -89,7 +102,7 @@ fun OrderDetailScreen(
                         )
                     } else {
                         IconButton(onClick = { viewModel.onShareClick() }) {
-                            Icon(Icons.Default.Share, contentDescription = "Chia sẻ")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share_btn))
                         }
                     }
                 },
@@ -102,7 +115,7 @@ fun OrderDetailScreen(
             }
         } else if (state.detail == null) {
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text("Không tìm thấy đơn hàng", color = AppColors.TextSecondary)
+                Text(stringResource(R.string.order_not_found), color = AppColors.TextSecondary)
             }
         } else {
             val detail = state.detail!!
@@ -122,16 +135,16 @@ fun OrderDetailScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Thông tin đơn hàng", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.order_info_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(12.dp))
-                            InfoRow("Mã đơn", order.orderCode)
-                            InfoRow("Thời gian", DateUtils.formatDateTime(order.createdAt))
-                            InfoRow("Trạng thái", order.status.name)
+                            InfoRow(stringResource(R.string.order_code_label), order.orderCode)
+                            InfoRow(stringResource(R.string.time_label), DateUtils.formatDateTime(order.createdAt))
+                            InfoRow(stringResource(R.string.status_label), order.status.name)
                             if (!order.customerName.isNullOrBlank()) {
-                                InfoRow("Khách hàng", order.customerName)
+                                InfoRow(stringResource(R.string.customer_label), order.customerName)
                             }
                             if (!order.notes.isNullOrBlank()) {
-                                InfoRow("Ghi chú", order.notes)
+                                InfoRow(stringResource(R.string.notes_label), order.notes)
                             }
                         }
                     }
@@ -139,7 +152,7 @@ fun OrderDetailScreen(
 
                 // Items
                 item {
-                    Text("Sản phẩm", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.products_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                 }
                 items(detail.items) { item ->
                     Card(
@@ -179,19 +192,19 @@ fun OrderDetailScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            InfoRow("Tạm tính", CurrencyFormatter.format(order.subtotal))
+                            InfoRow(stringResource(R.string.subtotal), CurrencyFormatter.format(order.subtotal))
                             if (order.discountAmount > 0) {
-                                InfoRow("Giảm giá", "-${CurrencyFormatter.format(order.discountAmount)}", AppColors.Error)
+                                InfoRow(stringResource(R.string.discount), "-${CurrencyFormatter.format(order.discountAmount)}", AppColors.Error)
                             }
                             if (order.taxAmount > 0) {
-                                InfoRow("Thuế", CurrencyFormatter.format(order.taxAmount))
+                                InfoRow(stringResource(R.string.tax), CurrencyFormatter.format(order.taxAmount))
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text("TỔNG CỘNG", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.grand_total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text(
                                     CurrencyFormatter.format(order.totalAmount),
                                     style = MaterialTheme.typography.titleLarge,
@@ -206,7 +219,7 @@ fun OrderDetailScreen(
                 // Payments
                 if (detail.payments.isNotEmpty()) {
                     item {
-                        Text("Thanh toán", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.payment_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                     }
                     items(detail.payments) { payment ->
                         Card(
@@ -219,12 +232,13 @@ fun OrderDetailScreen(
                                     .padding(12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text(payment.method.displayName(), fontWeight = FontWeight.Medium)
+                                val paymentContext = LocalContext.current
+                                Text(payment.method.displayName(paymentContext), fontWeight = FontWeight.Medium)
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(CurrencyFormatter.format(payment.amount), fontWeight = FontWeight.Bold)
                                     if (payment.changeAmount > 0) {
                                         Text(
-                                            "Thừa: ${CurrencyFormatter.format(payment.changeAmount)}",
+                                            stringResource(R.string.change_prefix, CurrencyFormatter.format(payment.changeAmount)),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = AppColors.TextSecondary,
                                         )
@@ -244,18 +258,13 @@ fun OrderDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.onPrintClick(context) },
+                            onClick = { viewModel.showReceiptPreview() },
                             modifier = Modifier.weight(1f).height(48.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !state.isPrinting,
                         ) {
-                            if (state.isPrinting) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                            }
+                            Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("In hóa đơn")
+                            Text(stringResource(R.string.print_receipt_btn))
                         }
                         Button(
                             onClick = { viewModel.onShareClick() },
@@ -270,7 +279,7 @@ fun OrderDetailScreen(
                                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Chia sẻ")
+                            Text(stringResource(R.string.share_btn))
                         }
                     }
                 }
@@ -304,14 +313,14 @@ private fun PrinterSelectionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Print, contentDescription = null, tint = AppColors.Primary) },
-        title = { Text("Chọn máy in") },
+        title = { Text(stringResource(R.string.select_printer)) },
         text = {
             if (devices.isEmpty()) {
-                Text("Không tìm thấy thiết bị Bluetooth nào.\nVui lòng ghép nối máy in trong cài đặt Bluetooth.")
+                Text(stringResource(R.string.no_bluetooth_devices))
             } else {
                 Column {
                     Text(
-                        "Chọn máy in Bluetooth đã ghép nối:",
+                        stringResource(R.string.select_paired_printer),
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.TextSecondary,
                     )
@@ -337,7 +346,7 @@ private fun PrinterSelectionDialog(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        device.name ?: "Không rõ tên",
+                                        device.name ?: stringResource(R.string.unknown_device),
                                         fontWeight = FontWeight.Medium,
                                     )
                                     Text(
@@ -356,7 +365,7 @@ private fun PrinterSelectionDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Đóng")
+                Text(stringResource(R.string.close))
             }
         },
     )
@@ -371,11 +380,11 @@ private fun ShareOptionsDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Share, contentDescription = null, tint = AppColors.Primary) },
-        title = { Text("Chia sẻ hóa đơn") },
+        title = { Text(stringResource(R.string.share_receipt_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Chọn định dạng chia sẻ:",
+                    stringResource(R.string.select_share_format),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary,
                 )
@@ -401,9 +410,9 @@ private fun ShareOptionsDialog(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Chia sẻ PDF", fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.share_pdf), fontWeight = FontWeight.Medium)
                             Text(
-                                "Gửi hóa đơn dạng file PDF đẹp",
+                                stringResource(R.string.share_pdf_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = AppColors.TextSecondary,
                             )
@@ -431,9 +440,9 @@ private fun ShareOptionsDialog(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Chia sẻ văn bản", fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.share_text), fontWeight = FontWeight.Medium)
                             Text(
-                                "Gửi qua Zalo, SMS, Messenger...",
+                                stringResource(R.string.share_text_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = AppColors.TextSecondary,
                             )
@@ -445,7 +454,7 @@ private fun ShareOptionsDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Đóng")
+                Text(stringResource(R.string.close))
             }
         },
     )

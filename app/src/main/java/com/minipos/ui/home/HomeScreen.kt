@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.ui.navigation.Screen
@@ -33,7 +34,6 @@ import com.minipos.ui.navigation.Screen
 @Composable
 fun HomeScreen(
     onNavigate: (String) -> Unit,
-    onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -78,21 +78,9 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                "Xin chào, ${state.userName}! 👋",
+                                stringResource(R.string.home_greeting, state.userName),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.85f),
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                viewModel.logout()
-                                onLogout()
-                            },
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = "Đăng xuất",
-                                tint = Color.White.copy(alpha = 0.8f),
                             )
                         }
                     }
@@ -122,7 +110,7 @@ fun HomeScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        "Doanh thu hôm nay",
+                                        stringResource(R.string.today_revenue),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = Color.White.copy(alpha = 0.8f),
                                     )
@@ -155,14 +143,14 @@ fun HomeScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        "Đơn hàng",
+                                        stringResource(R.string.home_orders_label),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = Color.White.copy(alpha = 0.8f),
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    "${state.todayOrders} đơn",
+                                    stringResource(R.string.home_orders_count, state.todayOrders),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
@@ -206,13 +194,13 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "Cảnh báo tồn kho",
+                                stringResource(R.string.home_low_stock_alert),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = AppColors.AccentDark,
                             )
                             Text(
-                                "${state.lowStockCount} sản phẩm sắp hết hàng",
+                                stringResource(R.string.home_low_stock_msg, state.lowStockCount),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = AppColors.TextSecondary,
                             )
@@ -230,7 +218,7 @@ fun HomeScreen(
 
             // ──── Quick Actions (2x2 grid) ────
             Text(
-                "Thao tác nhanh",
+                stringResource(R.string.home_quick_actions),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary,
@@ -249,16 +237,16 @@ fun HomeScreen(
                     HomeActionCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.QrCodeScanner,
-                        title = "Quét mã vạch",
-                        subtitle = "Scan & bán hàng",
+                        title = stringResource(R.string.home_scan_barcode),
+                        subtitle = stringResource(R.string.home_scan_and_sell),
                         gradientColors = listOf(Color(0xFF0EA5E9), Color(0xFF0284C7)),
                         onClick = { onNavigate(Screen.ScanToPos.route) },
                     )
                     HomeActionCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.ShoppingCart,
-                        title = "Bán hàng (POS)",
-                        subtitle = "Tạo đơn hàng",
+                        title = stringResource(R.string.home_pos),
+                        subtitle = stringResource(R.string.home_create_order),
                         gradientColors = listOf(Color(0xFF8B5CF6), Color(0xFF7C3AED)),
                         onClick = { onNavigate(Screen.PosStep1.route) },
                     )
@@ -270,16 +258,16 @@ fun HomeScreen(
                     HomeActionCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Store,
-                        title = "Quản lý",
-                        subtitle = "Cửa hàng của bạn",
+                        title = stringResource(R.string.home_management),
+                        subtitle = stringResource(R.string.home_your_store),
                         gradientColors = listOf(Color(0xFF059669), Color(0xFF047857)),
                         onClick = { onNavigate(Screen.StoreManagement.route) },
                     )
                     HomeActionCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Settings,
-                        title = "Cài đặt",
-                        subtitle = "Tuỳ chỉnh hệ thống",
+                        title = stringResource(R.string.home_settings),
+                        subtitle = stringResource(R.string.home_customize),
                         gradientColors = listOf(Color(0xFF64748B), Color(0xFF475569)),
                         onClick = { onNavigate(Screen.Settings.route) },
                     )
@@ -318,13 +306,13 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                "Sắp ra mắt",
+                                stringResource(R.string.home_coming_soon),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.Primary,
                             )
                             Text(
-                                "Tính năng mới trong phiên bản tiếp theo",
+                                stringResource(R.string.home_new_features_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = AppColors.TextSecondary,
                             )
@@ -336,8 +324,8 @@ fun HomeScreen(
                     UpcomingFeatureRow(
                         icon = Icons.Default.CloudUpload,
                         iconColor = Color(0xFF059669),
-                        title = "Sao lưu & Khôi phục Google Drive",
-                        description = "Tự động sao lưu dữ liệu lên Google Drive, khôi phục khi đổi thiết bị",
+                        title = stringResource(R.string.home_gdrive_title),
+                        description = stringResource(R.string.home_gdrive_desc),
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -345,8 +333,8 @@ fun HomeScreen(
                     UpcomingFeatureRow(
                         icon = Icons.Default.AutoAwesome,
                         iconColor = Color(0xFF8B5CF6),
-                        title = "AI đọc & nhập đơn hàng",
-                        description = "Chụp ảnh hoá đơn, AI tự động nhận diện và nhập đơn hàng",
+                        title = stringResource(R.string.home_ai_title),
+                        description = stringResource(R.string.home_ai_desc),
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -354,8 +342,8 @@ fun HomeScreen(
                     UpcomingFeatureRow(
                         icon = Icons.Default.SyncAlt,
                         iconColor = Color(0xFFE11D48),
-                        title = "Đồng bộ P2P đa thiết bị",
-                        description = "Đồng bộ dữ liệu giữa nhiều thiết bị qua mạng LAN",
+                        title = stringResource(R.string.home_p2p_title),
+                        description = stringResource(R.string.home_p2p_desc),
                     )
                 }
             }

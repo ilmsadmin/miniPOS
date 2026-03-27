@@ -18,6 +18,7 @@ data class CategoryListState(
     val isLoading: Boolean = true,
     val showForm: Boolean = false,
     val editingCategory: Category? = null,
+    val parentCategory: Category? = null, // parent for new subcategory
 )
 
 @HiltViewModel
@@ -42,11 +43,12 @@ class CategoryListViewModel @Inject constructor(
         }
     }
 
-    fun showCreateForm() { _state.update { it.copy(showForm = true, editingCategory = null) } }
-    fun showEditForm(category: Category) { _state.update { it.copy(showForm = true, editingCategory = category) } }
-    fun dismissForm() { _state.update { it.copy(showForm = false, editingCategory = null) } }
+    fun showCreateForm() { _state.update { it.copy(showForm = true, editingCategory = null, parentCategory = null) } }
+    fun showCreateSubcategory(parent: Category) { _state.update { it.copy(showForm = true, editingCategory = null, parentCategory = parent) } }
+    fun showEditForm(category: Category) { _state.update { it.copy(showForm = true, editingCategory = category, parentCategory = null) } }
+    fun dismissForm() { _state.update { it.copy(showForm = false, editingCategory = null, parentCategory = null) } }
 
-    fun save(name: String, description: String?, icon: String?, color: String?) {
+    fun save(name: String, description: String?, icon: String?, color: String?, parentId: String?) {
         viewModelScope.launch {
             val editing = _state.value.editingCategory
             val result = if (editing != null) {
@@ -55,10 +57,11 @@ class CategoryListViewModel @Inject constructor(
                     description = description,
                     icon = icon,
                     color = color,
+                    parentId = parentId ?: editing.parentId,
                     updatedAt = System.currentTimeMillis(),
                 ))
             } else {
-                categoryRepository.create(storeId, name, description, null, icon, color)
+                categoryRepository.create(storeId, name, description, parentId, icon, color)
             }
             if (result is Result.Success) {
                 dismissForm()
