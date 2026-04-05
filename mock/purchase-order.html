@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Nhập hàng</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-16); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    /* ─── Form fields ─── */
+    .field { margin-bottom:var(--sp-16); }
+    .field-label { font-size:12px; font-weight:700; color:var(--text-3); margin-bottom:var(--sp-6); text-transform:uppercase; letter-spacing:0.5px; }
+    .field-input {
+      width:100%; height:48px; border-radius:var(--r-lg);
+      border:1px solid var(--border-l); background:var(--bg-input);
+      font-size:14px; color:var(--text-1); padding:0 var(--sp-16);
+      font-family:inherit; outline:none; transition:all 0.2s;
+    }
+    .field-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
+    .field-row { display:flex; gap:var(--sp-12); }
+    .field-row .field { flex:1; }
+
+    .select-field {
+      position:relative; cursor:pointer;
+    }
+    .select-field::after {
+      content:''; position:absolute; right:16px; top:50%; transform:translateY(-50%);
+      border:5px solid transparent; border-top:6px solid var(--text-3);
+    }
+
+    /* ─── Search product ─── */
+    .search-add {
+      display:flex; gap:var(--sp-8); margin-bottom:var(--sp-16);
+    }
+    .search-add .search-bar {
+      flex:1; height:44px; background:var(--bg-input); border:1px solid var(--border);
+      border-radius:var(--r-2xl); display:flex; align-items:center;
+      padding:0 var(--sp-6) 0 var(--sp-16); gap:var(--sp-8); transition:all 0.2s;
+    }
+    .search-add .search-bar .material-symbols-rounded { color:var(--text-3); font-size:20px; }
+    .search-add .search-bar input { flex:1; border:none; background:transparent; font-size:13px; font-family:inherit; color:var(--text-1); outline:none; }
+    .search-add .search-bar input::placeholder { color:var(--text-3); }
+    .scan-btn {
+      width:44px; height:44px; border-radius:var(--r-full);
+      border:none; background:var(--grad-primary); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; box-shadow:var(--shadow-primary); transition:all 0.2s; flex-shrink:0;
+    }
+    .scan-btn:active { transform:scale(0.9); }
+
+    .sec-label {
+      font-size:12px; font-weight:800; color:var(--text-3);
+      text-transform:uppercase; letter-spacing:0.8px;
+      margin-bottom:var(--sp-12);
+    }
+
+    /* ─── PO items ─── */
+    .po-items { display:flex; flex-direction:column; gap:var(--sp-8); margin-bottom:var(--sp-16); }
+    .poi {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+    }
+    .poi-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--sp-8); }
+    .poi-name { font-size:14px; font-weight:700; flex:1; }
+    .poi-del {
+      width:32px; height:32px; border-radius:var(--r-full);
+      border:none; background:var(--error-soft); color:var(--error);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all 0.15s;
+    }
+    .poi-del:hover { background:rgba(255,82,82,0.2); }
+    .poi-del .material-symbols-rounded { font-size:18px; }
+    .poi-fields { display:flex; gap:var(--sp-8); }
+    .poi-field { flex:1; }
+    .poi-field label { font-size:10px; color:var(--text-3); font-weight:600; display:block; margin-bottom:3px; }
+    .poi-field input {
+      width:100%; height:36px; border-radius:var(--r-sm);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:13px; font-weight:700; color:var(--text-1);
+      padding:0 var(--sp-8); text-align:right;
+      font-family:inherit; outline:none; transition:all 0.15s;
+    }
+    .poi-field input:focus { border-color:var(--primary); }
+    .poi-total { text-align:right; font-size:13px; font-weight:800; color:var(--accent); margin-top:var(--sp-8); }
+
+    .add-btn {
+      width:100%; height:44px; border-radius:var(--r-lg);
+      border:2px dashed var(--border-l); background:transparent;
+      color:var(--text-3); font-size:13px; font-weight:700;
+      font-family:inherit; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:var(--sp-6);
+      transition:all 0.2s; margin-bottom:var(--sp-20);
+    }
+    .add-btn:hover { border-color:var(--primary); color:var(--primary-light); background:rgba(108,92,231,0.04); }
+    .add-btn .material-symbols-rounded { font-size:18px; }
+
+    /* ─── Summary & confirm ─── */
+    .po-summary {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      margin-bottom:var(--sp-16);
+    }
+    .po-sum-row { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; color:var(--text-2); }
+    .po-sum-row.total { font-size:18px; font-weight:900; color:var(--text-1); padding-top:var(--sp-8); margin-top:var(--sp-4); border-top:2px solid var(--border-l); }
+
+    .confirm-btn {
+      width:100%; height:56px; border:none; border-radius:var(--r-2xl);
+      background:var(--grad-primary); color:#fff;
+      font-size:16px; font-weight:800; font-family:inherit;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:var(--sp-8);
+      box-shadow:var(--shadow-primary); transition:all 0.25s;
+    }
+    .confirm-btn:hover { filter:brightness(1.08); box-shadow:var(--shadow-fab); }
+    .confirm-btn:active { transform:scale(0.97); }
+    .confirm-btn .material-symbols-rounded { font-size:22px; }
+
+    [data-theme="light"] .poi { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .po-summary { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Nhập hàng</span>
+    </div>
+
+    <div class="page-body">
+      <div class="field">
+        <div class="field-label">Nhà cung cấp</div>
+        <input class="field-input select-field" value="Coca Cola Vietnam" readonly>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-label">Ngày nhập</div>
+          <input class="field-input" value="04/04/2026" readonly>
+        </div>
+        <div class="field">
+          <div class="field-label">Mã phiếu</div>
+          <input class="field-input" value="PO-0046" readonly style="color:var(--text-3)">
+        </div>
+      </div>
+
+      <div class="sec-label">Danh sách sản phẩm nhập</div>
+
+      <div class="search-add">
+        <div class="search-bar">
+          <span class="material-symbols-rounded">search</span>
+          <input placeholder="Tìm hoặc quét SP...">
+        </div>
+        <button class="scan-btn"><span class="material-symbols-rounded">qr_code_scanner</span></button>
+      </div>
+
+      <div class="po-items">
+        <div class="poi">
+          <div class="poi-top">
+            <div class="poi-name">Coca Cola 330ml</div>
+            <button class="poi-del" onclick="toast('Xóa sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="poi-fields">
+            <div class="poi-field">
+              <label>Số lượng</label>
+              <input value="24" type="number">
+            </div>
+            <div class="poi-field">
+              <label>Giá nhập</label>
+              <input value="8,000">
+            </div>
+          </div>
+          <div class="poi-total">Thành tiền: 192,000đ</div>
+        </div>
+
+        <div class="poi">
+          <div class="poi-top">
+            <div class="poi-name">Pepsi 330ml</div>
+            <button class="poi-del" onclick="toast('Xóa sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="poi-fields">
+            <div class="poi-field">
+              <label>Số lượng</label>
+              <input value="12" type="number">
+            </div>
+            <div class="poi-field">
+              <label>Giá nhập</label>
+              <input value="7,500">
+            </div>
+          </div>
+          <div class="poi-total">Thành tiền: 90,000đ</div>
+        </div>
+      </div>
+
+      <button class="add-btn" onclick="toast('Thêm sản phẩm')">
+        <span class="material-symbols-rounded">add</span>Thêm sản phẩm
+      </button>
+
+      <div class="po-summary">
+        <div class="po-sum-row"><span>Tổng sản phẩm</span><span>2 loại · 36 SP</span></div>
+        <div class="po-sum-row total"><span>Tổng tiền nhập</span><span>282,000đ</span></div>
+      </div>
+
+      <button class="confirm-btn" onclick="toast('Xác nhận nhập hàng thành công!')">
+        <span class="material-symbols-rounded">verified</span>Xác nhận nhập hàng
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+  </script>
+</body>
+</html>

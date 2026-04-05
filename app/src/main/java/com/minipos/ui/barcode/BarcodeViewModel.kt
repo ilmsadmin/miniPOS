@@ -40,6 +40,16 @@ data class BarcodeProductItem(
 
     /** Current barcode value */
     val currentBarcode: String? get() = generatedBarcode ?: variant?.barcode ?: product.barcode
+
+    /** Display price */
+    val displayPrice: Double get() = variant?.sellingPrice ?: product.sellingPrice
+}
+
+enum class BarcodeType(val label: String, val description: String) {
+    EAN_13("EAN-13", "Tiêu chuẩn quốc tế"),
+    QR_CODE("QR Code", "Mã QR đa dụng"),
+    CODE_128("Code-128", "Mật độ cao"),
+    CODE_39("Code-39", "Alphanumeric"),
 }
 
 data class BarcodeScreenState(
@@ -49,6 +59,16 @@ data class BarcodeScreenState(
     val isLoading: Boolean = true,
     val filterMode: BarcodeFilterMode = BarcodeFilterMode.NO_BARCODE,
     val selectedCount: Int = 0,
+
+    // Barcode type & label options (new design)
+    val barcodeType: BarcodeType = BarcodeType.EAN_13,
+    val showProductName: Boolean = true,
+    val showPrice: Boolean = true,
+    val labelsPerProduct: Int = 4,
+
+    // Product picker
+    val showProductPicker: Boolean = false,
+    val pickerSearchQuery: String = "",
 
     // Generation
     val isGenerating: Boolean = false,
@@ -67,7 +87,25 @@ data class BarcodeScreenState(
     // Messages
     val message: String? = null,
     val error: String? = null,
-)
+) {
+    /** Products that the user has selected (checked) */
+    val selectedProducts: List<BarcodeProductItem> get() = products.filter { it.isSelected }
+
+    /** Products available for the picker dialog (not yet selected) */
+    val pickerProducts: List<BarcodeProductItem> get() {
+        val query = pickerSearchQuery.lowercase()
+        return products
+            .filter { !it.isSelected }
+            .filter {
+                if (query.isBlank()) true
+                else it.displayName.lowercase().contains(query) ||
+                        it.displaySku.lowercase().contains(query)
+            }
+    }
+
+    /** First selected product (for preview) */
+    val previewProduct: BarcodeProductItem? get() = selectedProducts.firstOrNull()
+}
 
 enum class BarcodeFilterMode(val label: String) {
     ALL("All"),
@@ -390,5 +428,113 @@ class BarcodeViewModel @Inject constructor(
 
     fun clearMessage() {
         _state.update { it.copy(message = null, error = null) }
+    }
+
+    // ═══════════════════════════════════════
+    // NEW DESIGN: Product picker, barcode type, label options
+    // ═══════════════════════════════════════
+
+    fun showProductPicker() {
+        _state.update { it.copy(showProductPicker = true, pickerSearchQuery = "") }
+    }
+
+    fun dismissProductPicker() {
+        _state.update { it.copy(showProductPicker = false, pickerSearchQuery = "") }
+    }
+
+    fun searchPicker(query: String) {
+        _state.update { it.copy(pickerSearchQuery = query) }
+    }
+
+    fun addProduct(itemId: String) {
+        _state.update { st ->
+            val updated = st.products.map { item ->
+                if (item.itemId == itemId) item.copy(isSelected = true) else item
+            }
+            st.copy(
+                products = updated,
+                selectedCount = updated.count { it.isSelected },
+            )
+        }
+        applyFilter()
+    }
+
+    fun removeProduct(itemId: String) {
+        _state.update { st ->
+            val updated = st.products.map { item ->
+                if (item.itemId == itemId) item.copy(isSelected = false) else item
+            }
+            st.copy(
+                products = updated,
+                selectedCount = updated.count { it.isSelected },
+            )
+        }
+        applyFilter()
+    }
+
+    fun setBarcodeType(type: BarcodeType) {
+        _state.update { it.copy(barcodeType = type) }
+    }
+
+    fun toggleShowProductName() {
+        _state.update { it.copy(showProductName = !it.showProductName) }
+    }
+
+    fun toggleShowPrice() {
+        _state.update { it.copy(showPrice = !it.showPrice) }
+    }
+
+    fun changeLabelsPerProduct(delta: Int) {
+        _state.update { st ->
+            val newVal = (st.labelsPerProduct + delta).coerceIn(1, 100)
+            st.copy(labelsPerProduct = newVal)
+        }
+    }
+
+    fun saveBarcodesAsImage(context: Context) {
+        val selected = _state.value.selectedProducts.filter { it.currentBarcode != null }
+        if (selected.isEmpty()) {
+            _state.update { it.copy(error = str(R.string.select_products_with_barcode)) }
+            return
+        }
+        viewModelScope.launch {
+            try {
+                _state.update { it.copy(isGenerating = true) }
+                val labels = selected.flatMap { item ->
+                    val barcode = item.currentBarcode!!
+                    List(_state.value.labelsPerProduct) {
+                        BarcodeGenerator.generateLabelBitmap(
+                            barcode = barcode,
+                            productName = if (_state.value.showProductName) item.displayName else "",
+                            sku = item.displaySku,
+                        )
+                    }
+                }
+                val combined = BarcodeGenerator.combineLabelBitmaps(labels)
+                val file = BarcodePrintHelper.saveLabelsImage(context, combined, "barcodes_${System.currentTimeMillis()}")
+                BarcodePrintHelper.shareImage(context, file)
+                _state.update { it.copy(isGenerating = false, message = str(R.string.barcode_saved_image)) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isGenerating = false, error = str(R.string.error_sharing, e.message ?: "")) }
+            }
+        }
+    }
+
+    fun printLabels(context: Context) {
+        val selected = _state.value.selectedProducts
+        if (selected.isEmpty()) {
+            _state.update { it.copy(error = str(R.string.select_products_with_barcode)) }
+            return
+        }
+
+        // First ensure all selected products have barcodes
+        val needGenerate = selected.filter { !it.hasBarcode && it.generatedBarcode == null }
+        if (needGenerate.isNotEmpty()) {
+            // Generate barcodes first, then show preview
+            generateBarcodes()
+        }
+
+        // Show preview with generated labels
+        showBarcodePreview()
     }
 }

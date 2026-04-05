@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
@@ -30,7 +31,8 @@ import com.minipos.domain.model.CartItem
 import com.minipos.domain.model.Discount
 import androidx.hilt.navigation.compose.hiltViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+import com.minipos.ui.components.*
+
 @Composable
 fun PosStep2Screen(
     onNext: () -> Unit,
@@ -41,7 +43,6 @@ fun PosStep2Screen(
     val stockError by viewModel.stockError.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Show stock error as snackbar
     LaunchedEffect(stockError) {
         stockError?.let { error ->
             snackbarHostState.showSnackbar(error, duration = SnackbarDuration.Short)
@@ -50,24 +51,16 @@ fun PosStep2Screen(
     }
 
     Scaffold(
+        containerColor = AppColors.Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.step2_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
-            )
-        },
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shadowElevation = 8.dp,
+                color = AppColors.Surface,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    // Order discount row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -86,56 +79,36 @@ fun PosStep2Screen(
                             )
                         }
                     }
-                    HorizontalDivider()
+                    HorizontalDivider(color = AppColors.BorderLight)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(stringResource(R.string.subtotal), style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
                         Text(CurrencyFormatter.format(cart.subtotal), style = MaterialTheme.typography.bodyMedium)
                     }
                     if (cart.orderDiscountAmount > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(stringResource(R.string.discount), style = MaterialTheme.typography.bodyMedium, color = AppColors.Error)
                             Text("-${CurrencyFormatter.format(cart.orderDiscountAmount)}", color = AppColors.Error)
                         }
                     }
                     if (cart.taxAmount > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(stringResource(R.string.tax), style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
                             Text(CurrencyFormatter.format(cart.taxAmount))
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(stringResource(R.string.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            CurrencyFormatter.format(cart.grandTotal),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.Primary,
-                        )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(stringResource(R.string.total), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(CurrencyFormatter.format(cart.grandTotal), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = AppColors.Primary)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Button(
+                    MiniPosGradientButton(
+                        text = stringResource(R.string.next),
                         onClick = onNext,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
                         enabled = !cart.isEmpty(),
-                    ) {
-                        Text(stringResource(R.string.next), modifier = Modifier.padding(vertical = 4.dp))
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
@@ -161,21 +134,36 @@ fun PosStep2Screen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.SurfaceElevated),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(40.dp), tint = AppColors.TextTertiary)
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.cart_empty), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
+                    Text(stringResource(R.string.cart_empty), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppColors.TextSecondary)
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(onClick = onBack) { Text(stringResource(R.string.back_to_products)) }
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.back_to_products), color = AppColors.Primary) }
                 }
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                MiniPosTopBar(
+                    title = stringResource(R.string.step2_title),
+                    onBack = onBack,
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                 itemsIndexed(cart.items) { index, item ->
                     CartItemCard(
                         item = item,
@@ -183,6 +171,7 @@ fun PosStep2Screen(
                         onPriceChange = { viewModel.updatePrice(index, it) },
                         onRemove = { viewModel.removeItem(index) },
                     )
+                }
                 }
             }
         }
@@ -203,8 +192,9 @@ private fun CartItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(

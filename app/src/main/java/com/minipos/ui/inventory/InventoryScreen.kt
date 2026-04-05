@@ -47,7 +47,8 @@ import com.patrykandpatrick.vico.core.component.shape.Shapes
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
 import com.patrykandpatrick.vico.core.entry.entryOf
 
-@OptIn(ExperimentalMaterial3Api::class)
+import com.minipos.ui.components.*
+
 @Composable
 fun InventoryScreen(
     onBack: () -> Unit,
@@ -66,22 +67,18 @@ fun InventoryScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.inventory_manage_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
-            )
-        },
+        containerColor = AppColors.Background,
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
+            MiniPosTopBar(
+                title = stringResource(R.string.inventory_manage_title),
+                onBack = onBack,
+            )
+
             // Tab Row
             TabRow(
                 selectedTabIndex = state.selectedTab.ordinal,
@@ -163,15 +160,13 @@ private fun OverviewTab(state: InventoryState) {
 
         // Stock value card
         item {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.SecondaryContainer),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                    .background(AppColors.SecondaryContainer)
+                    .padding(16.dp),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                ) {
                     Text(stringResource(R.string.inventory_value), style = MaterialTheme.typography.titleSmall, color = AppColors.SecondaryDark)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -201,7 +196,6 @@ private fun OverviewTab(state: InventoryState) {
                             )
                         }
                     }
-                }
             }
         }
 
@@ -268,16 +262,16 @@ private fun StockBarChart(title: String, items: List<StockOverviewItem>) {
     }
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
         colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
             Spacer(modifier = Modifier.height(12.dp))
             Chart(
                 chart = columnChart(
@@ -305,38 +299,34 @@ private fun StockBarChart(title: String, items: List<StockOverviewItem>) {
 
 @Composable
 private fun OverviewProductCard(item: StockOverviewItem, statusColor: Color) {
-    Card(
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = statusColor.copy(alpha = 0.06f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .background(statusColor.copy(alpha = 0.06f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    "SKU: ${item.productSku} · Min: ${item.minStock}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "${item.currentStock.toLong()} ${item.productUnit}",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = statusColor,
-                )
-                Text(
-                    CurrencyFormatter.formatCompact(item.stockValue),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(item.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                "SKU: ${item.productSku} · Min: ${item.minStock}",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.TextSecondary,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                "${item.currentStock.toLong()} ${item.productUnit}",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = statusColor,
+            )
+            Text(
+                CurrencyFormatter.formatCompact(item.stockValue),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.TextSecondary,
+            )
         }
     }
 }
@@ -349,23 +339,11 @@ private fun StockCheckTab(state: InventoryState, viewModel: InventoryViewModel) 
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Search bar
-        OutlinedTextField(
+        MiniPosSearchBar(
             value = state.stockCheckSearch,
             onValueChange = { viewModel.updateStockCheckSearch(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text(stringResource(R.string.search_stock)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            trailingIcon = {
-                if (state.stockCheckSearch.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.updateStockCheckSearch("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_cd))
-                    }
-                }
-            },
+            placeholder = stringResource(R.string.search_stock),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
         // Quick stats row
@@ -436,12 +414,12 @@ private fun StockCheckProductCard(item: ProductStock, onAdjust: () -> Unit) {
     val isOut = item.currentStock <= 0
 
     Card(
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                isOut -> AppColors.ErrorContainer
-                isLow -> AppColors.AccentContainer
+                isOut -> AppColors.Error.copy(alpha = 0.06f)
+                isLow -> AppColors.Warning.copy(alpha = 0.06f)
                 else -> AppColors.Surface
             }
         ),
@@ -522,31 +500,20 @@ private fun HistoryTab(state: InventoryState, viewModel: InventoryViewModel) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilterChip(
+            MiniPosFilterChip(
+                label = stringResource(R.string.history_all),
                 selected = state.historyFilterType == "all",
                 onClick = { viewModel.setHistoryFilterType("all") },
-                label = { Text(stringResource(R.string.history_all)) },
-                leadingIcon = if (state.historyFilterType == "all") { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
             )
-            FilterChip(
+            MiniPosFilterChip(
+                label = stringResource(R.string.history_stock_in),
                 selected = state.historyFilterType == "in",
                 onClick = { viewModel.setHistoryFilterType("in") },
-                label = { Text(stringResource(R.string.history_stock_in)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = AppColors.SecondaryContainer,
-                    selectedLabelColor = AppColors.SecondaryDark,
-                ),
-                leadingIcon = if (state.historyFilterType == "in") { { Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
             )
-            FilterChip(
+            MiniPosFilterChip(
+                label = stringResource(R.string.history_stock_out),
                 selected = state.historyFilterType == "out",
                 onClick = { viewModel.setHistoryFilterType("out") },
-                label = { Text(stringResource(R.string.history_stock_out)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = AppColors.ErrorContainer,
-                    selectedLabelColor = AppColors.ErrorDark,
-                ),
-                leadingIcon = if (state.historyFilterType == "out") { { Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(16.dp)) } } else null,
             )
         }
 
@@ -618,9 +585,9 @@ private fun HistoryItemCard(item: StockHistoryItem, onClick: () -> Unit) {
     val typeInfo = getMovementTypeInfoData(item.type)
 
     Card(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
         colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
@@ -873,22 +840,17 @@ private fun DetailRow(
 
 @Composable
 private fun SummaryCard(label: String, value: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .background(color.copy(alpha = 0.1f))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = color)
-            Text(label, style = MaterialTheme.typography.bodySmall, color = color)
-        }
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = color)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
 
@@ -953,7 +915,7 @@ private fun StockAdjustDialog(
                             label = { Text(stringResource(R.string.supplier_select_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supplierExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                             singleLine = true,
                         )
                         ExposedDropdownMenu(
@@ -987,7 +949,7 @@ private fun StockAdjustDialog(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
 
                 if (error != null) {
@@ -1002,7 +964,7 @@ private fun StockAdjustDialog(
                     if (qty != null && qty > 0) onAdjust(qty, selectedType, selectedSupplierId)
                 },
                 enabled = (amount.toDoubleOrNull() ?: 0.0) > 0,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
             ) { Text(stringResource(R.string.confirm_btn)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },

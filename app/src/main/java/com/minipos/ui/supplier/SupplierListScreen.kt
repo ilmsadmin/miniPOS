@@ -1,105 +1,172 @@
 package com.minipos.ui.supplier
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.Supplier
+import com.minipos.ui.components.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ═══════════════════════════════════════
+// ICON GRADIENT PALETTE (matches mock s1–s6)
+// ═══════════════════════════════════════
+
+private val SupplierIconGradients = listOf(
+    listOf(Color(0xFFFF6B6B), Color(0xFFEE5A24)), // s1 — red-orange
+    listOf(Color(0xFF4BB8F0), Color(0xFF2196F3)), // s2 — blue
+    listOf(Color(0xFF81C784), Color(0xFF388E3C)), // s3 — green
+    listOf(Color(0xFFFFD54F), Color(0xFFFFB300)), // s4 — amber
+    listOf(Color(0xFFCE93D8), Color(0xFF8E24AA)), // s5 — purple
+    listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA)), // s6 — indigo
+)
+
+private fun supplierIconGradient(index: Int): Brush {
+    val colors = SupplierIconGradients[index % SupplierIconGradients.size]
+    return Brush.linearGradient(colors)
+}
+
+// ═══════════════════════════════════════
+// SUPPLIER LIST SCREEN
+// ═══════════════════════════════════════
+
 @Composable
 fun SupplierListScreen(
     onBack: () -> Unit,
+    onNavigateToForm: (String?) -> Unit = {},
+    onNavigateToPurchase: () -> Unit = {},
     viewModel: SupplierListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
-    if (state.showForm) {
-        SupplierFormDialog(
-            editing = state.editingSupplier,
-            onSave = { name, contact, phone, email, address, taxCode, notes ->
-                viewModel.save(name, contact, phone, email, address, taxCode, notes)
-            },
-            onDismiss = { viewModel.dismissForm() },
-        )
-    }
-
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.supplier_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
+        containerColor = AppColors.Background,
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            // ── Top bar with add button (matches mock topbar) ──
+            MiniPosTopBar(
+                title = stringResource(R.string.supplier_title),
+                onBack = onBack,
                 actions = {
-                    IconButton(onClick = { viewModel.showCreateForm() }) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_supplier_cd))
+                    IconButton(
+                        onClick = { onNavigateToForm(null) },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MiniPosGradients.primary()),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = stringResource(R.string.add_supplier_cd),
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
                     }
                 },
             )
-        },
-    ) { paddingValues ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (state.suppliers.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.no_suppliers), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { viewModel.showCreateForm() }, shape = RoundedCornerShape(8.dp)) {
-                        Text(stringResource(R.string.add_supplier_btn))
+
+            if (state.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppColors.Primary)
+                }
+            } else if (state.suppliers.isEmpty()) {
+                // ── Empty state ──
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.SurfaceElevated),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.LocalShipping, contentDescription = null, modifier = Modifier.size(40.dp), tint = AppColors.TextTertiary)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(stringResource(R.string.no_suppliers), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppColors.TextSecondary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MiniPosGradientButton(
+                            text = stringResource(R.string.add_supplier_btn),
+                            onClick = { onNavigateToForm(null) },
+                            modifier = Modifier.width(200.dp),
+                            height = 44.dp,
+                        )
                     }
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(state.suppliers) { supplier ->
-                    SupplierItem(
-                        supplier = supplier,
-                        onClick = { viewModel.showEditForm(supplier) },
-                        onDelete = { viewModel.delete(supplier) },
-                    )
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // ── Search Bar ──
+                    item {
+                        MiniPosSearchBar(
+                            value = state.searchQuery,
+                            onValueChange = { viewModel.search(it) },
+                            placeholder = stringResource(R.string.search_supplier_hint),
+                        )
+                    }
+
+                    // ── Supplier cards ──
+                    itemsIndexed(state.filteredSuppliers) { index, supplier ->
+                        SupplierCard(
+                            supplier = supplier,
+                            colorIndex = index,
+                            productCount = state.productCounts[supplier.id] ?: 0,
+                            onClick = { onNavigateToForm(supplier.id) },
+                            onDelete = { viewModel.delete(supplier) },
+                            onNavigateToPurchase = onNavigateToPurchase,
+                        )
+                    }
+
+                    item { Spacer(Modifier.height(16.dp)) }
                 }
             }
         }
     }
 }
 
+// ═══════════════════════════════════════
+// SUPPLIER CARD (matches mock .sup)
+// ═══════════════════════════════════════
+
 @Composable
-private fun SupplierItem(
+private fun SupplierCard(
     supplier: Supplier,
+    colorIndex: Int,
+    productCount: Int,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    onNavigateToPurchase: () -> Unit,
 ) {
+    val context = LocalContext.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
@@ -107,93 +174,206 @@ private fun SupplierItem(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text(stringResource(R.string.delete_supplier_title)) },
             text = { Text(stringResource(R.string.delete_confirm_msg, supplier.name)) },
-            confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDelete() }) { Text(stringResource(R.string.delete), color = AppColors.Error) } },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) } },
+            confirmButton = {
+                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
+                    Text(stringResource(R.string.delete), color = AppColors.Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
     }
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .background(AppColors.Surface)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
     ) {
+        // ── Top row: icon + name/contact + badge ──
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Default.LocalShipping, contentDescription = null, tint = AppColors.Accent, modifier = Modifier.size(36.dp))
-            Spacer(modifier = Modifier.width(12.dp))
+            // Gradient icon (matches mock .sup-icon.s*)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                    .background(supplierIconGradient(colorIndex)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.LocalShipping,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // Name + contact person
             Column(modifier = Modifier.weight(1f)) {
-                Text(supplier.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(
+                    text = supplier.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary,
+                )
                 if (!supplier.contactPerson.isNullOrBlank()) {
-                    Text("LH: ${supplier.contactPerson}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                }
-                if (!supplier.phone.isNullOrBlank()) {
-                    Text(supplier.phone, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    Text(
+                        text = stringResource(R.string.supplier_contact_prefix, supplier.contactPerson),
+                        fontSize = 12.sp,
+                        color = AppColors.TextTertiary,
+                    )
                 }
             }
-            IconButton(onClick = { showDeleteConfirm = true }) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
+
+            // Product count badge (matches mock .sup-badge)
+            if (productCount > 0) {
+                Text(
+                    text = stringResource(R.string.supplier_products_count, productCount),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AppColors.PrimaryLight,
+                    modifier = Modifier
+                        .background(
+                            AppColors.PrimaryContainer,
+                            RoundedCornerShape(MiniPosTokens.RadiusFull),
+                        )
+                        .padding(horizontal = 10.dp, vertical = 3.dp),
+                )
             }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // ── Details row: phone + email (matches mock .sup-details) ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Phone detail
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Call,
+                    contentDescription = null,
+                    tint = AppColors.TextTertiary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = supplier.phone ?: stringResource(R.string.supplier_no_phone),
+                    fontSize = 12.sp,
+                    color = AppColors.TextSecondary,
+                )
+            }
+            // Email detail
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Mail,
+                    contentDescription = null,
+                    tint = AppColors.TextTertiary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = supplier.email ?: stringResource(R.string.supplier_no_email),
+                    fontSize = 12.sp,
+                    color = AppColors.TextSecondary,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // ── Action buttons row (matches mock .sup-actions) ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            // Call button
+            SupplierActionButton(
+                icon = Icons.Rounded.Call,
+                label = stringResource(R.string.supplier_call_btn),
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    supplier.phone?.let { phone ->
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                        context.startActivity(intent)
+                    }
+                },
+            )
+            // Email button
+            SupplierActionButton(
+                icon = Icons.Rounded.Mail,
+                label = stringResource(R.string.supplier_email_btn),
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    supplier.email?.let { email ->
+                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email"))
+                        context.startActivity(intent)
+                    }
+                },
+            )
+            // Purchase order button
+            SupplierActionButton(
+                icon = Icons.Rounded.AddShoppingCart,
+                label = stringResource(R.string.supplier_purchase_btn),
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToPurchase,
+            )
         }
     }
 }
 
-@Composable
-private fun SupplierFormDialog(
-    editing: Supplier?,
-    onSave: (String, String?, String?, String?, String?, String?, String?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var name by remember { mutableStateOf(editing?.name ?: "") }
-    var contact by remember { mutableStateOf(editing?.contactPerson ?: "") }
-    var phone by remember { mutableStateOf(editing?.phone ?: "") }
-    var email by remember { mutableStateOf(editing?.email ?: "") }
-    var address by remember { mutableStateOf(editing?.address ?: "") }
-    var taxCode by remember { mutableStateOf(editing?.taxCode ?: "") }
-    var notes by remember { mutableStateOf(editing?.notes ?: "") }
+// ═══════════════════════════════════════
+// SUPPLIER ACTION BUTTON (matches mock .sup-act)
+// ═══════════════════════════════════════
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (editing != null) stringResource(R.string.edit_supplier) else stringResource(R.string.add_supplier_btn)) },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.supplier_name_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
-                }
-                item {
-                    OutlinedTextField(value = contact, onValueChange = { contact = it }, label = { Text(stringResource(R.string.contact_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
-                }
-                item {
-                    OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.phone_number)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), shape = RoundedCornerShape(8.dp))
-                }
-                item {
-                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(8.dp))
-                }
-                item {
-                    OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text(stringResource(R.string.address_label)) }, modifier = Modifier.fillMaxWidth(), maxLines = 2, shape = RoundedCornerShape(8.dp))
-                }
-                item {
-                    OutlinedTextField(value = taxCode, onValueChange = { taxCode = it }, label = { Text(stringResource(R.string.tax_code)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(8.dp))
-                }
-                item {
-                    OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(stringResource(R.string.notes)) }, modifier = Modifier.fillMaxWidth(), maxLines = 3, shape = RoundedCornerShape(8.dp))
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isNotBlank()) onSave(name, contact.ifBlank { null }, phone.ifBlank { null }, email.ifBlank { null }, address.ifBlank { null }, taxCode.ifBlank { null }, notes.ifBlank { null })
-                },
-                enabled = name.isNotBlank(),
-                shape = RoundedCornerShape(8.dp),
-            ) { Text(stringResource(R.string.save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+@Composable
+private fun SupplierActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .background(Color.Transparent)
+            .then(
+                Modifier
+                    .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusMd))
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = AppColors.TextSecondary,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
+
+// SupplierFormDialog removed — now uses full-screen SupplierFormScreen via navigation

@@ -15,7 +15,9 @@ import com.minipos.domain.repository.InventoryRepository
 import com.minipos.domain.repository.ProductRepository
 import com.minipos.domain.repository.StoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -82,6 +84,9 @@ class ProductListViewModel @Inject constructor(
     private val _formState = MutableStateFlow(ProductFormState())
     val formState: StateFlow<ProductFormState> = _formState
 
+    private val _saveSuccess = MutableSharedFlow<Boolean>()
+    val saveSuccess: SharedFlow<Boolean> = _saveSuccess
+
     private val _variantFormState = MutableStateFlow(VariantFormState())
     val variantFormState: StateFlow<VariantFormState> = _variantFormState
 
@@ -89,6 +94,10 @@ class ProductListViewModel @Inject constructor(
     private var storeCode: String = ""
 
     init { loadData() }
+
+    fun refreshData() {
+        loadData()
+    }
 
     private fun loadData() {
         viewModelScope.launch {
@@ -162,6 +171,23 @@ class ProductListViewModel @Inject constructor(
         loadVariants(product.id)
     }
 
+    /**
+     * Load a product by ID from the repository and populate the edit form.
+     * Used by ProductFormScreen when navigated to via deep link / route.
+     */
+    fun loadProductForEdit(productId: String) {
+        viewModelScope.launch {
+            // Ensure store is loaded
+            if (storeId.isEmpty()) {
+                val store = storeRepository.getStore() ?: return@launch
+                storeId = store.id
+                storeCode = store.code
+            }
+            val product = productRepository.getById(productId) ?: return@launch
+            showEditForm(product)
+        }
+    }
+
     fun dismissForm() {
         _state.update { it.copy(showForm = false, editingProduct = null) }
     }
@@ -205,6 +231,7 @@ class ProductListViewModel @Inject constructor(
                     _formState.update { it.copy(isSaving = false) }
                     dismissForm()
                     loadData()
+                    _saveSuccess.emit(true)
                 }
                 is Result.Error -> {
                     _formState.update { it.copy(isSaving = false, error = result.message) }

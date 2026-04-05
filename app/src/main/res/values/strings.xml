@@ -2,12 +2,40 @@
 <resources>
     <string name="app_name">miniPOS</string>
 
+    <!-- Splash -->
+    <string name="splash_brand">Mini POS</string>
+    <string name="splash_tagline">Smart sales management</string>
+    <string name="splash_loading">Initializing…</string>
+    <string name="splash_designed_by">Designed by</string>
+    <string name="splash_company">Zenix Labs</string>
+
     <!-- Onboarding -->
     <string name="welcome_title">miniPOS</string>
     <string name="welcome_subtitle">Simple point-of-sale system\nfor your store</string>
     <string name="create_store">Create New Store</string>
     <string name="join_store">Join a Store</string>
     <string name="restore_from_gdrive">Restore from Google Drive</string>
+
+    <!-- Onboarding Slides -->
+    <string name="ob_tag_1">Quick</string>
+    <string name="ob_title_1_line1">Lightning</string>
+    <string name="ob_title_1_line2">fast sales</string>
+    <string name="ob_desc_1">Tap to add products, scan barcodes instantly. Optimized interface makes every transaction take just seconds.</string>
+
+    <string name="ob_tag_2">Smart</string>
+    <string name="ob_title_2_line1">Smart</string>
+    <string name="ob_title_2_line2">management</string>
+    <string name="ob_desc_2">Track inventory in real-time, automatic revenue reports. Everything at your fingertips — anytime, anywhere.</string>
+
+    <string name="ob_tag_3">Get Started</string>
+    <string name="ob_title_3_line1">Ready to</string>
+    <string name="ob_title_3_line2">launch</string>
+    <string name="ob_desc_3">Set up in 30 seconds. No IT knowledge needed, no hidden fees. Start selling today!</string>
+
+    <string name="ob_skip">Skip</string>
+    <string name="ob_next">Continue</string>
+    <string name="ob_start">Start using</string>
+    <string name="ob_swipe_hint">Swipe to continue</string>
 
     <!-- Create Store -->
     <string name="create_store_title">Create Store</string>
@@ -224,12 +252,27 @@
 
     <!-- Report -->
     <string name="report_today">Today</string>
+    <string name="report_this_week">This week</string>
+    <string name="report_this_month">This month</string>
+    <string name="report_custom">Custom</string>
     <string name="report_7days">7 days</string>
     <string name="report_30days">30 days</string>
     <string name="report_orders_count">%1$d orders</string>
     <string name="report_order_count_label">Orders</string>
     <string name="report_avg_order_label">Avg/Order</string>
     <string name="report_today_orders">Today\'s Orders</string>
+    <string name="report_revenue">Revenue</string>
+    <string name="report_orders">Orders</string>
+    <string name="report_products_sold">Products sold</string>
+    <string name="report_customers">Customers</string>
+    <string name="report_revenue_by_hour">Revenue by hour</string>
+    <string name="report_top_products">Top selling products</string>
+    <string name="report_detail_reports">Detail reports</string>
+    <string name="report_inventory">Inventory report</string>
+    <string name="report_debt">Debt report</string>
+    <string name="report_profit">Profit report</string>
+    <string name="report_export_excel">Export Excel</string>
+    <string name="report_times_sold">×%1$d</string>
 
     <!-- Payment method -->
     <string name="payment_method_cash">Cash</string>
@@ -344,17 +387,31 @@
     <string name="contact_label">Contact Person</string>
     <string name="address_label">Address</string>
     <string name="tax_code_label">Tax Code</string>
+    <string name="search_supplier_hint">Search supplier…</string>
+    <string name="supplier_contact_prefix">Contact: %1$s</string>
+    <string name="supplier_products_count">%1$d Products</string>
+    <string name="supplier_call_btn">Call</string>
+    <string name="supplier_email_btn">Email</string>
+    <string name="supplier_purchase_btn">Purchase</string>
+    <string name="supplier_no_phone">No phone number</string>
+    <string name="supplier_no_email">No email</string>
 
     <!-- Customer Screen -->
     <string name="customer_title">Customers</string>
     <string name="add_customer_cd">Add Customer</string>
-    <string name="search_customer_hint">Search customer…</string>
+    <string name="search_customer_hint">Search name, phone number…</string>
     <string name="no_customers">No customers yet</string>
     <string name="add_customer_btn">Add Customer</string>
     <string name="delete_customer_title">Delete Customer?</string>
     <string name="edit_customer">Edit Customer</string>
     <string name="visit_purchases_format">%1$d purchases</string>
     <string name="total_spent_format">Total spent: %1$s</string>
+    <string name="customer_stat_total">Customers</string>
+    <string name="customer_stat_new_month">New this month</string>
+    <string name="customer_stat_with_debt">Has debt</string>
+    <string name="customer_debt_format">Debt %1$s</string>
+    <string name="customer_orders_format">%1$d orders</string>
+    <string name="customer_detail_prefix">Detail: %1$s</string>
 
     <!-- Onboarding -->
     <string name="onboarding_subtitle">Simple point-of-sale system\nfor your store</string>
@@ -439,6 +496,27 @@
     <string name="select_products_with_barcode">Please select products with barcodes</string>
     <string name="error_sharing">Sharing error: %1$s</string>
     <string name="print_success">Print successful!</string>
+    <string name="barcode_saved_image">Barcode image saved</string>
+
+    <!-- Barcode Screen (new design) -->
+    <string name="barcode_screen_title">Create Barcodes</string>
+    <string name="barcode_selected_products">Selected Products</string>
+    <string name="barcode_add_products">Add products…</string>
+    <string name="barcode_removed">Deselected</string>
+    <string name="barcode_type_section">Barcode Type</string>
+    <string name="barcode_label_options">Label Options</string>
+    <string name="barcode_show_name">Show Product Name</string>
+    <string name="barcode_show_name_desc">Print product name on label</string>
+    <string name="barcode_show_price">Show Selling Price</string>
+    <string name="barcode_show_price_desc">Print retail price on label</string>
+    <string name="barcode_labels_per_product">Labels per product</string>
+    <string name="barcode_preview_section">Preview</string>
+    <string name="barcode_action_save">Save</string>
+    <string name="barcode_action_print">Print Labels</string>
+    <string name="barcode_no_preview">Select a product to preview</string>
+    <string name="barcode_pick_product_title">Select Products</string>
+    <string name="barcode_pick_search">Search products…</string>
+    <string name="barcode_pick_empty">No more products to add</string>
 
     <!-- OrderDetail / PosStep5 ViewModel -->
     <string name="bluetooth_not_enabled">Bluetooth is not enabled. Please enable Bluetooth and pair a printer.</string>
@@ -556,6 +634,16 @@
     <string name="p2p_sync_label">P2P Sync</string>
     <string name="coming_soon">Coming soon</string>
     <string name="section_app">Application</string>
+    <string name="section_appearance">Appearance</string>
+    <string name="section_other">Other</string>
+    <string name="dark_mode_label">Dark mode</string>
+    <string name="dark_mode_desc">Easier on the eyes in low-light environments</string>
+    <string name="language_label">Language</string>
+    <string name="language_vietnamese">Vietnamese</string>
+    <string name="bluetooth_printer_label">Bluetooth Printer</string>
+    <string name="bluetooth_not_connected">Not connected</string>
+    <string name="help_feedback_label">Help &amp; Feedback</string>
+    <string name="app_info_label">App Information</string>
     <string name="version_label">Version</string>
     <string name="version_value">miniPOS v1.0.0</string>
     <string name="store_info_title">Store Information</string>
@@ -674,6 +762,12 @@
     <string name="new_order_btn">New Order</string>
     <string name="back_to_home">Back to Home</string>
     <string name="print_bluetooth_label">Print via Bluetooth</string>
+    <string name="step5_order_label">Order %1$s</string>
+    <string name="step5_print_receipt_btn">Print Receipt</string>
+    <string name="step5_share_zalo_sms">Share via Zalo / SMS</string>
+    <string name="step5_view_order_detail">View Order Detail</string>
+    <string name="step5_create_new_order">Create New Order</string>
+    <string name="step5_auto_redirect">Auto return to POS in %1$d seconds…</string>
 
     <!-- Scan To POS Screen -->
     <string name="scan_product_barcode">Scan Product Barcode</string>
@@ -746,6 +840,42 @@
     <string name="status_partially_refunded">Partially Refunded</string>
     <string name="status_cancelled">Cancelled</string>
 
+    <!-- Order List Screen (redesigned) -->
+    <string name="order_history_title">Order History</string>
+    <string name="search_order_hint">Search by order code, customer…</string>
+    <string name="period_today">Today</string>
+    <string name="period_7_days">7 days</string>
+    <string name="period_30_days">30 days</string>
+    <string name="period_custom">Custom</string>
+    <string name="day_today_prefix">Today — %1$s</string>
+    <string name="day_total_format">Total: %1$s (%2$d orders)</string>
+    <string name="order_items_count">%1$d products</string>
+    <string name="order_no_results">No orders found</string>
+    <string name="order_search_empty_desc">Try a different search or period</string>
+
+    <!-- Order Detail Screen (redesigned) -->
+    <string name="order_products_section">Products (%1$d)</string>
+    <string name="order_summary_section">Summary</string>
+    <string name="order_payment_section">Payment</string>
+    <string name="order_customer_section">Customer</string>
+    <string name="label_subtotal">Subtotal</string>
+    <string name="label_tax_percent">Tax (%1$s%%)</string>
+    <string name="label_discount">Discount</string>
+    <string name="label_grand_total">Grand total</string>
+    <string name="label_customer_name">Name</string>
+    <string name="label_customer_phone">Phone</string>
+    <string name="label_notes">Notes</string>
+    <string name="label_none">None</string>
+    <string name="label_guest">Guest</string>
+    <string name="payment_received_change">Received %1$s · Change %2$s</string>
+    <string name="btn_reprint">Reprint</string>
+    <string name="btn_duplicate_order">Duplicate</string>
+    <string name="btn_return_refund">Return / Refund</string>
+    <string name="toast_reprint">Reprint receipt</string>
+    <string name="toast_duplicate">Create similar order</string>
+    <string name="toast_return">Request return</string>
+    <string name="share_order">Share order</string>
+
     <!-- Product List Screen extras -->
     <string name="add_first_product">Add First Product</string>
     <string name="cost_prefix">Cost: %1$s</string>
@@ -766,6 +896,16 @@
     <!-- Category List Screen extras -->
     <string name="category_empty_desc">Create categories to organize your products</string>
     <string name="create_first_category">Create First Category</string>
+    <string name="category_stat_categories">Categories</string>
+    <string name="category_stat_subcategories">Subcategories</string>
+    <string name="category_stat_products">Products</string>
+    <string name="category_search_hint">Search categories…</string>
+    <string name="category_product_sub_count">%1$d products · %2$d subcategories</string>
+    <string name="category_product_count_simple">%1$d products</string>
+    <string name="edit_category_action">Edit category</string>
+    <string name="delete_category_action">Delete category</string>
+    <string name="add_subcategory">Add subcategory</string>
+    <string name="category_title_screen">Product Categories</string>
 
     <!-- Store Management Screen sections & items -->
     <string name="section_catalog">Categories &amp; Products</string>
@@ -789,13 +929,28 @@
     <string name="mgmt_barcode">Barcode</string>
     <string name="mgmt_barcode_desc">Create, print product barcodes</string>
 
+    <!-- Store Management Quick Stats -->
+    <string name="mgmt_quick_stats_title">Quick Stats</string>
+    <string name="mgmt_stat_total_products">Total Products</string>
+    <string name="mgmt_stat_customers">Customers</string>
+    <string name="mgmt_stat_categories">Categories</string>
+    <string name="mgmt_stat_suppliers">Suppliers</string>
+    <string name="mgmt_categories_count">%1$d categories</string>
+    <string name="mgmt_products_count">%1$d products</string>
+    <string name="mgmt_customers_count">%1$d customers</string>
+    <string name="mgmt_suppliers_count">%1$d suppliers</string>
+
     <!-- Default units list -->
     <string name="units_list">pcs,item,box,pack,kg,g,L,mL,bottle,can,bag,case,set</string>
 
-    <!-- Purchase Screen -->
+    <!-- Purchase Screen (redesigned to match mock) -->
     <string name="purchase_title">Purchase Stock</string>
-    <string name="purchase_supplier_label">Supplier (optional)</string>
+    <string name="purchase_supplier_label">Supplier</string>
     <string name="purchase_no_supplier">No supplier</string>
+    <string name="purchase_date_label">Purchase Date</string>
+    <string name="purchase_code_label">PO Code</string>
+    <string name="purchase_product_list_section">Products to import</string>
+    <string name="purchase_search_or_scan_hint">Search or scan product…</string>
     <string name="purchase_add_product">Add product</string>
     <string name="purchase_empty">No products added yet.\nTap the + button to add products.</string>
     <string name="purchase_confirm_btn">Confirm Purchase</string>
@@ -805,9 +960,14 @@
     <string name="purchase_search_hint">Search product, SKU, barcode…</string>
     <string name="purchase_no_products">No products found</string>
     <string name="purchase_stock_current">Stock: %1$s</string>
+    <string name="purchase_summary_products">Total products</string>
+    <string name="purchase_summary_types_units">%1$d types · %2$d units</string>
+    <string name="purchase_summary_total">Total purchase</string>
     <string name="purchase_summary">%1$d item(s) · Total: %2$d</string>
     <string name="purchase_notes_hint">Notes (optional)</string>
     <string name="purchase_qty_label">Qty</string>
+    <string name="purchase_line_subtotal">Subtotal: %1$s</string>
+    <string name="purchase_remove_product">Remove product</string>
 
     <!-- Receipt Preview -->
     <string name="receipt_preview_title">Receipt Preview</string>
@@ -845,4 +1005,291 @@
     <string name="msg_pin_locked">Account locked. Try again in %1$d minutes.</string>
     <string name="msg_pin_locked_5min">Incorrect PIN 5 times. Account locked for 5 minutes.</string>
     <string name="msg_pin_wrong">Incorrect PIN. %1$d attempts remaining.</string>
+
+    <!-- Product List Screen (mock-aligned) -->
+    <string name="prod_showing_count">Showing %1$d products</string>
+    <string name="prod_stock_ok">Stock: %1$d</string>
+    <string name="prod_stock_low">Stock: %1$d</string>
+    <string name="prod_stock_out">Out of stock</string>
+    <string name="prod_no_category">Uncategorized</string>
+    <string name="prod_scan_barcode">Scan barcode</string>
+
+    <!-- Stock Management Screen -->
+    <string name="stock_mgmt_title">Stock Management</string>
+
+    <!-- Inventory Hub Screen -->
+    <string name="inv_hub_title">Inventory</string>
+    <string name="inv_hub_purchase_in">Purchase Stock</string>
+    <string name="inv_hub_purchase_in_desc">Create new purchase order</string>
+    <string name="inv_hub_order_history">Order History</string>
+    <string name="inv_hub_order_history_desc">View past orders</string>
+    <string name="inv_hub_stock_mgmt">Stock Management</string>
+    <string name="inv_hub_stock_mgmt_desc">Check stock &amp; inventory</string>
+    <string name="inv_hub_barcode">Create Barcode</string>
+    <string name="inv_hub_barcode_desc">Print barcode labels</string>
+    <string name="inv_hub_overview">Stock Overview</string>
+    <string name="inv_hub_low_stock">Low Stock</string>
+    <string name="inv_hub_out_of_stock">Out of Stock</string>
+    <string name="inv_hub_stock_value">Stock Value</string>
+    <string name="inv_hub_recent_purchase">Recent Purchases</string>
+    <string name="inv_hub_supplier_prefix">Supplier: %1$s</string>
+    <string name="inv_hub_no_recent">No recent stock movements</string>
+
+    <string name="stock_mgmt_search_hint">Search products…</string>
+    <string name="stock_mgmt_export_report">Export stock report</string>
+    <string name="stock_mgmt_sort">Sort</string>
+    <string name="stock_mgmt_filter_all">All</string>
+    <string name="stock_mgmt_filter_in_stock">In Stock</string>
+    <string name="stock_mgmt_filter_low">Low Stock</string>
+    <string name="stock_mgmt_filter_out">Out of Stock</string>
+    <string name="stock_mgmt_badge_ok">OK</string>
+    <string name="stock_mgmt_badge_low">Low</string>
+    <string name="stock_mgmt_badge_out">Out</string>
+    <string name="stock_mgmt_cost_prefix">Cost: %1$s</string>
+    <string name="stock_mgmt_qty_format">%1$d/%2$d</string>
+    <string name="stock_mgmt_create_audit">Create Stock Audit</string>
+    <string name="stock_mgmt_audit_created">New stock audit session created</string>
+    <string name="stock_mgmt_filter_applied">Filter: %1$s</string>
+    <string name="stock_mgmt_no_products">No products found</string>
+    <string name="stock_mgmt_no_products_desc">Add products with inventory tracking to see them here</string>
+
+    <!-- Stock Audit Screen -->
+    <string name="sa_title">Stock Audit / Adjust</string>
+    <string name="sa_tab_audit">Stock Audit</string>
+    <string name="sa_tab_add_stock">Add Stock</string>
+    <string name="sa_tab_remove_stock">Remove / Damage</string>
+    <string name="sa_info_audit">Enter the <b>actual counted quantity</b> in the warehouse. The system will automatically calculate differences with software stock.</string>
+    <string name="sa_info_add">Enter the quantity to <b>add to stock</b>. Use this for incoming goods that haven\'t been recorded.</string>
+    <string name="sa_info_remove">Enter the quantity to <b>remove from stock</b>. Use this for damaged, lost, or expired goods.</string>
+    <string name="sa_session_code">Session Code</string>
+    <string name="sa_audit_date">Audit Date</string>
+    <string name="sa_reason">Adjustment Reason</string>
+    <string name="sa_reason_required">Adjustment Reason *</string>
+    <string name="sa_reason_hint">e.g. Monthly stock audit April</string>
+    <string name="sa_products_section">Audit Products</string>
+    <string name="sa_search_hint">Search or scan product…</string>
+    <string name="sa_system_stock">System Stock</string>
+    <string name="sa_actual_count">Actual Count</string>
+    <string name="sa_actual_qty">Actual quantity</string>
+    <string name="sa_shelf_location">Shelf location</string>
+    <string name="sa_shelf_hint">e.g. A1-02</string>
+    <string name="sa_diff_reason">Difference reason</string>
+    <string name="sa_match">Match</string>
+    <string name="sa_shortage">Short %1$d</string>
+    <string name="sa_surplus">Surplus %1$d</string>
+    <string name="sa_add_product">Add product</string>
+    <string name="sa_notes">Audit session notes</string>
+    <string name="sa_notes_hint">Additional notes (optional)…</string>
+    <string name="sa_summary_total">Total products checked</string>
+    <string name="sa_summary_match">Match</string>
+    <string name="sa_summary_shortage">Shortage</string>
+    <string name="sa_summary_surplus">Surplus</string>
+    <string name="sa_summary_net">Net difference</string>
+    <string name="sa_confirm_audit">Confirm Stock Audit</string>
+    <string name="sa_confirm_add">Confirm Add Stock</string>
+    <string name="sa_confirm_remove">Confirm Remove Stock</string>
+    <string name="sa_saved">Stock audit session saved!</string>
+    <string name="sa_product_removed">Product removed</string>
+    <string name="sa_product_added">Product added to audit</string>
+    <string name="sa_product_already_added">Product already in list</string>
+    <string name="sa_no_products">No products added yet</string>
+    <string name="sa_no_products_desc">Search or scan products to add them to the audit</string>
+    <string name="sa_reason_loss">Loss</string>
+    <string name="sa_reason_damaged">Damaged</string>
+    <string name="sa_reason_theft">Theft</string>
+    <string name="sa_reason_not_updated">Not yet updated</string>
+    <string name="sa_reason_miscount">Previous miscount</string>
+    <string name="sa_reason_other">Other</string>
+    <string name="sa_qty_to_add">Qty to add</string>
+    <string name="sa_qty_to_remove">Qty to remove</string>
+    <string name="sa_products_count">%1$d products</string>
+    <string name="sa_items_count">%1$d items</string>
+    <string name="sa_validation_no_products">Please add at least one product</string>
+    <string name="sa_validation_no_reason">Please enter a reason</string>
+
+    <!-- Product Form Screen (full-screen, mock-aligned) -->
+    <string name="pf_add_title">Add Product</string>
+    <string name="pf_edit_title">Edit Product</string>
+    <string name="pf_save">Save</string>
+    <string name="pf_photo_hint">Tap to add product photo</string>
+    <string name="pf_section_basic">Basic Information</string>
+    <string name="pf_product_name">Product Name</string>
+    <string name="pf_product_name_hint">e.g. Coca Cola 330ml</string>
+    <string name="pf_sku">SKU</string>
+    <string name="pf_sku_hint">Auto</string>
+    <string name="pf_barcode">Barcode</string>
+    <string name="pf_barcode_hint">Scan or enter</string>
+    <string name="pf_category">Category</string>
+    <string name="pf_category_hint">Select category</string>
+    <string name="pf_unit">Unit</string>
+    <string name="pf_unit_hint">e.g. Can, Box, Kg…</string>
+    <string name="pf_section_pricing">Pricing</string>
+    <string name="pf_selling_price">Selling Price</string>
+    <string name="pf_cost_price">Cost Price</string>
+    <string name="pf_tax">Tax (%)</string>
+    <string name="pf_tax_hint">VAT applicable to this product</string>
+    <string name="pf_section_stock">Stock</string>
+    <string name="pf_initial_stock">Initial Stock</string>
+    <string name="pf_low_stock_alert">Low Stock Alert</string>
+    <string name="pf_low_stock_hint">Notify when ≤ this number</string>
+    <string name="pf_section_description">Description</string>
+    <string name="pf_description_hint">Product description (optional)…</string>
+    <string name="pf_active_label">Active</string>
+    <string name="pf_active_desc">Show product on POS</string>
+    <string name="pf_delete_product">Delete Product</string>
+    <string name="pf_saved_toast">Product saved!</string>
+    <string name="pf_deleted_toast">Product deleted!</string>
+    <string name="pf_select_photo">Select product photo</string>
+    <string name="pf_scan_barcode">Scan barcode</string>
+    <string name="pf_select_category">Select category</string>
+    <string name="pf_generate_barcode">Generate</string>
+    <string name="pf_section_variants">Variants</string>
+    <string name="pf_has_variants">Has variants</string>
+    <string name="pf_has_variants_desc">Enable variant options (size, color, etc.)</string>
+    <string name="pf_add_variant">Add variant</string>
+    <string name="pf_no_variants_hint">No variants yet. Add your first variant.</string>
+
+    <!-- POS new design strings -->
+    <string name="pos_cart_title">Cart</string>
+    <string name="pos_clear_cart">Clear</string>
+    <string name="pos_walk_in_customer">Walk-in Customer</string>
+    <string name="pos_customer_label">Customer</string>
+    <string name="pos_change_customer">Change</string>
+    <string name="pos_add_discount">+ Add discount</string>
+    <string name="pos_grand_total">Grand Total</string>
+    <string name="pos_checkout_btn">Checkout</string>
+    <string name="pos_skip_customer">No customer info needed</string>
+    <string name="total_to_pay_label">Total to pay</string>
+    <string name="customer_pays_label">Customer pays</string>
+    <string name="still_owe_label">Still owe</string>
+
+    <!-- ═══ Customer Form Screen ═══ -->
+    <string name="cf_tap_change_photo">Tap to change photo</string>
+    <string name="cf_customer_type">Customer Type</string>
+    <string name="cf_type_individual">Individual</string>
+    <string name="cf_type_wholesale">Wholesale</string>
+    <string name="cf_type_vip">VIP</string>
+    <string name="cf_delivery_address">Delivery Address</string>
+    <string name="cf_debt_management">Debt Management</string>
+    <string name="cf_current_debt">Current Debt</string>
+    <string name="cf_allow_credit">Allow credit purchase</string>
+    <string name="cf_allow_credit_desc">Customer can buy on credit</string>
+    <string name="cf_credit_limit">Maximum credit limit</string>
+    <string name="cf_credit_limit_hint">System will warn when exceeding the limit</string>
+    <string name="cf_active">Active</string>
+    <string name="cf_active_desc">Show customer in list</string>
+    <string name="cf_delete_customer">Delete Customer</string>
+    <string name="cf_no_debt">No debt</string>
+
+    <!-- ═══ Customer Detail Screen ═══ -->
+    <string name="cd_edit">Edit</string>
+    <string name="cd_more">More</string>
+    <string name="cd_active">Active</string>
+    <string name="cd_quick_call">Call</string>
+    <string name="cd_quick_message">Message</string>
+    <string name="cd_quick_new_order">New Order</string>
+    <string name="cd_total_orders">Total Orders</string>
+    <string name="cd_total_spent">Total Spent</string>
+    <string name="cd_debt">Debt</string>
+    <string name="cd_contact_info">Contact Information</string>
+    <string name="cd_phone">Phone</string>
+    <string name="cd_email">Email</string>
+    <string name="cd_address">Address</string>
+    <string name="cd_created">Created</string>
+    <string name="cd_na">N/A</string>
+    <string name="cd_current_balance">Current Balance</string>
+    <string name="cd_collect">Collect</string>
+    <string name="cd_history">History</string>
+    <string name="cd_no_orders">No orders yet</string>
+    <string name="cd_notes">Notes</string>
+    <string name="cd_no_notes">No notes</string>
+    <string name="cd_customer_detail">Customer Details</string>
+    <string name="cd_loading">Loading…</string>
+    <string name="cd_not_found">Customer not found</string>
+
+    <!-- ═══ Supplier Form Screen ═══ -->
+    <string name="sf_logo_placeholder">Logo</string>
+    <string name="sf_tap_change_logo">Tap to change logo</string>
+    <string name="sf_section_contact">Contact Information</string>
+    <string name="sf_contact_person">Contact Person</string>
+    <string name="sf_mobile">Mobile</string>
+    <string name="sf_payment_terms">Payment Terms</string>
+    <string name="sf_payment_cash">Cash</string>
+    <string name="sf_payment_transfer">Bank Transfer</string>
+    <string name="sf_payment_credit_7">Credit 7 days</string>
+    <string name="sf_payment_credit_15">Credit 15 days</string>
+    <string name="sf_payment_credit_30">Credit 30 days</string>
+    <string name="sf_payment_hint">Select payment method with supplier</string>
+    <string name="sf_section_banking">Banking Information</string>
+    <string name="sf_bank_name">Bank Name</string>
+    <string name="sf_bank_name_hint">e.g. Vietcombank</string>
+    <string name="sf_bank_account">Account Number</string>
+    <string name="sf_bank_account_hint">Account number</string>
+    <string name="sf_bank_holder">Account Holder</string>
+    <string name="sf_bank_holder_hint">Account holder name</string>
+    <string name="sf_active">Active</string>
+    <string name="sf_active_desc">Show supplier in list</string>
+    <string name="sf_delete_supplier">Delete Supplier</string>
+    <string name="sf_supplier_code">Supplier Code</string>
+    <string name="sf_supplier_name_hint">e.g. Coca Cola Vietnam</string>
+    <string name="sf_contact_person_hint">Contact person name</string>
+    <string name="sf_phone_hint">Phone number</string>
+    <string name="sf_mobile_hint">Personal phone</string>
+    <string name="sf_email_hint">email@company.com</string>
+    <string name="sf_address_hint">Warehouse / office address…</string>
+    <string name="sf_notes_hint">Additional notes about the supplier (optional)…</string>
+
+    <!-- ═══ Category Form Screen ═══ -->
+    <string name="catf_choose_icon">Choose Icon</string>
+    <string name="catf_tap_change_icon">Tap to change icon</string>
+    <string name="catf_section_info">Category Information</string>
+    <string name="catf_color">Color</string>
+    <string name="catf_parent_category">Parent Category</string>
+    <string name="catf_no_parent">None (root category)</string>
+    <string name="catf_subcategories">Subcategories</string>
+    <string name="catf_active">Active</string>
+    <string name="catf_active_desc">Show category in list</string>
+    <string name="catf_delete_category">Delete Category</string>
+
+    <!-- ═══ Store Settings Screen ═══ -->
+    <string name="store_settings_title">Store Settings</string>
+    <string name="store_settings_save">Save</string>
+    <string name="store_settings_saved">Settings saved!</string>
+    <string name="store_logo_hint">Tap to change logo</string>
+    <string name="ss_section_store_info">Store Information</string>
+    <string name="ss_store_name_label">Store Name</string>
+    <string name="ss_store_name_required">Store Name *</string>
+    <string name="ss_store_name_hint">e.g. Minh Anh Grocery</string>
+    <string name="ss_address_label">Address</string>
+    <string name="ss_address_hint">Store address…</string>
+    <string name="ss_phone_label">Phone</string>
+    <string name="ss_email_label">Email</string>
+    <string name="ss_section_tax_currency">Tax &amp; Currency</string>
+    <string name="ss_default_vat">Default VAT</string>
+    <string name="ss_vat_desc">Applied to all products</string>
+    <string name="ss_currency_unit">Currency</string>
+    <string name="ss_currency_vnd">Vietnamese Dong</string>
+    <string name="ss_section_receipt">Receipt</string>
+    <string name="ss_auto_print_receipt">Auto print receipt</string>
+    <string name="ss_auto_print_desc">Print after completing payment</string>
+    <string name="ss_show_logo_receipt">Show logo on receipt</string>
+    <string name="ss_show_logo_desc">Print store logo at receipt header</string>
+    <string name="ss_receipt_thank_you">Thank you message on receipt</string>
+    <string name="ss_receipt_thank_you_hint">Displayed at bottom of receipt</string>
+    <string name="ss_receipt_preview">Receipt Preview</string>
+    <string name="ss_receipt_preview_label">RECEIPT PREVIEW</string>
+    <string name="ss_receipt_total">Total</string>
+    <string name="ss_receipt_preview_hint">Preview of printed receipt</string>
+    <string name="ss_section_business">Business Rules</string>
+    <string name="ss_allow_debt">Allow debt purchases</string>
+    <string name="ss_allow_debt_desc">Customers can buy on credit</string>
+    <string name="ss_low_stock_warning">Low stock warning</string>
+    <string name="ss_low_stock_desc">Notify when stock is low</string>
+    <string name="ss_sales_sound">Sales sound</string>
+    <string name="ss_sales_sound_desc">Play sound on scan or checkout</string>
+    <string name="ss_default_low_stock_level">Default low stock threshold</string>
+    <string name="ss_default_low_stock_hint">Applied to products without custom settings</string>
+    <string name="ss_section_hours">Operational Hours</string>
+    <string name="ss_open_time">Opening time</string>
+    <string name="ss_close_time">Closing time</string>
 </resources>

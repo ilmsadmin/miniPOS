@@ -1,25 +1,32 @@
 package com.minipos.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.R
@@ -27,11 +34,12 @@ import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.StoreSettings
 import com.minipos.domain.model.User
 import com.minipos.domain.model.UserRole
+import com.minipos.ui.components.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToStoreSettings: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -164,164 +172,246 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = AppColors.Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_label)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
-            )
-        },
     ) { paddingValues ->
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = AppColors.Primary)
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Store info card
-                item {
-                    state.store?.let { store ->
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = AppColors.PrimaryContainer),
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Store, contentDescription = null, tint = AppColors.Primary, modifier = Modifier.size(32.dp))
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(store.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Text("${stringResource(R.string.store_code_format, store.code)}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                                    }
-                                }
-                                if (!store.address.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(store.address, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                                }
-                                if (!store.phone.isNullOrBlank()) {
-                                    Text("${stringResource(R.string.store_phone_format, store.phone)}", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                                }
-                            }
+                MiniPosTopBar(
+                    title = stringResource(R.string.settings_label),
+                    onBack = onBack,
+                    actions = {
+                        IconButton(onClick = onNavigateToStoreSettings) {
+                            Icon(
+                                Icons.Rounded.Storefront,
+                                contentDescription = stringResource(R.string.store_settings_title),
+                                tint = AppColors.TextSecondary,
+                            )
                         }
-                    }
-                }
+                    },
+                )
 
-                // Current user
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                // ─── Profile card (like mock's .profile-card) ───
                 item {
                     state.currentUser?.let { user ->
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+                                .background(AppColors.Surface)
+                                .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl))
+                                .clickable { viewModel.showStoreInfoDialog() }
+                                .padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(
+                            // Avatar with accent gradient
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(MiniPosGradients.accent()),
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = AppColors.Secondary, modifier = Modifier.size(32.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(user.displayName, fontWeight = FontWeight.Medium)
+                                Text(
+                                    user.displayName.firstOrNull()?.uppercase() ?: "?",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    user.displayName,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = AppColors.TextPrimary,
+                                )
+                                Text(
+                                    when (user.role) {
+                                        UserRole.OWNER -> stringResource(R.string.role_owner)
+                                        UserRole.MANAGER -> stringResource(R.string.role_manager)
+                                        UserRole.CASHIER -> stringResource(R.string.role_cashier)
+                                    },
+                                    fontSize = 12.sp,
+                                    color = AppColors.TextTertiary,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                state.store?.let { store ->
                                     Text(
-                                        stringResource(R.string.role_label, when (user.role) {
-                                            UserRole.OWNER -> stringResource(R.string.role_owner)
-                                            UserRole.MANAGER -> stringResource(R.string.role_manager)
-                                            UserRole.CASHIER -> stringResource(R.string.role_cashier)
-                                        }),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = AppColors.TextSecondary,
+                                        store.name,
+                                        fontSize = 11.sp,
+                                        color = AppColors.PrimaryLight,
+                                        fontWeight = FontWeight.SemiBold,
                                     )
                                 }
                             }
+                            Icon(
+                                Icons.Rounded.ChevronRight,
+                                contentDescription = null,
+                                tint = AppColors.TextTertiary,
+                            )
                         }
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                // Settings items
-                item { SectionHeader(stringResource(R.string.section_store)) }
+                // ─── Store settings group ───
+                item { SettingsGroupTitle(stringResource(R.string.section_store)) }
                 item {
-                    SettingsItem(
-                        Icons.Default.Store,
-                        stringResource(R.string.store_info_label),
-                        stringResource(R.string.store_info_desc),
-                    ) { viewModel.showStoreInfoDialog() }
-                }
-                item {
-                    SettingsItem(
-                        Icons.Default.People,
-                        stringResource(R.string.staff_label),
-                        stringResource(R.string.staff_count, state.users.size),
-                    ) { viewModel.showUserManagement() }
-                }
-                item {
-                    val settings = state.store?.settings ?: StoreSettings()
-                    SettingsItem(
-                        Icons.Default.Tune,
-                        stringResource(R.string.sales_settings_label),
-                        buildString {
-                            if (settings.taxEnabled) append(stringResource(R.string.tax_enabled_format, settings.defaultTaxRate.toString()))
-                            else append(stringResource(R.string.tax_disabled))
-                            append(" · ")
-                            if (settings.autoPrintReceipt) append(stringResource(R.string.auto_print)) else append(stringResource(R.string.manual_print))
-                        },
-                    ) { viewModel.showSalesSettingsDialog() }
-                }
-
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-                item { SectionHeader(stringResource(R.string.section_data)) }
-                item {
-                    SettingsItem(
-                        Icons.Default.CloudUpload,
-                        stringResource(R.string.backup_label),
-                        stringResource(R.string.backup_desc),
-                    ) { viewModel.showBackupDialog() }
-                }
-                item {
-                    SettingsItem(
-                        Icons.Default.CloudDownload,
-                        stringResource(R.string.restore_label),
-                        stringResource(R.string.restore_desc),
-                    ) { viewModel.showRestoreDialog() }
-                }
-                item {
-                    SettingsItem(
-                        Icons.Default.SyncAlt,
-                        stringResource(R.string.p2p_sync_label),
-                        stringResource(R.string.coming_soon),
-                    ) {
-                        // P2P Sync - Coming soon
+                    SettingsGroup {
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Storefront,
+                            iconGradient = listOf(Color(0xFF6C5CE7), Color(0xFFA29BFE)),
+                            title = stringResource(R.string.store_info_label),
+                            subtitle = stringResource(R.string.store_info_desc),
+                            onClick = { onNavigateToStoreSettings() },
+                        )
+                        SettingsItemDivider()
+                        val settings = state.store?.settings ?: StoreSettings()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Receipt,
+                            iconGradient = listOf(Color(0xFF00D2FF), Color(0xFF3B9FDB)),
+                            title = stringResource(R.string.sales_settings_label),
+                            subtitle = buildString {
+                                if (settings.taxEnabled) append(stringResource(R.string.tax_enabled_format, settings.defaultTaxRate.toString()))
+                                else append(stringResource(R.string.tax_disabled))
+                            },
+                            trailingValue = if (settings.taxEnabled) "${settings.defaultTaxRate.toInt()}%" else null,
+                            onClick = { viewModel.showSalesSettingsDialog() },
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Print,
+                            iconGradient = listOf(Color(0xFFFF8A65), Color(0xFFFF5252)),
+                            title = stringResource(R.string.bluetooth_printer_label),
+                            subtitle = stringResource(R.string.bluetooth_not_connected),
+                            onClick = { /* TODO: Bluetooth printer setup */ },
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.CloudSync,
+                            iconGradient = listOf(Color(0xFF00E676), Color(0xFF69F0AE)),
+                            title = stringResource(R.string.backup_label),
+                            subtitle = stringResource(R.string.backup_desc),
+                            onClick = { viewModel.showBackupDialog() },
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.ManageAccounts,
+                            iconGradient = listOf(Color(0xFFFFD54F), Color(0xFFF9A825)),
+                            title = stringResource(R.string.staff_label),
+                            subtitle = stringResource(R.string.staff_count, state.users.size),
+                            onClick = { viewModel.showUserManagement() },
+                        )
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-                item { SectionHeader(stringResource(R.string.section_app)) }
+                item { Spacer(modifier = Modifier.height(12.dp)) }
+
+                // ─── Appearance group ───
+                item { SettingsGroupTitle(stringResource(R.string.section_appearance)) }
                 item {
-                    SettingsItem(
-                        Icons.Default.Info,
-                        stringResource(R.string.version_label),
-                        stringResource(R.string.version_value),
-                    ) {}
+                    SettingsGroup {
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.DarkMode,
+                            iconGradient = listOf(Color(0xFF0A0E1A), Color(0xFF334155)),
+                            title = stringResource(R.string.dark_mode_label),
+                            subtitle = stringResource(R.string.dark_mode_desc),
+                            trailingContent = {
+                                // Dark mode toggle would need integration with theme state
+                                // For now, show a toggle placeholder
+                                Switch(
+                                    checked = true, // TODO: bind to actual theme state
+                                    onCheckedChange = { /* TODO: toggle theme */ },
+                                    colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
+                                )
+                            },
+                            onClick = { /* TODO: toggle theme */ },
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Translate,
+                            iconGradient = listOf(Color(0xFF4DD0E1), Color(0xFF0097A7)),
+                            title = stringResource(R.string.language_label),
+                            trailingValue = stringResource(R.string.language_vietnamese),
+                            onClick = { /* TODO: language picker */ },
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(12.dp)) }
+
+                // ─── Other group ───
+                item { SettingsGroupTitle(stringResource(R.string.section_other)) }
+                item {
+                    SettingsGroup {
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Help,
+                            iconGradient = listOf(Color(0xFFCE93D8), Color(0xFFAB47BC)),
+                            title = stringResource(R.string.help_feedback_label),
+                            onClick = { /* TODO */ },
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Info,
+                            iconGradient = listOf(Color(0xFF90A4AE), Color(0xFF607D8B)),
+                            title = stringResource(R.string.app_info_label),
+                            subtitle = stringResource(R.string.version_value),
+                            onClick = { /* TODO */ },
+                        )
+                    }
+                }
+
+                // Version footer
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Row {
+                            Text(
+                                "Mini POS ",
+                                fontSize = 12.sp,
+                                color = AppColors.TextTertiary,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                "v1.0.0",
+                                fontSize = 12.sp,
+                                color = AppColors.PrimaryLight,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Zenix Labs",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.BrandBlue,
+                        )
+                    }
                 }
 
                 item { Spacer(modifier = Modifier.height(32.dp)) }
             }
+        }
         }
     }
 }
@@ -361,7 +451,7 @@ private fun StoreInfoDialog(
                     supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 OutlinedTextField(
                     value = address,
@@ -370,7 +460,7 @@ private fun StoreInfoDialog(
                     singleLine = false,
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 OutlinedTextField(
                     value = phone,
@@ -379,7 +469,7 @@ private fun StoreInfoDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 HorizontalDivider()
                 OutlinedTextField(
@@ -388,7 +478,7 @@ private fun StoreInfoDialog(
                     label = { Text(stringResource(R.string.display_name_required)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 HorizontalDivider()
                 // PIN section
@@ -408,7 +498,7 @@ private fun StoreInfoDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                     )
                 }
                 OutlinedTextField(
@@ -420,7 +510,7 @@ private fun StoreInfoDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 if (newPin.isNotBlank()) {
                     OutlinedTextField(
@@ -433,7 +523,7 @@ private fun StoreInfoDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                     )
                 }
             }
@@ -509,7 +599,7 @@ private fun SalesSettingsDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         suffix = { Text("%") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                     )
                 }
 
@@ -523,7 +613,7 @@ private fun SalesSettingsDialog(
                     singleLine = false,
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
 
                 // Receipt footer
@@ -534,7 +624,7 @@ private fun SalesSettingsDialog(
                     singleLine = false,
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -655,10 +745,10 @@ private fun UserCard(
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) AppColors.PrimaryContainer else AppColors.SurfaceVariant
+            containerColor = if (isCurrent) AppColors.Primary.copy(alpha = 0.08f) else AppColors.Surface
         ),
     ) {
         Row(
@@ -756,7 +846,7 @@ private fun AddUserDialog(
                     supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 OutlinedTextField(
                     value = pin,
@@ -768,7 +858,7 @@ private fun AddUserDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 OutlinedTextField(
                     value = confirmPin,
@@ -779,20 +869,20 @@ private fun AddUserDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
 
                 Text(stringResource(R.string.role_selection), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
+                    MiniPosFilterChip(
+                        label = stringResource(R.string.role_manager),
                         selected = selectedRole == UserRole.MANAGER,
                         onClick = { selectedRole = UserRole.MANAGER },
-                        label = { Text(stringResource(R.string.role_manager)) },
                     )
-                    FilterChip(
+                    MiniPosFilterChip(
+                        label = stringResource(R.string.role_cashier),
                         selected = selectedRole == UserRole.CASHIER,
                         onClick = { selectedRole = UserRole.CASHIER },
-                        label = { Text(stringResource(R.string.role_cashier)) },
                     )
                 }
             }
@@ -839,21 +929,21 @@ private fun EditUserDialog(
                     supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
 
                 if (user.role != UserRole.OWNER) {
                     Text(stringResource(R.string.role_selection), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
+                        MiniPosFilterChip(
+                            label = stringResource(R.string.role_manager),
                             selected = selectedRole == UserRole.MANAGER,
                             onClick = { selectedRole = UserRole.MANAGER },
-                            label = { Text(stringResource(R.string.role_manager)) },
                         )
-                        FilterChip(
+                        MiniPosFilterChip(
+                            label = stringResource(R.string.role_cashier),
                             selected = selectedRole == UserRole.CASHIER,
                             onClick = { selectedRole = UserRole.CASHIER },
-                            label = { Text(stringResource(R.string.role_cashier)) },
                         )
                     }
                 }
@@ -900,7 +990,7 @@ private fun ResetPinDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
                 OutlinedTextField(
                     value = confirmPin,
@@ -911,7 +1001,7 @@ private fun ResetPinDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
                 )
             }
         },
@@ -930,47 +1020,103 @@ private fun ResetPinDialog(
     )
 }
 
-// ============ Shared Components ============
+// ============ Shared Components (matching mock design) ============
 
 @Composable
-private fun SectionHeader(title: String) {
+private fun SettingsGroupTitle(title: String) {
     Text(
-        title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Medium,
-        color = AppColors.Primary,
-        modifier = Modifier.padding(vertical = 4.dp),
+        title.uppercase(),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.ExtraBold,
+        color = AppColors.TextTertiary,
+        letterSpacing = 0.8.sp,
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
     )
 }
 
 @Composable
-private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
+private fun SettingsGroup(
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl)),
+        content = content,
+    )
+}
+
+@Composable
+private fun SettingsItemDivider() {
+    HorizontalDivider(
+        color = AppColors.Divider,
+        modifier = Modifier.padding(horizontal = 20.dp),
+    )
+}
+
+@Composable
+private fun SettingsItemStyled(
+    icon: ImageVector,
+    iconGradient: List<Color>,
+    title: String,
+    subtitle: String? = null,
+    trailingValue: String? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
+        // Icon with gradient background
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .size(36.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                .background(Brush.linearGradient(iconGradient)),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = AppColors.TextSecondary, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.TextPrimary,
+            )
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    fontSize = 11.sp,
+                    color = AppColors.TextTertiary,
+                )
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.TextTertiary)
+        }
+        if (trailingValue != null) {
+            Text(
+                trailingValue,
+                fontSize = 12.sp,
+                color = AppColors.TextTertiary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        }
+        if (trailingContent != null) {
+            trailingContent()
+        } else {
+            Icon(
+                Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.TextTertiary,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

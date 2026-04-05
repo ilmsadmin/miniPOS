@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Báo cáo</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-8); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    /* ─── Period chips ─── */
+    .period-wrap { padding:0 0 var(--sp-16); flex-shrink:0; position:relative; z-index:1; }
+    .periods {
+      display:flex; gap:var(--sp-6); padding:0 var(--sp-16);
+      overflow-x:auto; scrollbar-width:none;
+    }
+    .periods::-webkit-scrollbar { display:none; }
+    .period-chip {
+      padding:var(--sp-8) var(--sp-16);
+      border-radius:var(--r-full); border:1px solid var(--border-l);
+      background:transparent; color:var(--text-2);
+      font-size:12px; font-weight:700; font-family:inherit;
+      cursor:pointer; white-space:nowrap; transition:all 0.2s;
+    }
+    .period-chip:hover { background:var(--bg-input); }
+    .period-chip.on { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 2px 12px var(--primary-glow); }
+
+    /* ─── KPI cards ─── */
+    .kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-8); margin-bottom:var(--sp-20); }
+    .kpi {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+    }
+    .kpi-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--sp-8); }
+    .kpi-icon .material-symbols-rounded { font-size:22px; }
+    .kpi:nth-child(1) .kpi-icon .material-symbols-rounded { color:var(--success); }
+    .kpi:nth-child(2) .kpi-icon .material-symbols-rounded { color:var(--accent); }
+    .kpi:nth-child(3) .kpi-icon .material-symbols-rounded { color:var(--primary-light); }
+    .kpi:nth-child(4) .kpi-icon .material-symbols-rounded { color:var(--warning); }
+    .kpi-trend { font-size:11px; font-weight:700; display:flex; align-items:center; gap:2px; }
+    .kpi-trend.up { color:var(--success); }
+    .kpi-trend.down { color:var(--error); }
+    .kpi-trend .material-symbols-rounded { font-size:14px; }
+    .kpi-val { font-size:22px; font-weight:900; letter-spacing:-0.3px; }
+    .kpi-lbl { font-size:11px; color:var(--text-3); font-weight:600; margin-top:2px; }
+
+    /* ─── Chart area ─── */
+    .sec-title {
+      font-size:13px; font-weight:800; color:var(--text-3);
+      text-transform:uppercase; letter-spacing:0.8px;
+      margin-bottom:var(--sp-12);
+      display:flex; align-items:center; gap:var(--sp-8);
+    }
+    .sec-title .material-symbols-rounded { font-size:18px; }
+    .chart-card {
+      border-radius:var(--r-xl); background:var(--bg-card);
+      border:1px solid var(--border); padding:var(--sp-16);
+      margin-bottom:var(--sp-20); overflow:hidden;
+    }
+    .chart-area {
+      height:140px; position:relative; display:flex;
+      align-items:flex-end; gap:2px; padding-top:var(--sp-12);
+    }
+    .chart-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .chart-bar {
+      width:100%; border-radius:var(--r-sm) var(--r-sm) 0 0;
+      background:var(--grad-primary); min-height:4px;
+      transition:height 0.5s var(--ease-spring);
+      position:relative;
+    }
+    .chart-bar::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+      border-radius:inherit;
+    }
+    .chart-bar.accent { background:var(--grad-accent); }
+    .chart-lbl { font-size:9px; color:var(--text-3); font-weight:600; }
+    .chart-line {
+      position:absolute; top:0; left:0; right:0;
+      border-top:1px dashed var(--border-l); opacity:0.3;
+    }
+
+    /* ─── Top products ─── */
+    .top-list { display:flex; flex-direction:column; gap:var(--sp-6); margin-bottom:var(--sp-20); }
+    .top-item {
+      display:flex; align-items:center; gap:var(--sp-12);
+      padding:var(--sp-12) var(--sp-16);
+      border-radius:var(--r-lg); background:var(--bg-card);
+      border:1px solid var(--border);
+    }
+    .top-rank {
+      width:28px; height:28px; border-radius:var(--r-full);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:900; flex-shrink:0;
+    }
+    .top-item:nth-child(1) .top-rank { background:linear-gradient(135deg, #FFD700, #FFA000); color:#fff; }
+    .top-item:nth-child(2) .top-rank { background:linear-gradient(135deg, #B0BEC5, #78909C); color:#fff; }
+    .top-item:nth-child(3) .top-rank { background:linear-gradient(135deg, #BCAAA4, #8D6E63); color:#fff; }
+    .top-item:nth-child(n+4) .top-rank { background:var(--bg-elevated); color:var(--text-3); }
+    .top-name { flex:1; font-size:13px; font-weight:600; }
+    .top-qty { font-size:12px; color:var(--text-3); font-weight:600; white-space:nowrap; }
+    .top-amt { font-size:13px; font-weight:800; color:var(--accent); white-space:nowrap; }
+
+    /* ─── Detail reports ─── */
+    .report-list { display:flex; flex-direction:column; gap:var(--sp-8); margin-bottom:var(--sp-16); }
+    .report-item {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      display:flex; align-items:center; gap:var(--sp-12);
+      cursor:pointer; transition:all 0.2s;
+    }
+    .report-item:hover { background:var(--bg-card-hover); transform:translateX(4px); }
+    .report-icon .material-symbols-rounded { font-size:22px; color:var(--primary-light); }
+    .report-info { flex:1; }
+    .report-name { font-size:14px; font-weight:700; }
+    .report-arrow { color:var(--text-3); }
+
+    [data-theme="light"] .kpi { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .chart-card { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .top-item { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.16 14.26l.04-.12L8.1 12h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 3H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 14.37 5.48 16 7 16h12v-2H7.42c-.14 0-.25-.11-.25-.25z" fill="white"/></svg>
+        </div>
+        <span class="brand-text">Báo cáo</span>
+      </div>
+      <div class="hdr-actions">
+        <button class="theme-btn" onclick="toggleTheme()"><span class="material-symbols-rounded" id="themeIcon">light_mode</span></button>
+        <button class="icon-btn"><span class="material-symbols-rounded">notifications</span></button>
+        <button class="avatar">Z</button>
+      </div>
+    </div>
+
+    <div class="period-wrap">
+      <div class="periods">
+        <button class="period-chip on">Hôm nay</button>
+        <button class="period-chip">Tuần này</button>
+        <button class="period-chip">Tháng này</button>
+        <button class="period-chip">Tuỳ chọn</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon"><span class="material-symbols-rounded">payments</span></div>
+            <div class="kpi-trend up"><span class="material-symbols-rounded">trending_up</span>12%</div>
+          </div>
+          <div class="kpi-val">1.25M</div>
+          <div class="kpi-lbl">Doanh thu</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon"><span class="material-symbols-rounded">receipt</span></div>
+            <div class="kpi-trend up"><span class="material-symbols-rounded">trending_up</span>3</div>
+          </div>
+          <div class="kpi-val">15</div>
+          <div class="kpi-lbl">Đơn hàng</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon"><span class="material-symbols-rounded">sell</span></div>
+          </div>
+          <div class="kpi-val">45</div>
+          <div class="kpi-lbl">SP đã bán</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon"><span class="material-symbols-rounded">group</span></div>
+          </div>
+          <div class="kpi-val">8</div>
+          <div class="kpi-lbl">Khách hàng</div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="sec-title"><span class="material-symbols-rounded">show_chart</span>Doanh thu theo giờ</div>
+      <div class="chart-card">
+        <div class="chart-area" id="chart">
+          <div class="chart-line" style="top:0"></div>
+          <div class="chart-line" style="top:33%"></div>
+          <div class="chart-line" style="top:66%"></div>
+        </div>
+      </div>
+
+      <!-- Top products -->
+      <div class="sec-title"><span class="material-symbols-rounded">emoji_events</span>Top sản phẩm bán chạy</div>
+      <div class="top-list">
+        <div class="top-item">
+          <div class="top-rank">1</div>
+          <div class="top-name">Coca Cola 330ml</div>
+          <div class="top-qty">×18</div>
+          <div class="top-amt">216K</div>
+        </div>
+        <div class="top-item">
+          <div class="top-rank">2</div>
+          <div class="top-name">Mì Hảo Hảo</div>
+          <div class="top-qty">×12</div>
+          <div class="top-amt">42K</div>
+        </div>
+        <div class="top-item">
+          <div class="top-rank">3</div>
+          <div class="top-name">Nước suối Lavie</div>
+          <div class="top-qty">×10</div>
+          <div class="top-amt">40K</div>
+        </div>
+        <div class="top-item">
+          <div class="top-rank">4</div>
+          <div class="top-name">Pepsi 330ml</div>
+          <div class="top-qty">×8</div>
+          <div class="top-amt">88K</div>
+        </div>
+        <div class="top-item">
+          <div class="top-rank">5</div>
+          <div class="top-name">Snack Oishi</div>
+          <div class="top-qty">×7</div>
+          <div class="top-amt">35K</div>
+        </div>
+      </div>
+
+      <!-- Detail reports -->
+      <div class="sec-title"><span class="material-symbols-rounded">description</span>Báo cáo chi tiết</div>
+      <div class="report-list">
+        <div class="report-item" onclick="toast('Báo cáo tồn kho')">
+          <div class="report-icon"><span class="material-symbols-rounded">inventory</span></div>
+          <div class="report-info"><div class="report-name">Báo cáo tồn kho</div></div>
+          <div class="report-arrow"><span class="material-symbols-rounded">chevron_right</span></div>
+        </div>
+        <div class="report-item" onclick="toast('Báo cáo công nợ')">
+          <div class="report-icon"><span class="material-symbols-rounded">credit_score</span></div>
+          <div class="report-info"><div class="report-name">Báo cáo công nợ</div></div>
+          <div class="report-arrow"><span class="material-symbols-rounded">chevron_right</span></div>
+        </div>
+        <div class="report-item" onclick="toast('Báo cáo lợi nhuận')">
+          <div class="report-icon"><span class="material-symbols-rounded">trending_up</span></div>
+          <div class="report-info"><div class="report-name">Báo cáo lợi nhuận</div></div>
+          <div class="report-arrow"><span class="material-symbols-rounded">chevron_right</span></div>
+        </div>
+        <div class="report-item" onclick="toast('Xuất Excel')">
+          <div class="report-icon"><span class="material-symbols-rounded">download</span></div>
+          <div class="report-info"><div class="report-name">Xuất Excel</div></div>
+          <div class="report-arrow"><span class="material-symbols-rounded">chevron_right</span></div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="bnav">
+      <button class="ni" onclick="location.href='inventory.html'">
+        <div class="npill"><span class="material-symbols-rounded">warehouse</span></div><span>Kho hàng</span>
+        <span class="nbadge">3</span>
+      </button>
+      <button class="ni" onclick="location.href='management.html'">
+        <div class="npill"><span class="material-symbols-rounded">list_alt</span></div><span>Quản lý</span>
+      </button>
+      <div class="nspc"></div>
+      <button class="ni on">
+        <div class="npill"><span class="material-symbols-rounded">bar_chart</span></div><span>Báo cáo</span>
+      </button>
+      <button class="ni" onclick="location.href='settings.html'">
+        <div class="npill"><span class="material-symbols-rounded">more_horiz</span></div><span>Thêm</span>
+      </button>
+      <div class="fab-wrap">
+        <button class="fab" onclick="location.href='pos-home.html'">
+          <span class="material-symbols-rounded">point_of_sale</span><span class="fab-lbl">POS</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    function getTheme(){return localStorage.getItem('pos-theme')||'dark'}
+    function applyTheme(t){document.documentElement.setAttribute('data-theme',t);const i=document.getElementById('themeIcon');if(i)i.textContent=t==='dark'?'light_mode':'dark_mode';localStorage.setItem('pos-theme',t)}
+    function toggleTheme(){const c=getTheme();const n=c==='dark'?'light':'dark';applyTheme(n);toast(n==='light'?'Light Mode':'Dark Mode')}
+    applyTheme(getTheme());
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+
+    // Generate chart bars
+    const hours = ['8h','9h','10h','11h','12h','13h','14h','15h','16h','17h','18h'];
+    const vals = [45,72,120,95,65,40,110,130,85,60,30];
+    const max = Math.max(...vals);
+    const chart = document.getElementById('chart');
+    // Keep the chart lines
+    hours.forEach((h,i)=>{
+      const w = document.createElement('div');
+      w.className = 'chart-bar-wrap';
+      const pct = (vals[i]/max)*100;
+      w.innerHTML = `<div class="chart-bar${i%2?' accent':''}" style="height:${pct}%"></div><div class="chart-lbl">${h}</div>`;
+      chart.appendChild(w);
+    });
+
+    // Period chips
+    document.querySelectorAll('.period-chip').forEach(c=>{
+      c.addEventListener('click', ()=>{
+        document.querySelectorAll('.period-chip').forEach(x=>x.classList.remove('on'));
+        c.classList.add('on');
+        toast(c.textContent);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,264 +1,314 @@
 package com.minipos.ui.home
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.minipos.core.theme.AppColors
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.R
+import com.minipos.core.theme.AppColors
+import com.minipos.ui.components.*
 import com.minipos.ui.navigation.Screen
 
-private data class ManagementItem(
+// ═══════════════════════════════════════
+// DATA MODELS
+// ═══════════════════════════════════════
+
+private data class ManagementMenuItem(
     val icon: ImageVector,
     val titleRes: Int,
-    val subtitleRes: Int,
+    val countFormat: Int,
     val route: String,
-    val iconBgColor: Color,
-    val iconTint: Color,
+    val gradientColors: List<Color>,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+private data class QuickStatItem(
+    val icon: ImageVector,
+    val labelRes: Int,
+    val iconColor: @Composable () -> Color,
+)
+
+// ═══════════════════════════════════════
+// SCREEN
+// ═══════════════════════════════════════
+
 @Composable
 fun StoreManagementScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit,
+    viewModel: StoreManagementViewModel = hiltViewModel(),
 ) {
-    val catalogItems = listOf(
-        ManagementItem(
-            icon = Icons.Default.Category,
+    val state by viewModel.state.collectAsState()
+
+    // Menu items matching the HTML design exactly
+    val menuItems = listOf(
+        ManagementMenuItem(
+            icon = Icons.Rounded.Category,
             titleRes = R.string.mgmt_categories,
-            subtitleRes = R.string.mgmt_categories_desc,
+            countFormat = R.string.mgmt_categories_count,
             route = Screen.CategoryList.route,
-            iconBgColor = Color(0xFFFFF7ED),
-            iconTint = Color(0xFFD97706),
+            gradientColors = listOf(Color(0xFFFF8A65), Color(0xFFFF5252)), // mi-cat
         ),
-        ManagementItem(
-            icon = Icons.Default.Inventory2,
+        ManagementMenuItem(
+            icon = Icons.Rounded.Sell,
             titleRes = R.string.mgmt_products,
-            subtitleRes = R.string.mgmt_products_desc,
+            countFormat = R.string.mgmt_products_count,
             route = Screen.ProductList.route,
-            iconBgColor = Color(0xFFF3E8FF),
-            iconTint = Color(0xFF8B5CF6),
+            gradientColors = listOf(Color(0xFF6C5CE7), Color(0xFFA29BFE)), // mi-prod
         ),
-        ManagementItem(
-            icon = Icons.Default.People,
+        ManagementMenuItem(
+            icon = Icons.Rounded.Group,
             titleRes = R.string.mgmt_customers,
-            subtitleRes = R.string.mgmt_customers_desc,
+            countFormat = R.string.mgmt_customers_count,
             route = Screen.CustomerList.route,
-            iconBgColor = Color(0xFFFFF1F2),
-            iconTint = Color(0xFFE11D48),
+            gradientColors = listOf(Color(0xFF00D2FF), Color(0xFF3B9FDB)), // mi-cust
         ),
-        ManagementItem(
-            icon = Icons.Default.LocalShipping,
+        ManagementMenuItem(
+            icon = Icons.Rounded.LocalShipping,
             titleRes = R.string.mgmt_suppliers,
-            subtitleRes = R.string.mgmt_suppliers_desc,
+            countFormat = R.string.mgmt_suppliers_count,
             route = Screen.SupplierList.route,
-            iconBgColor = Color(0xFFECFEFF),
-            iconTint = Color(0xFF0891B2),
-        ),
-        ManagementItem(
-            icon = Icons.Default.BarChart,
-            titleRes = R.string.mgmt_reports,
-            subtitleRes = R.string.mgmt_reports_desc,
-            route = Screen.Reports.route,
-            iconBgColor = Color(0xFFECFDF5),
-            iconTint = Color(0xFF059669),
+            gradientColors = listOf(Color(0xFFFFD54F), Color(0xFFF9A825)), // mi-supp
         ),
     )
 
-    val operationItems = listOf(
-        ManagementItem(
-            icon = Icons.Default.MoveToInbox,
-            titleRes = R.string.mgmt_purchase,
-            subtitleRes = R.string.mgmt_purchase_desc,
-            route = Screen.PurchaseOrder.route,
-            iconBgColor = Color(0xFFECFDF5),
-            iconTint = Color(0xFF059669),
+    // Quick stat items matching the HTML design
+    val quickStatItems = listOf(
+        QuickStatItem(
+            icon = Icons.Rounded.Inventory2,
+            labelRes = R.string.mgmt_stat_total_products,
+            iconColor = { AppColors.PrimaryLight },
         ),
-        ManagementItem(
-            icon = Icons.Default.Receipt,
-            titleRes = R.string.mgmt_orders,
-            subtitleRes = R.string.mgmt_orders_desc,
-            route = Screen.OrderList.route,
-            iconBgColor = Color(0xFFF3E8FF),
-            iconTint = Color(0xFF7C3AED),
+        QuickStatItem(
+            icon = Icons.Rounded.Group,
+            labelRes = R.string.mgmt_stat_customers,
+            iconColor = { AppColors.Accent },
         ),
-        ManagementItem(
-            icon = Icons.Default.Inventory,
-            titleRes = R.string.mgmt_inventory,
-            subtitleRes = R.string.mgmt_inventory_desc,
-            route = Screen.InventoryOverview.route,
-            iconBgColor = Color(0xFFFEF3C7),
-            iconTint = Color(0xFFD97706),
+        QuickStatItem(
+            icon = Icons.Rounded.Category,
+            labelRes = R.string.mgmt_stat_categories,
+            iconColor = { AppColors.IconFood },
         ),
-        ManagementItem(
-            icon = Icons.Default.QrCode,
-            titleRes = R.string.mgmt_barcode,
-            subtitleRes = R.string.mgmt_barcode_desc,
-            route = Screen.BarcodeManagement.route,
-            iconBgColor = Color(0xFFF1F5F9),
-            iconTint = Color(0xFF374151),
+        QuickStatItem(
+            icon = Icons.Rounded.LocalShipping,
+            labelRes = R.string.mgmt_stat_suppliers,
+            iconColor = { AppColors.Warning },
         ),
+    )
+
+    // Map stat values in order: products, customers, categories, suppliers
+    val statValues = listOf(
+        state.productCount,
+        state.customerCount,
+        state.categoryCount,
+        state.supplierCount,
+    )
+
+    // Map count values for menu items: categories, products, customers, suppliers
+    val menuCounts = listOf(
+        state.categoryCount,
+        state.productCount,
+        state.customerCount,
+        state.supplierCount,
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringResource(R.string.store_management_title), fontWeight = FontWeight.Bold)
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Surface),
-            )
-        },
         containerColor = AppColors.Background,
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(paddingValues),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            MiniPosTopBar(
+                title = stringResource(R.string.store_management_title),
+                onBack = onBack,
+            )
 
-            // ── Section: Danh mục & sản phẩm ──
-            SectionHeader(title = stringResource(R.string.section_catalog))
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
             ) {
-                Column {
-                    catalogItems.forEachIndexed { index, item ->
-                        ManagementRow(
+                // ─── Menu List ───
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 24.dp),
+                ) {
+                    menuItems.forEachIndexed { index, item ->
+                        ManagementMenuCard(
                             item = item,
+                            count = menuCounts[index],
                             onClick = { onNavigate(item.route) },
                         )
-                        if (index < catalogItems.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 72.dp),
-                                color = AppColors.Divider,
-                            )
+                    }
+                }
+
+                // ─── Quick Stats Section ───
+                SectionTitle(
+                    title = stringResource(R.string.mgmt_quick_stats_title),
+                    icon = Icons.Rounded.Insights,
+                )
+
+                // 2×2 Grid
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 16.dp),
+                ) {
+                    for (row in 0..1) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            for (col in 0..1) {
+                                val idx = row * 2 + col
+                                QuickStatCard(
+                                    icon = quickStatItems[idx].icon,
+                                    value = statValues[idx],
+                                    label = stringResource(quickStatItems[idx].labelRes),
+                                    iconColor = quickStatItems[idx].iconColor(),
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── Section: Kho hàng & Vận hành ──
-            SectionHeader(title = stringResource(R.string.section_operations))
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            ) {
-                Column {
-                    operationItems.forEachIndexed { index, item ->
-                        ManagementRow(
-                            item = item,
-                            onClick = { onNavigate(item.route) },
-                        )
-                        if (index < operationItems.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 72.dp),
-                                color = AppColors.Divider,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = AppColors.TextSecondary,
-        modifier = Modifier.padding(start = 4.dp),
-    )
-}
+// ═══════════════════════════════════════
+// MANAGEMENT MENU CARD
+// Matches .menu-item in the HTML design:
+// 48dp gradient icon box, title (15sp bold),
+// count subtitle (12sp tertiary), chevron arrow
+// ═══════════════════════════════════════
 
 @Composable
-private fun ManagementRow(
-    item: ManagementItem,
+private fun ManagementMenuCard(
+    item: ManagementMenuItem,
+    count: Int,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl))
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Icon container
-        Surface(
-            shape = CircleShape,
-            color = item.iconBgColor,
-            modifier = Modifier.size(42.dp),
+        // Gradient icon container (48dp, r-lg = 16dp)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                .background(Brush.linearGradient(item.gradientColors)),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(
-                    item.icon,
-                    contentDescription = null,
-                    tint = item.iconTint,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
+            Icon(
+                item.icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(26.dp),
+            )
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
-        // Text
+        // Title + count
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                stringResource(item.titleRes),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                text = stringResource(item.titleRes),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary,
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                stringResource(item.subtitleRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.TextSecondary,
+                text = stringResource(item.countFormat, count),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = AppColors.TextTertiary,
             )
         }
 
-        // Chevron
+        // Chevron arrow
         Icon(
-            Icons.Default.ChevronRight,
+            Icons.Rounded.ChevronRight,
             contentDescription = null,
             tint = AppColors.TextTertiary,
             modifier = Modifier.size(20.dp),
         )
+    }
+}
+
+// ═══════════════════════════════════════
+// QUICK STAT CARD
+// Matches .qs-card in the HTML design:
+// Icon (24dp colored) + value (20sp, 900 weight) + label (10sp tertiary)
+// ═══════════════════════════════════════
+
+@Composable
+private fun QuickStatCard(
+    icon: ImageVector,
+    value: Int,
+    label: String,
+    iconColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp),
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                text = value.toString(),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                color = AppColors.TextPrimary,
+            )
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.TextTertiary,
+            )
+        }
     }
 }

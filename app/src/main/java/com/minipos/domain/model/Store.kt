@@ -20,4 +20,12 @@ data class StoreSettings(
     val defaultTaxRate: Double = 0.0,
     val lowStockAlert: Boolean = true,
     val autoPrintReceipt: Boolean = false,
+    // New fields for store settings screen
+    val showLogoOnReceipt: Boolean = true,
+    val receiptThankYou: String = "",
+    val allowDebt: Boolean = true,
+    val salesSound: Boolean = false,
+    val defaultLowStockLevel: Int = 20,
+    val openTime: String = "06:00",
+    val closeTime: String = "22:00",
 )

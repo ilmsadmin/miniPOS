@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Lịch sử đơn hàng</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+
+    .search-wrap { padding:0 var(--sp-16) var(--sp-12); flex-shrink:0; z-index:1; }
+    .search-bar {
+      height:44px; background:var(--bg-input); border:1px solid var(--border);
+      border-radius:var(--r-2xl); display:flex; align-items:center;
+      padding:0 var(--sp-6) 0 var(--sp-16); gap:var(--sp-12); transition:all 0.2s;
+    }
+    .search-bar:focus-within { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
+    .search-bar .material-symbols-rounded { color:var(--text-3); font-size:20px; }
+    .search-bar input { flex:1; border:none; background:transparent; font-size:13px; font-family:inherit; color:var(--text-1); outline:none; }
+    .search-bar input::placeholder { color:var(--text-3); }
+
+    .period-chips { display:flex; gap:var(--sp-6); padding:0 var(--sp-16) var(--sp-12); flex-shrink:0; overflow-x:auto; scrollbar-width:none; }
+    .period-chips::-webkit-scrollbar { display:none; }
+    .pc {
+      padding:var(--sp-6) var(--sp-12); border-radius:var(--r-full);
+      border:1px solid var(--border-l); background:transparent; color:var(--text-2);
+      font-size:12px; font-weight:700; font-family:inherit; cursor:pointer;
+      white-space:nowrap; transition:all 0.2s;
+    }
+    .pc.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    .day-group { margin-bottom:var(--sp-20); }
+    .day-label {
+      font-size:12px; font-weight:700; color:var(--text-3); margin-bottom:var(--sp-8);
+      display:flex; align-items:center; gap:var(--sp-8);
+    }
+    .day-label .material-symbols-rounded { font-size:16px; }
+    .order-list { display:flex; flex-direction:column; gap:var(--sp-8); }
+    .order-card {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      cursor:pointer; transition:all 0.2s;
+    }
+    .order-card:hover { background:var(--bg-card-hover); border-color:var(--border-l); }
+    .order-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--sp-8); }
+    .order-code { font-size:14px; font-weight:800; }
+    .order-amt { font-size:15px; font-weight:900; color:var(--accent); }
+    .order-mid { display:flex; align-items:center; gap:var(--sp-12); margin-bottom:var(--sp-6); }
+    .order-cust { display:flex; align-items:center; gap:var(--sp-4); font-size:12px; color:var(--text-2); font-weight:500; }
+    .order-cust .material-symbols-rounded { font-size:14px; }
+    .order-method { display:flex; align-items:center; gap:var(--sp-4); font-size:12px; color:var(--text-2); font-weight:500; }
+    .order-method .material-symbols-rounded { font-size:14px; }
+    .order-bot { display:flex; align-items:center; justify-content:space-between; }
+    .order-meta { font-size:11px; color:var(--text-3); }
+    .order-status {
+      padding:3px 10px; border-radius:var(--r-full);
+      font-size:10px; font-weight:800; text-transform:uppercase;
+    }
+    .os-done { background:var(--success-soft); color:var(--success); }
+    .os-return { background:var(--warning-soft); color:var(--warning); }
+
+    .day-total {
+      text-align:right; font-size:12px; color:var(--text-3);
+      font-weight:600; margin-top:var(--sp-8); padding-right:var(--sp-4);
+    }
+    .day-total span { color:var(--accent); font-weight:800; }
+
+    [data-theme="light"] .order-card { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Lịch sử đơn hàng</span>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search-bar">
+        <span class="material-symbols-rounded">search</span>
+        <input placeholder="Tìm theo mã đơn, khách hàng...">
+      </div>
+    </div>
+
+    <div class="period-chips">
+      <button class="pc on">Hôm nay</button>
+      <button class="pc">7 ngày</button>
+      <button class="pc">30 ngày</button>
+      <button class="pc">Tuỳ chọn</button>
+    </div>
+
+    <div class="page-body">
+      <div class="day-group">
+        <div class="day-label"><span class="material-symbols-rounded">today</span>Hôm nay — 04/04/2026</div>
+        <div class="order-list">
+          <div class="order-card" onclick="toast('Chi tiết #DH-00142')">
+            <div class="order-top">
+              <div class="order-code">#DH-00142</div>
+              <div class="order-amt">28,225đ</div>
+            </div>
+            <div class="order-mid">
+              <div class="order-cust"><span class="material-symbols-rounded">person</span>Khách lẻ</div>
+              <div class="order-method"><span class="material-symbols-rounded">payments</span>Tiền mặt</div>
+            </div>
+            <div class="order-bot">
+              <div class="order-meta">3 sản phẩm · 14:32</div>
+              <div class="order-status os-done">Hoàn thành</div>
+            </div>
+          </div>
+          <div class="order-card" onclick="toast('Chi tiết #DH-00141')">
+            <div class="order-top">
+              <div class="order-code">#DH-00141</div>
+              <div class="order-amt">45,000đ</div>
+            </div>
+            <div class="order-mid">
+              <div class="order-cust"><span class="material-symbols-rounded">person</span>Nguyễn Văn A</div>
+              <div class="order-method"><span class="material-symbols-rounded">account_balance</span>Chuyển khoản</div>
+            </div>
+            <div class="order-bot">
+              <div class="order-meta">5 sản phẩm · 11:05</div>
+              <div class="order-status os-done">Hoàn thành</div>
+            </div>
+          </div>
+          <div class="order-card" onclick="toast('Chi tiết #DH-00140')">
+            <div class="order-top">
+              <div class="order-code">#DH-00140</div>
+              <div class="order-amt">12,000đ</div>
+            </div>
+            <div class="order-mid">
+              <div class="order-cust"><span class="material-symbols-rounded">person</span>Khách lẻ</div>
+              <div class="order-method"><span class="material-symbols-rounded">payments</span>Tiền mặt</div>
+            </div>
+            <div class="order-bot">
+              <div class="order-meta">1 sản phẩm · 09:20</div>
+              <div class="order-status os-return">Trả hàng</div>
+            </div>
+          </div>
+        </div>
+        <div class="day-total">Tổng: <span>85,225đ</span> (3 đơn)</div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label"><span class="material-symbols-rounded">event</span>03/04/2026</div>
+        <div class="order-list">
+          <div class="order-card" onclick="toast('Chi tiết #DH-00139')">
+            <div class="order-top"><div class="order-code">#DH-00139</div><div class="order-amt">156,000đ</div></div>
+            <div class="order-mid">
+              <div class="order-cust"><span class="material-symbols-rounded">person</span>Trần Thị B</div>
+              <div class="order-method"><span class="material-symbols-rounded">smartphone</span>Ví điện tử</div>
+            </div>
+            <div class="order-bot">
+              <div class="order-meta">8 sản phẩm · 17:45</div>
+              <div class="order-status os-done">Hoàn thành</div>
+            </div>
+          </div>
+          <div class="order-card" onclick="toast('Chi tiết #DH-00138')">
+            <div class="order-top"><div class="order-code">#DH-00138</div><div class="order-amt">23,500đ</div></div>
+            <div class="order-mid">
+              <div class="order-cust"><span class="material-symbols-rounded">person</span>Khách lẻ</div>
+              <div class="order-method"><span class="material-symbols-rounded">payments</span>Tiền mặt</div>
+            </div>
+            <div class="order-bot">
+              <div class="order-meta">2 sản phẩm · 10:12</div>
+              <div class="order-status os-done">Hoàn thành</div>
+            </div>
+          </div>
+        </div>
+        <div class="day-total">Tổng: <span>179,500đ</span> (2 đơn)</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    document.querySelectorAll('.pc').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.pc').forEach(x=>x.classList.remove('on'));c.classList.add('on')}));
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+  </script>
+</body>
+</html>

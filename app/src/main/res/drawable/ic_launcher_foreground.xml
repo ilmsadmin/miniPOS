@@ -5,43 +5,50 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 
-        miniPOS Icon - Shopping bag with receipt/bolt symbol
-        Safe zone: 54dp centered (24dp inset from each edge on 108dp canvas)
-        Icon content within 26-82 range
+    <!--
+        miniPOS Icon Foreground — Modern Dynamic Shopping Cart
+        White cart icon with bold rounded strokes, dynamic swoosh angle.
+        Centered on 108dp canvas within safe zone (24-84).
     -->
 
-    <!-- Shopping bag body - rounded rectangle -->
+    <!-- Cart handle (angled bar extending from top-left) -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M26,34 L34,40" />
+
+    <!-- Cart body (swooping basket shape with dynamic tilt) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M36,42 L36,74 C36,76.2 37.8,78 40,78 L68,78 C70.2,78 72,76.2 72,74 L72,42 C72,39.8 70.2,38 68,38 L40,38 C37.8,38 36,39.8 36,42z" />
+        android:pathData="M34,40 L38,38 L74,35
+                          Q76,35 76,37
+                          L72,56
+                          Q71,59 68,59
+                          L44,61
+                          Q41,61 40,58
+                          L36,44
+                          Q35,41 38,38
+                          Z" />
 
-    <!-- Bag handle -->
+    <!-- Inner cut-out to create cart opening -->
     <path
         android:fillColor="@android:color/transparent"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M45,38 L45,33 C45,28 49,25 54,25 C59,25 63,28 63,33 L63,38" />
+        android:pathData="M42,44 L70,41" />
 
-    <!-- Receipt/price tag lines on the bag -->
-    <path
-        android:fillColor="#2563EB"
-        android:pathData="M42,48 L58,48 C59.1,48 60,48.45 60,49 C60,49.55 59.1,50 58,50 L42,50 C40.9,50 40,49.55 40,49 C40,48.45 40.9,48 42,48z" />
-    <path
-        android:fillColor="#2563EB"
-        android:pathData="M42,53 L54,53 C55.1,53 56,53.45 56,54 C56,54.55 55.1,55 54,55 L42,55 C40.9,55 40,54.55 40,54 C40,53.45 40.9,53 42,53z" />
-
-    <!-- Dollar/currency circle -->
-    <path
-        android:fillColor="#F59E0B"
-        android:pathData="M61,64 m-8,0 a8,8 0,1 1,16 0 a8,8 0,1 1,-16 0" />
-
-    <!-- ₫ symbol (Vietnamese Dong) simplified as "đ" -->
+    <!-- Left wheel -->
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.5"
-        android:pathData="M59.2,61 L59.2,67.5 M57,62.5 L62,62.5 M59.2,62.2 C59.2,62.2 62.5,62.5 62.5,64.8 C62.5,67 59.2,67.3 59.2,67.3" />
+        android:pathData="M45,64 a4,4 0,1 1,8 0 a4,4 0,1 1,-8 0" />
+
+    <!-- Right wheel -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,63 a4,4 0,1 1,8 0 a4,4 0,1 1,-8 0" />
 
 </vector>

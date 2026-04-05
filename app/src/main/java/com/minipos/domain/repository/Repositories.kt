@@ -47,6 +47,7 @@ interface ProductRepository {
     suspend fun create(product: Product): Result<Product>
     suspend fun update(product: Product): Result<Product>
     suspend fun delete(productId: String): Result<Unit>
+    suspend fun getById(productId: String): Product?
     fun observeProducts(storeId: String): Flow<List<Product>>
     suspend fun getAll(storeId: String): List<Product>
     suspend fun getByCategory(storeId: String, categoryId: String): List<Product>

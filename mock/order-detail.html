@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Chi tiết đơn hàng</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+    .topbar-actions { display:flex; gap:var(--sp-4); }
+    .topbar-btn { width:40px; height:40px; border:none; border-radius:var(--r-full); background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .topbar-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .topbar-btn .material-symbols-rounded { font-size:22px; }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-20); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    /* ─── Order header card ─── */
+    .order-header {
+      padding:var(--sp-20); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      text-align:center; margin-bottom:var(--sp-16);
+    }
+    .order-id { font-size:12px; font-weight:700; color:var(--text-3); margin-bottom:var(--sp-4); letter-spacing:0.5px; }
+    .order-total {
+      font-size:32px; font-weight:900; line-height:1;
+      background:var(--grad-primary); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      margin-bottom:var(--sp-8);
+    }
+    .order-status {
+      display:inline-flex; align-items:center; gap:var(--sp-4);
+      padding:var(--sp-4) var(--sp-16); border-radius:var(--r-full);
+      font-size:12px; font-weight:800;
+    }
+    .order-status.done { background:var(--success-soft); color:var(--success); }
+    .order-status.returned { background:var(--error-soft); color:var(--error); }
+    .order-status .material-symbols-rounded { font-size:16px; }
+    .order-meta { display:flex; justify-content:center; gap:var(--sp-16); margin-top:var(--sp-12); font-size:12px; color:var(--text-3); }
+    .order-meta span { display:flex; align-items:center; gap:var(--sp-4); }
+    .order-meta .material-symbols-rounded { font-size:16px; }
+
+    /* ─── Section ─── */
+    .sec { margin-bottom:var(--sp-16); }
+    .sec-label {
+      font-size:12px; font-weight:800; color:var(--text-3);
+      text-transform:uppercase; letter-spacing:0.8px;
+      margin-bottom:var(--sp-8);
+    }
+
+    /* ─── Product list ─── */
+    .item-list {
+      border-radius:var(--r-lg); background:var(--bg-card);
+      border:1px solid var(--border); overflow:hidden;
+    }
+    .item {
+      display:flex; align-items:center; gap:var(--sp-12);
+      padding:var(--sp-12) var(--sp-16);
+      border-bottom:1px solid var(--border);
+    }
+    .item:last-child { border-bottom:none; }
+    .item-icon {
+      width:40px; height:40px; border-radius:var(--r-md);
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px; flex-shrink:0;
+    }
+    .item-icon.drinks { background:linear-gradient(135deg,#4BB8F0,#2196F3); color:#fff; }
+    .item-icon.food { background:linear-gradient(135deg,#FF8A65,#F44336); color:#fff; }
+    .item-icon.snacks { background:linear-gradient(135deg,#FFD54F,#FFB300); color:#fff; }
+    .item-body { flex:1; }
+    .item-name { font-size:13px; font-weight:700; }
+    .item-qty { font-size:11px; color:var(--text-3); }
+    .item-price { font-size:14px; font-weight:800; color:var(--accent); }
+
+    /* ─── Summary ─── */
+    .summary-card {
+      border-radius:var(--r-lg); background:var(--bg-card);
+      border:1px solid var(--border); padding:var(--sp-16);
+    }
+    .sum-row { display:flex; justify-content:space-between; font-size:13px; color:var(--text-2); padding:3px 0; }
+    .sum-row.total { font-size:16px; font-weight:900; color:var(--text-1); margin-top:var(--sp-8); padding-top:var(--sp-8); border-top:2px solid var(--border-l); }
+
+    /* ─── Customer info ─── */
+    .info-card {
+      border-radius:var(--r-lg); background:var(--bg-card);
+      border:1px solid var(--border); padding:var(--sp-16);
+    }
+    .info-row { display:flex; justify-content:space-between; font-size:13px; padding:var(--sp-4) 0; }
+    .info-label { color:var(--text-3); }
+    .info-val { font-weight:700; }
+
+    /* ─── Payment info ─── */
+    .pay-method {
+      display:flex; align-items:center; gap:var(--sp-12);
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+    }
+    .pay-icon {
+      width:40px; height:40px; border-radius:var(--r-full);
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px;
+    }
+    .pay-icon.cash { background:var(--success-soft); color:var(--success); }
+    .pay-body { flex:1; }
+    .pay-name { font-size:13px; font-weight:700; }
+    .pay-detail { font-size:11px; color:var(--text-3); }
+
+    /* ─── Action buttons ─── */
+    .actions { display:flex; gap:var(--sp-8); margin-top:var(--sp-4); }
+    .act-btn {
+      flex:1; height:48px; border-radius:var(--r-2xl);
+      border:none; font-size:13px; font-weight:800; font-family:inherit;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:var(--sp-6);
+      transition:all 0.2s;
+    }
+    .act-btn .material-symbols-rounded { font-size:20px; }
+    .act-btn.primary { background:var(--grad-primary); color:#fff; box-shadow:var(--shadow-primary); }
+    .act-btn.primary:hover { filter:brightness(1.08); }
+    .act-btn.primary:active { transform:scale(0.97); }
+    .act-btn.secondary { background:var(--bg-input); color:var(--text-1); border:1px solid var(--border); }
+    .act-btn.secondary:hover { background:var(--bg-card); }
+    .act-btn.danger { background:transparent; color:var(--error); border:1px solid var(--error); }
+    .act-btn.danger:hover { background:var(--error-soft); }
+
+    [data-theme="light"] .order-header { box-shadow:var(--shadow-md); }
+    [data-theme="light"] .item-list { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .summary-card { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .info-card { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .pay-method { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Chi tiết đơn hàng</span>
+      <div class="topbar-actions">
+        <button class="topbar-btn" onclick="toast('Chia sẻ đơn hàng')"><span class="material-symbols-rounded">share</span></button>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Order header -->
+      <div class="order-header">
+        <div class="order-id">#DH-00142</div>
+        <div class="order-total">28,225đ</div>
+        <div class="order-status done"><span class="material-symbols-rounded">check_circle</span>Hoàn thành</div>
+        <div class="order-meta">
+          <span><span class="material-symbols-rounded">calendar_today</span>04/04/2026</span>
+          <span><span class="material-symbols-rounded">schedule</span>14:35</span>
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div class="sec">
+        <div class="sec-label">Sản phẩm (3)</div>
+        <div class="item-list">
+          <div class="item">
+            <div class="item-icon drinks"><span class="material-symbols-rounded">local_cafe</span></div>
+            <div class="item-body">
+              <div class="item-name">Coca Cola 330ml</div>
+              <div class="item-qty">10,000đ × 1</div>
+            </div>
+            <div class="item-price">10,000đ</div>
+          </div>
+          <div class="item">
+            <div class="item-icon food"><span class="material-symbols-rounded">restaurant</span></div>
+            <div class="item-body">
+              <div class="item-name">Mì Hảo Hảo</div>
+              <div class="item-qty">5,000đ × 2</div>
+            </div>
+            <div class="item-price">10,000đ</div>
+          </div>
+          <div class="item">
+            <div class="item-icon snacks"><span class="material-symbols-rounded">cookie</span></div>
+            <div class="item-body">
+              <div class="item-name">Bánh Oreo</div>
+              <div class="item-qty">5,500đ × 1</div>
+            </div>
+            <div class="item-price">5,500đ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="sec">
+        <div class="sec-label">Tóm tắt</div>
+        <div class="summary-card">
+          <div class="sum-row"><span>Tạm tính</span><span>25,500đ</span></div>
+          <div class="sum-row"><span>Thuế (10%)</span><span>2,550đ</span></div>
+          <div class="sum-row"><span>Giảm giá</span><span style="color:var(--success)">0đ</span></div>
+          <div class="sum-row total"><span>Tổng cộng</span><span>28,225đ</span></div>
+        </div>
+      </div>
+
+      <!-- Payment -->
+      <div class="sec">
+        <div class="sec-label">Thanh toán</div>
+        <div class="pay-method">
+          <div class="pay-icon cash"><span class="material-symbols-rounded">payments</span></div>
+          <div class="pay-body">
+            <div class="pay-name">Tiền mặt</div>
+            <div class="pay-detail">Khách đưa 30,000đ · Thối 1,775đ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer -->
+      <div class="sec">
+        <div class="sec-label">Khách hàng</div>
+        <div class="info-card">
+          <div class="info-row"><span class="info-label">Tên</span><span class="info-val">Nguyễn Văn A</span></div>
+          <div class="info-row"><span class="info-label">SĐT</span><span class="info-val">0901 234 567</span></div>
+          <div class="info-row"><span class="info-label">Ghi chú</span><span class="info-val" style="color:var(--text-3)">Không có</span></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button class="act-btn secondary" onclick="toast('In lại hoá đơn')">
+          <span class="material-symbols-rounded">print</span>In lại
+        </button>
+        <button class="act-btn primary" onclick="toast('Tạo đơn tương tự')">
+          <span class="material-symbols-rounded">content_copy</span>Đơn tương tự
+        </button>
+      </div>
+      <div class="actions" style="margin-top:var(--sp-8)">
+        <button class="act-btn danger" onclick="toast('Yêu cầu trả hàng')">
+          <span class="material-symbols-rounded">undo</span>Trả hàng / Hoàn tiền
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+  </script>
+</body>
+</html>

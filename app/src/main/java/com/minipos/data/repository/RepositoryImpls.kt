@@ -316,6 +316,9 @@ class ProductRepositoryImpl @Inject constructor(
     override fun observeProducts(storeId: String): Flow<List<Product>> =
         productDao.observeProducts(storeId).map { list -> list.map { it.toDomain() } }
 
+    override suspend fun getById(productId: String): Product? =
+        productDao.getById(productId)?.toDomain()
+
     override suspend fun getAll(storeId: String): List<Product> =
         productDao.getAll(storeId).map { it.toDomain() }
 
@@ -419,9 +422,14 @@ class SupplierRepositoryImpl @Inject constructor(
                 name = supplier.name,
                 contactPerson = supplier.contactPerson,
                 phone = supplier.phone,
+                mobile = supplier.mobile,
                 email = supplier.email,
                 address = supplier.address,
                 taxCode = supplier.taxCode,
+                paymentTerm = supplier.paymentTerm,
+                bankName = supplier.bankName,
+                bankAccount = supplier.bankAccount,
+                bankAccountHolder = supplier.bankAccountHolder,
                 notes = supplier.notes,
                 createdAt = now,
                 updatedAt = now,
@@ -441,9 +449,14 @@ class SupplierRepositoryImpl @Inject constructor(
                 name = supplier.name,
                 contactPerson = supplier.contactPerson,
                 phone = supplier.phone,
+                mobile = supplier.mobile,
                 email = supplier.email,
                 address = supplier.address,
                 taxCode = supplier.taxCode,
+                paymentTerm = supplier.paymentTerm,
+                bankName = supplier.bankName,
+                bankAccount = supplier.bankAccount,
+                bankAccountHolder = supplier.bankAccountHolder,
                 notes = supplier.notes,
                 updatedAt = DateUtils.now(),
             )
@@ -898,8 +911,10 @@ fun ProductVariantEntity.toDomain() = ProductVariant(
 
 fun SupplierEntity.toDomain() = Supplier(
     id = id, storeId = storeId, name = name, contactPerson = contactPerson,
-    phone = phone, email = email, address = address, taxCode = taxCode,
-    notes = notes, isActive = isActive, createdAt = createdAt, updatedAt = updatedAt,
+    phone = phone, mobile = mobile, email = email, address = address, taxCode = taxCode,
+    paymentTerm = paymentTerm, bankName = bankName, bankAccount = bankAccount,
+    bankAccountHolder = bankAccountHolder, notes = notes, isActive = isActive,
+    createdAt = createdAt, updatedAt = updatedAt,
 )
 
 fun CustomerEntity.toDomain() = Customer(

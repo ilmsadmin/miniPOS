@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Thêm/Sửa nhà cung cấp</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+    .save-btn {
+      padding:var(--sp-8) var(--sp-20); border:none; border-radius:var(--r-full);
+      background:var(--grad-primary); color:#fff; font-size:13px; font-weight:800;
+      font-family:inherit; cursor:pointer; box-shadow:var(--shadow-primary);
+      transition:all 0.2s;
+    }
+    .save-btn:hover { filter:brightness(1.08); }
+    .save-btn:active { transform:scale(0.95); }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-20); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    /* ─── Logo upload ─── */
+    .logo-upload {
+      display:flex; flex-direction:column; align-items:center;
+      margin-bottom:var(--sp-24); gap:var(--sp-8);
+    }
+    .logo-circle {
+      width:72px; height:72px; border-radius:var(--r-xl);
+      background:linear-gradient(135deg,#FF6B6B,#EE5A24); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; position:relative; transition:all 0.2s;
+    }
+    .logo-circle:hover { transform:scale(1.05); }
+    .logo-circle .material-symbols-rounded { font-size:32px; }
+    .logo-edit {
+      position:absolute; bottom:-4px; right:-4px;
+      width:24px; height:24px; border-radius:var(--r-full);
+      background:var(--grad-primary); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      border:2px solid var(--bg); box-shadow:var(--shadow-sm);
+    }
+    .logo-edit .material-symbols-rounded { font-size:12px; }
+    .logo-hint { font-size:11px; color:var(--text-3); font-weight:600; }
+
+    /* ─── Form sections ─── */
+    .section { margin-bottom:var(--sp-20); }
+    .sec-label {
+      font-size:12px; font-weight:800; color:var(--text-3);
+      text-transform:uppercase; letter-spacing:0.8px;
+      margin-bottom:var(--sp-12);
+    }
+    .field { margin-bottom:var(--sp-12); }
+    .field-label { font-size:12px; font-weight:700; color:var(--text-2); margin-bottom:var(--sp-4); display:flex; align-items:center; gap:var(--sp-4); }
+    .field-label .req { color:var(--error); }
+    .field-input {
+      width:100%; height:48px; border-radius:var(--r-lg);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:14px; color:var(--text-1); padding:0 var(--sp-16);
+      font-family:inherit; outline:none; transition:all 0.2s;
+      box-sizing:border-box;
+    }
+    .field-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
+    .field-input::placeholder { color:var(--text-3); }
+    .field-row { display:flex; gap:var(--sp-12); }
+    .field-row .field { flex:1; }
+    .field-textarea {
+      width:100%; min-height:80px; border-radius:var(--r-lg);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:14px; color:var(--text-1); padding:var(--sp-12) var(--sp-16);
+      font-family:inherit; outline:none; resize:vertical; transition:all 0.2s;
+      box-sizing:border-box;
+    }
+    .field-textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
+    .field-textarea::placeholder { color:var(--text-3); }
+    .field-hint { font-size:11px; color:var(--text-3); margin-top:var(--sp-4); }
+
+    /* ─── Input with icon ─── */
+    .field-icon-wrap {
+      position:relative;
+    }
+    .field-icon-wrap .field-input { padding-left:44px; }
+    .field-icon-wrap .fi {
+      position:absolute; left:14px; top:50%; transform:translateY(-50%);
+      color:var(--text-3);
+    }
+    .field-icon-wrap .fi .material-symbols-rounded { font-size:20px; }
+
+    /* ─── Products supplied ─── */
+    .prod-list {
+      border-radius:var(--r-lg); background:var(--bg-card);
+      border:1px solid var(--border); overflow:hidden;
+    }
+    .prod-item {
+      display:flex; align-items:center; gap:var(--sp-8);
+      padding:var(--sp-10) var(--sp-16);
+      border-bottom:1px solid var(--divider);
+    }
+    .prod-item:last-child { border-bottom:none; }
+    .prod-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .prod-name { flex:1; font-size:13px; font-weight:600; }
+    .prod-price { font-size:12px; font-weight:700; color:var(--accent); }
+    .prod-del {
+      width:28px; height:28px; border-radius:var(--r-full);
+      border:none; background:transparent; color:var(--text-3);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all 0.15s;
+    }
+    .prod-del:hover { background:var(--error-soft); color:var(--error); }
+    .prod-del .material-symbols-rounded { font-size:16px; }
+    .add-prod-btn {
+      display:flex; align-items:center; justify-content:center; gap:var(--sp-4);
+      padding:var(--sp-12) var(--sp-16); color:var(--primary-light);
+      font-size:13px; font-weight:700; cursor:pointer;
+      border-top:1px solid var(--divider); transition:all 0.15s;
+    }
+    .add-prod-btn:hover { background:rgba(108,92,231,0.04); }
+    .add-prod-btn .material-symbols-rounded { font-size:18px; }
+
+    /* ─── Payment terms ─── */
+    .term-chips { display:flex; gap:var(--sp-8); flex-wrap:wrap; }
+    .term-chip {
+      padding:var(--sp-8) var(--sp-16); border-radius:var(--r-full);
+      border:1.5px solid var(--border); background:var(--bg-card);
+      color:var(--text-2); font-size:12px; font-weight:700;
+      font-family:inherit; cursor:pointer; transition:all 0.2s;
+    }
+    .term-chip:hover { border-color:var(--border-l); }
+    .term-chip.on { border-color:var(--primary); background:rgba(108,92,231,0.08); color:var(--primary-light); }
+
+    /* ─── Toggle row ─── */
+    .toggle-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      margin-bottom:var(--sp-12);
+    }
+    .toggle-label { font-size:14px; font-weight:700; }
+    .toggle-desc { font-size:11px; color:var(--text-3); }
+    .toggle-sw {
+      width:48px; height:28px; border-radius:14px; border:none;
+      background:var(--bg-input); position:relative; cursor:pointer; transition:all 0.25s;
+    }
+    .toggle-sw::after {
+      content:''; position:absolute; width:22px; height:22px;
+      border-radius:50%; background:#fff; top:3px; left:3px;
+      transition:all 0.25s; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-sw.on { background:var(--primary); }
+    .toggle-sw.on::after { left:23px; }
+
+    /* ─── Delete button ─── */
+    .del-btn {
+      width:100%; height:48px; border:1px solid var(--error);
+      border-radius:var(--r-lg); background:transparent;
+      color:var(--error); font-size:14px; font-weight:700;
+      font-family:inherit; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:var(--sp-6);
+      transition:all 0.2s; margin-top:var(--sp-12);
+    }
+    .del-btn:hover { background:var(--error-soft); }
+    .del-btn .material-symbols-rounded { font-size:20px; }
+
+    [data-theme="light"] .toggle-row { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .prod-list { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .term-chip { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Sửa nhà cung cấp</span>
+      <button class="save-btn" onclick="toast('Đã lưu nhà cung cấp!')">Lưu</button>
+    </div>
+
+    <div class="page-body">
+      <!-- Logo -->
+      <div class="logo-upload">
+        <div class="logo-circle" onclick="toast('Chọn logo NCC')">
+          <span class="material-symbols-rounded">local_shipping</span>
+          <div class="logo-edit"><span class="material-symbols-rounded">photo_camera</span></div>
+        </div>
+        <div class="logo-hint">Logo nhà cung cấp</div>
+      </div>
+
+      <!-- Basic info -->
+      <div class="section">
+        <div class="sec-label">Thông tin cơ bản</div>
+        <div class="field">
+          <div class="field-label">Tên công ty <span class="req">*</span></div>
+          <input class="field-input" placeholder="VD: Coca Cola Vietnam" value="Coca Cola Vietnam">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <div class="field-label">Mã NCC</div>
+            <input class="field-input" value="NCC-001" readonly style="color:var(--text-3)">
+          </div>
+          <div class="field">
+            <div class="field-label">Mã số thuế</div>
+            <input class="field-input" placeholder="MST" value="0302718127">
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="section">
+        <div class="sec-label">Thông tin liên hệ</div>
+        <div class="field">
+          <div class="field-label">Người liên hệ <span class="req">*</span></div>
+          <input class="field-input" placeholder="Họ tên người liên hệ" value="Nguyễn Văn Nam">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <div class="field-label">Số điện thoại <span class="req">*</span></div>
+            <div class="field-icon-wrap">
+              <div class="fi"><span class="material-symbols-rounded">call</span></div>
+              <input class="field-input" value="028 3812 3456" type="tel">
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">Di động</div>
+            <div class="field-icon-wrap">
+              <div class="fi"><span class="material-symbols-rounded">smartphone</span></div>
+              <input class="field-input" placeholder="SĐT cá nhân" value="0901 555 678">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Email</div>
+          <div class="field-icon-wrap">
+            <div class="fi"><span class="material-symbols-rounded">mail</span></div>
+            <input class="field-input" value="order@cocacola.vn" type="email">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Địa chỉ</div>
+          <textarea class="field-textarea" placeholder="Địa chỉ kho / văn phòng...">485 Nguyễn Tri Phương, Q.10, TP.HCM</textarea>
+        </div>
+      </div>
+
+      <!-- Payment terms -->
+      <div class="section">
+        <div class="sec-label">Điều khoản thanh toán</div>
+        <div class="term-chips">
+          <button class="term-chip on" onclick="pickTerm(this)">Tiền mặt</button>
+          <button class="term-chip" onclick="pickTerm(this)">Chuyển khoản</button>
+          <button class="term-chip" onclick="pickTerm(this)">Công nợ 7 ngày</button>
+          <button class="term-chip" onclick="pickTerm(this)">Công nợ 15 ngày</button>
+          <button class="term-chip" onclick="pickTerm(this)">Công nợ 30 ngày</button>
+        </div>
+        <div class="field-hint" style="margin-top:var(--sp-8)">Chọn hình thức thanh toán với NCC</div>
+      </div>
+
+      <!-- Products supplied -->
+      <div class="section">
+        <div class="sec-label">Sản phẩm cung cấp (12)</div>
+        <div class="prod-list">
+          <div class="prod-item">
+            <div class="prod-dot" style="background:#4BB8F0"></div>
+            <span class="prod-name">Coca Cola 330ml</span>
+            <span class="prod-price">8,000đ</span>
+            <button class="prod-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="prod-item">
+            <div class="prod-dot" style="background:#4BB8F0"></div>
+            <span class="prod-name">Pepsi 330ml</span>
+            <span class="prod-price">7,500đ</span>
+            <button class="prod-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="prod-item">
+            <div class="prod-dot" style="background:#4BB8F0"></div>
+            <span class="prod-name">Fanta 330ml</span>
+            <span class="prod-price">8,000đ</span>
+            <button class="prod-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="prod-item">
+            <div class="prod-dot" style="background:#4BB8F0"></div>
+            <span class="prod-name">Sprite 330ml</span>
+            <span class="prod-price">8,000đ</span>
+            <button class="prod-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="add-prod-btn" onclick="toast('Thêm sản phẩm từ NCC')">
+            <span class="material-symbols-rounded">add</span>Thêm sản phẩm
+          </div>
+        </div>
+      </div>
+
+      <!-- Banking info -->
+      <div class="section">
+        <div class="sec-label">Thông tin ngân hàng</div>
+        <div class="field">
+          <div class="field-label">Tên ngân hàng</div>
+          <input class="field-input" placeholder="VD: Vietcombank" value="Vietcombank">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <div class="field-label">Số tài khoản</div>
+            <input class="field-input" placeholder="Số TK" value="007100012345">
+          </div>
+          <div class="field">
+            <div class="field-label">Chủ tài khoản</div>
+            <input class="field-input" placeholder="Tên chủ TK" value="COCA COLA VN">
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="section">
+        <div class="sec-label">Ghi chú</div>
+        <textarea class="field-textarea" placeholder="Ghi chú thêm về nhà cung cấp...">Giao hàng thứ 2, 4, 6 hàng tuần. Đặt trước 2 ngày.</textarea>
+      </div>
+
+      <!-- Active toggle -->
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Đang hợp tác</div>
+          <div class="toggle-desc">Hiển thị NCC trong danh sách nhập hàng</div>
+        </div>
+        <button class="toggle-sw on" onclick="this.classList.toggle('on')"></button>
+      </div>
+
+      <button class="del-btn" onclick="toast('Xóa nhà cung cấp')">
+        <span class="material-symbols-rounded">delete</span>Xóa nhà cung cấp
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+    function pickTerm(el){document.querySelectorAll('.term-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on')}
+  </script>
+</body>
+</html>

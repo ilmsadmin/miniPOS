@@ -22,7 +22,7 @@ import com.minipos.data.database.entity.*
         OrderPaymentEntity::class,
         StockMovementEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class MiniPosDatabase : RoomDatabase() {
@@ -83,6 +83,16 @@ abstract class MiniPosDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_product_variants_store_id` ON `product_variants` (`store_id`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_product_variants_product_id` ON `product_variants` (`product_id`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_product_variants_barcode` ON `product_variants` (`barcode`)")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE suppliers ADD COLUMN mobile TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE suppliers ADD COLUMN payment_term TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE suppliers ADD COLUMN bank_name TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE suppliers ADD COLUMN bank_account TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE suppliers ADD COLUMN bank_account_holder TEXT DEFAULT NULL")
             }
         }
     }

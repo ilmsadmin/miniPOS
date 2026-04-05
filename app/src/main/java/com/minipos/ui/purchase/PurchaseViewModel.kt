@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 data class PurchaseLineItem(
@@ -47,6 +50,11 @@ data class PurchaseState(
     val successMessage: String? = null,
     val errorMessage: String? = null,
     val notes: String = "",
+    // PO metadata
+    val purchaseDate: String = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()),
+    val purchaseCode: String = "",
+    // Inline search (on main screen)
+    val inlineSearchQuery: String = "",
     // Variant picker
     val showVariantPicker: Boolean = false,
     val variantPickerProduct: Product? = null,
@@ -81,8 +89,14 @@ class PurchaseViewModel @Inject constructor(
             storeId = store.id
             val suppliers = supplierRepository.getAll(storeId)
             val products = productRepository.getAll(storeId).filter { it.trackInventory && it.isActive }
-            _state.update { it.copy(isLoading = false, suppliers = suppliers, products = products) }
+            val poCode = generatePOCode()
+            _state.update { it.copy(isLoading = false, suppliers = suppliers, products = products, purchaseCode = poCode) }
         }
+    }
+
+    private fun generatePOCode(): String {
+        val seq = (1..9999).random()
+        return "PO-${String.format("%04d", seq)}"
     }
 
     fun selectSupplier(supplierId: String?) {
@@ -100,6 +114,36 @@ class PurchaseViewModel @Inject constructor(
     fun updateSearch(query: String) {
         _state.update { it.copy(searchQuery = query) }
     }
+
+    fun updateInlineSearch(query: String) {
+        _state.update { it.copy(inlineSearchQuery = query) }
+    }
+
+    /** Try to add a product by barcode (from scan). Returns true if found. */
+    fun addProductByBarcode(barcode: String): Boolean {
+        val product = _state.value.products.find {
+            it.barcode?.equals(barcode, ignoreCase = true) == true
+        }
+        if (product != null) {
+            addProduct(product)
+            return true
+        }
+        _state.update { it.copy(errorMessage = str(R.string.msg_barcode_not_found, barcode)) }
+        return false
+    }
+
+    /** Products matching the inline search query */
+    val inlineFilteredProducts: List<Product>
+        get() {
+            val query = _state.value.inlineSearchQuery.trim().lowercase()
+            val products = _state.value.products
+            if (query.isEmpty()) return emptyList()
+            return products.filter {
+                it.name.lowercase().contains(query) ||
+                    it.sku.lowercase().contains(query) ||
+                    (it.barcode?.lowercase()?.contains(query) == true)
+            }.take(5) // limit suggestions
+        }
 
     fun addProduct(product: Product) {
         if (product.hasVariants) {

@@ -4,33 +4,39 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.PaymentMethod
 import com.minipos.R
+import com.minipos.ui.components.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ═══════════════════════════════════════
+// POS STEP 4 — PAYMENT SCREEN
+// Matches payment.html mock design:
+// Amount display → Methods → Cash input + Numpad → Confirm
+// ═══════════════════════════════════════
+
 @Composable
 fun PosStep4Screen(
     onPaymentSuccess: () -> Unit,
@@ -41,310 +47,491 @@ fun PosStep4Screen(
     val state by viewModel.state.collectAsState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.step4_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
-            )
-        },
+        containerColor = AppColors.Background,
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(paddingValues)
+                .imePadding(),
         ) {
-            // Order summary
-            item {
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            // ── Top bar ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .height(56.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.order_summary), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        cart.items.forEach { item ->
+                    Icon(Icons.Rounded.ArrowBack, "Back", tint = AppColors.TextSecondary, modifier = Modifier.size(24.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.step4_title), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = AppColors.TextPrimary)
+            }
+
+            // ── Scrollable content ──
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                // ── Amount display ──
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        stringResource(R.string.total_to_pay_label),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextTertiary,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        CurrencyFormatter.format(cart.grandTotal),
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1).sp,
+                        color = AppColors.Primary,
+                    )
+                }
+
+                // ── Payment methods ──
+                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    Text(
+                        stringResource(R.string.payment_method_label).uppercase(),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextTertiary,
+                        letterSpacing = 0.8.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        PaymentMethodCard(
+                            icon = Icons.Rounded.Payments,
+                            label = stringResource(R.string.payment_method_cash),
+                            selected = state.selectedMethod == PaymentMethod.CASH,
+                            onClick = { viewModel.selectMethod(PaymentMethod.CASH) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        PaymentMethodCard(
+                            icon = Icons.Rounded.AccountBalance,
+                            label = stringResource(R.string.payment_method_transfer),
+                            selected = state.selectedMethod == PaymentMethod.TRANSFER,
+                            onClick = { viewModel.selectMethod(PaymentMethod.TRANSFER) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        PaymentMethodCard(
+                            icon = Icons.Rounded.Smartphone,
+                            label = stringResource(R.string.payment_method_ewallet),
+                            selected = state.selectedMethod == PaymentMethod.EWALLET,
+                            onClick = { viewModel.selectMethod(PaymentMethod.EWALLET) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                // ── Cash input section ──
+                if (state.selectedMethod == PaymentMethod.CASH) {
+                    // Customer pay input
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.customer_pays_label),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextSecondary,
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                .border(2.dp, AppColors.BorderLight, RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                .background(AppColors.InputBackground)
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            Text(
+                                if (state.receivedAmountText.isNotBlank()) {
+                                    CurrencyFormatter.format((state.receivedAmountText.toDoubleOrNull() ?: 0.0))
+                                } else "",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = AppColors.TextPrimary,
+                            )
+                        }
+                    }
+
+                    // Quick amounts
+                    val quickAmounts = viewModel.getQuickAmounts(cart.grandTotal)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        // Exact amount button
+                        QuickAmountButton(
+                            text = CurrencyFormatter.formatCompact(cart.grandTotal),
+                            isExact = true,
+                            onClick = { viewModel.updateReceivedAmount(cart.grandTotal.toLong().toString()) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        quickAmounts.take(2).forEach { amount ->
+                            QuickAmountButton(
+                                text = CurrencyFormatter.formatCompact(amount),
+                                isExact = false,
+                                onClick = { viewModel.updateReceivedAmount(amount.toLong().toString()) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                    if (quickAmounts.size > 2) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            quickAmounts.drop(2).take(3).forEach { amount ->
+                                QuickAmountButton(
+                                    text = CurrencyFormatter.formatCompact(amount),
+                                    isExact = false,
+                                    onClick = { viewModel.updateReceivedAmount(amount.toLong().toString()) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat((3 - quickAmounts.drop(2).take(3).size).coerceAtLeast(0)) {
+                                Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+
+                    // Change display
+                    val receivedAmount = state.receivedAmountText.toDoubleOrNull() ?: 0.0
+                    val diff = receivedAmount - cart.grandTotal
+                    if (receivedAmount > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(MiniPosTokens.RadiusFull))
+                                    .background(
+                                        if (diff >= 0) AppColors.Success.copy(alpha = 0.1f)
+                                        else AppColors.Error.copy(alpha = 0.1f),
+                                    )
+                                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    if (diff >= 0) Icons.Rounded.CheckCircle else Icons.Rounded.Warning,
+                                    null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (diff >= 0) AppColors.Success else AppColors.Error,
+                                )
+                                Text(
+                                    if (diff >= 0) stringResource(R.string.change_label) else stringResource(R.string.still_owe_label),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AppColors.TextSecondary,
+                                )
+                                Text(
+                                    CurrencyFormatter.format(kotlin.math.abs(diff)),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (diff >= 0) AppColors.Success else AppColors.Error,
+                                )
+                            }
+                        }
+                    }
+
+                    // Numpad
+                    val numKeys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "del")
+                    val rows = numKeys.chunked(3)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        rows.forEach { row ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    "${item.product.name} x${
-                                        if (item.quantity == item.quantity.toLong().toDouble()) item.quantity.toLong().toString()
-                                        else item.quantity.toString()
-                                    }",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                Text(
-                                    CurrencyFormatter.format(item.lineTotal),
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        SummaryRow(stringResource(R.string.subtotal), CurrencyFormatter.format(cart.subtotal))
-                        if (cart.orderDiscountAmount > 0) {
-                            SummaryRow(stringResource(R.string.discount), "-${CurrencyFormatter.format(cart.orderDiscountAmount)}", color = AppColors.Error)
-                        }
-                        if (cart.taxAmount > 0) {
-                            SummaryRow(stringResource(R.string.tax), CurrencyFormatter.format(cart.taxAmount))
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text(stringResource(R.string.grand_total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(
-                                CurrencyFormatter.format(cart.grandTotal),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.Primary,
-                            )
-                        }
-                        if (cart.customer != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = AppColors.TextSecondary)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.customer_prefix, cart.customer!!.name), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Payment method selection
-            item {
-                Text(stringResource(R.string.payment_method_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PaymentMethodChip(
-                        method = PaymentMethod.CASH,
-                        icon = Icons.Default.Payments,
-                        selected = state.selectedMethod == PaymentMethod.CASH,
-                        onClick = { viewModel.selectMethod(PaymentMethod.CASH) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    PaymentMethodChip(
-                        method = PaymentMethod.TRANSFER,
-                        icon = Icons.Default.AccountBalance,
-                        selected = state.selectedMethod == PaymentMethod.TRANSFER,
-                        onClick = { viewModel.selectMethod(PaymentMethod.TRANSFER) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    PaymentMethodChip(
-                        method = PaymentMethod.EWALLET,
-                        icon = Icons.Default.PhoneAndroid,
-                        selected = state.selectedMethod == PaymentMethod.EWALLET,
-                        onClick = { viewModel.selectMethod(PaymentMethod.EWALLET) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-
-            // Cash calculator
-            if (state.selectedMethod == PaymentMethod.CASH) {
-                item {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.amount_received_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = state.receivedAmountText,
-                                onValueChange = { viewModel.updateReceivedAmount(it) },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                suffix = { Text(stringResource(R.string.currency_suffix)) },
-                                textStyle = MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.End,
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Quick amount buttons
-                            val quickAmounts = viewModel.getQuickAmounts(cart.grandTotal)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                    .height(52.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                quickAmounts.take(3).forEach { amount ->
-                                    OutlinedButton(
-                                        onClick = { viewModel.updateReceivedAmount(amount.toLong().toString()) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                    ) {
-                                        Text(CurrencyFormatter.formatCompact(amount), style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                            }
-                            if (quickAmounts.size > 3) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    quickAmounts.drop(3).forEach { amount ->
-                                        OutlinedButton(
-                                            onClick = { viewModel.updateReceivedAmount(amount.toLong().toString()) },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(8.dp),
-                                        ) {
-                                            Text(CurrencyFormatter.formatCompact(amount), style = MaterialTheme.typography.bodySmall)
-                                        }
-                                    }
-                                    // Fill remaining space
-                                    repeat(3 - quickAmounts.drop(3).size) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
-
-                            if (state.changeAmount > 0) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(AppColors.SecondaryContainer)
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(stringResource(R.string.change_label), style = MaterialTheme.typography.titleSmall, color = AppColors.Secondary)
-                                    Text(
-                                        CurrencyFormatter.format(state.changeAmount),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AppColors.Secondary,
+                                row.forEach { key ->
+                                    NumpadKey(
+                                        key = key,
+                                        onClick = {
+                                            if (key == "del") {
+                                                val current = state.receivedAmountText
+                                                if (current.isNotEmpty()) {
+                                                    viewModel.updateReceivedAmount(current.dropLast(1).ifEmpty { "" })
+                                                }
+                                            } else {
+                                                val current = state.receivedAmountText
+                                                if (current.length < 10) {
+                                                    viewModel.updateReceivedAmount(current + key)
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight(),
                                     )
                                 }
                             }
                         }
                     }
                 }
-            }
+            } // end scrollable content
 
-            // Notes
-            item {
-                OutlinedTextField(
-                    value = state.notes,
-                    onValueChange = { viewModel.updateNotes(it) },
-                    label = { Text(stringResource(R.string.notes_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3,
-                    shape = RoundedCornerShape(12.dp),
-                )
-            }
-
-            // Confirm button
-            item {
-                Button(
-                    onClick = {
-                        viewModel.confirmPayment(
-                            grandTotal = cart.grandTotal,
-                            onSuccess = onPaymentSuccess,
-                        )
-                    },
+            // ── Bottom action (always visible, outside scroll) ──
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AppColors.Background)
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 8.dp, bottom = 12.dp),
+            ) {
+                // Notes row
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Secondary),
-                    enabled = !state.isProcessing && state.canConfirm(cart.grandTotal),
+                        .padding(bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (state.isProcessing) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                    } else {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.confirm_payment_btn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Rounded.EditNote,
+                        null,
+                        modifier = Modifier.size(20.dp),
+                        tint = AppColors.TextTertiary,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
+                            .background(AppColors.InputBackground)
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (state.notes.isEmpty()) {
+                            Text(
+                                stringResource(R.string.notes_label),
+                                color = AppColors.TextTertiary,
+                                fontSize = 13.sp,
+                            )
+                        }
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = state.notes,
+                            onValueChange = { viewModel.updateNotes(it) },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = AppColors.TextPrimary,
+                                fontSize = 13.sp,
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                // Error
+                if (state.error != null) {
+                    Text(
+                        state.error!!,
+                        color = AppColors.Error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+
+                // Confirm button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.Radius2xl))
+                        .background(
+                            if (!state.isProcessing && state.canConfirm(cart.grandTotal))
+                                Brush.linearGradient(listOf(AppColors.Primary, AppColors.Accent, AppColors.PrimaryLight))
+                            else Brush.linearGradient(listOf(AppColors.TextTertiary.copy(alpha = 0.4f), AppColors.TextTertiary.copy(alpha = 0.4f))),
+                        )
+                        .clickable(
+                            enabled = !state.isProcessing && state.canConfirm(cart.grandTotal),
+                        ) {
+                            viewModel.confirmPayment(
+                                grandTotal = cart.grandTotal,
+                                onSuccess = onPaymentSuccess,
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (state.isProcessing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(Icons.Rounded.Verified, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                        Text(
+                            stringResource(R.string.confirm_payment_btn),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                        )
                     }
                 }
             }
-
-            // Error
-            if (state.error != null) {
-                item {
-                    Text(state.error!!, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
 
+// ─── Payment method card ───
 @Composable
-private fun PaymentMethodChip(
-    method: PaymentMethod,
+private fun PaymentMethodCard(
     icon: ImageVector,
+    label: String,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    Column(
         modifier = modifier
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .border(
+                width = 2.dp,
+                color = if (selected) AppColors.Primary else AppColors.Border,
+                shape = RoundedCornerShape(MiniPosTokens.RadiusLg),
+            )
+            .background(
+                if (selected) AppColors.Primary.copy(alpha = 0.08f) else AppColors.Surface,
+            )
             .clickable(onClick = onClick)
-            .then(
-                if (selected) Modifier.border(2.dp, AppColors.Primary, RoundedCornerShape(12.dp))
-                else Modifier
-            ),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) AppColors.PrimaryContainer else AppColors.Surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 2.dp else 0.dp),
+            .padding(vertical = 16.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .size(44.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                .background(
+                    if (selected) Brush.linearGradient(listOf(AppColors.Primary, AppColors.Accent))
+                    else Brush.linearGradient(listOf(AppColors.SurfaceElevated, AppColors.SurfaceElevated)),
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            val context = LocalContext.current
             Icon(
                 icon,
-                contentDescription = method.displayName(context),
-                tint = if (selected) AppColors.Primary else AppColors.TextSecondary,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                method.displayName(context),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                color = if (selected) AppColors.Primary else AppColors.TextSecondary,
+                null,
+                modifier = Modifier.size(24.dp),
+                tint = if (selected) Color.White else AppColors.TextTertiary,
             )
         }
+        Text(
+            label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (selected) AppColors.TextPrimary else AppColors.TextSecondary,
+        )
     }
 }
 
+// ─── Quick amount button ───
 @Composable
-private fun SummaryRow(label: String, value: String, color: Color = AppColors.TextSecondary) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+private fun QuickAmountButton(
+    text: String,
+    isExact: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .height(38.dp)
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .border(
+                1.dp,
+                if (isExact) AppColors.Primary else AppColors.BorderLight,
+                RoundedCornerShape(MiniPosTokens.RadiusMd),
+            )
+            .background(
+                if (isExact) AppColors.Primary.copy(alpha = 0.06f) else AppColors.Surface,
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = color)
+        Text(
+            text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isExact) AppColors.PrimaryLight else AppColors.TextSecondary,
+        )
+    }
+}
+
+// ─── Numpad key ───
+@Composable
+private fun NumpadKey(
+    key: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .background(AppColors.Surface)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (key == "del") {
+            Icon(
+                Icons.Rounded.Backspace,
+                contentDescription = "Delete",
+                modifier = Modifier.size(24.dp),
+                tint = AppColors.Error,
+            )
+        } else {
+            Text(
+                key,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary,
+            )
+        }
     }
 }

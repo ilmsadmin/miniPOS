@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Khách hàng</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+    .add-btn {
+      width:40px; height:40px; border:none; border-radius:var(--r-full);
+      background:var(--grad-primary); color:#fff;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      box-shadow:var(--shadow-primary); transition:all 0.2s;
+    }
+    .add-btn:active { transform:scale(0.9); }
+    .add-btn .material-symbols-rounded { font-size:22px; }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-16); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    /* Stats */
+    .stats { display:flex; gap:var(--sp-8); margin-bottom:var(--sp-16); }
+    .stat-card {
+      flex:1; padding:var(--sp-12); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      text-align:center;
+    }
+    .stat-val { font-size:20px; font-weight:900; background:var(--grad-primary); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+    .stat-lbl { font-size:10px; color:var(--text-3); font-weight:600; }
+
+    /* Search */
+    .search-bar {
+      height:44px; background:var(--bg-input); border:1px solid var(--border);
+      border-radius:var(--r-2xl); display:flex; align-items:center;
+      padding:0 var(--sp-16); gap:var(--sp-8); margin-bottom:var(--sp-16);
+    }
+    .search-bar .material-symbols-rounded { font-size:20px; color:var(--text-3); }
+    .search-bar input { flex:1; border:none; background:transparent; font-size:13px; font-family:inherit; color:var(--text-1); outline:none; }
+    .search-bar input::placeholder { color:var(--text-3); }
+
+    /* Customer list */
+    .cust-list { display:flex; flex-direction:column; gap:var(--sp-8); }
+    .cust {
+      display:flex; align-items:center; gap:var(--sp-12);
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      cursor:pointer; transition:all 0.2s;
+    }
+    .cust:hover { border-color:var(--border-l); }
+    .cust-avatar {
+      width:44px; height:44px; border-radius:var(--r-full);
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px; font-weight:900; color:#fff; flex-shrink:0;
+    }
+    .cust-avatar.c1 { background:linear-gradient(135deg,#6C5CE7,#a78bfa); }
+    .cust-avatar.c2 { background:linear-gradient(135deg,#00D2FF,#4BB8F0); }
+    .cust-avatar.c3 { background:linear-gradient(135deg,#FF8A65,#F44336); }
+    .cust-avatar.c4 { background:linear-gradient(135deg,#81C784,#388E3C); }
+    .cust-avatar.c5 { background:linear-gradient(135deg,#FFD54F,#FFB300); }
+    .cust-body { flex:1; }
+    .cust-name { font-size:14px; font-weight:700; margin-bottom:2px; }
+    .cust-phone { font-size:12px; color:var(--text-3); }
+    .cust-right { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+    .cust-total { font-size:13px; font-weight:800; color:var(--accent); }
+    .cust-orders { font-size:11px; color:var(--text-3); }
+    .cust-debt {
+      font-size:10px; font-weight:800; padding:2px 8px;
+      border-radius:var(--r-full);
+    }
+    .cust-debt.has { background:var(--error-soft); color:var(--error); }
+    .cust-debt.none { background:var(--success-soft); color:var(--success); }
+
+    [data-theme="light"] .cust { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .stat-card { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Khách hàng</span>
+      <button class="add-btn" onclick="location.href='customer-form.html'"><span class="material-symbols-rounded">person_add</span></button>
+    </div>
+
+    <div class="page-body">
+      <div class="stats">
+        <div class="stat-card"><div class="stat-val">48</div><div class="stat-lbl">Khách hàng</div></div>
+        <div class="stat-card"><div class="stat-val">12</div><div class="stat-lbl">Khách mới tháng</div></div>
+        <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Có công nợ</div></div>
+      </div>
+
+      <div class="search-bar">
+        <span class="material-symbols-rounded">search</span>
+        <input placeholder="Tìm tên, SĐT khách hàng...">
+      </div>
+
+      <div class="cust-list">
+        <div class="cust" onclick="location.href='customer-detail.html'">
+          <div class="cust-avatar c1">NA</div>
+          <div class="cust-body">
+            <div class="cust-name">Nguyễn Văn A</div>
+            <div class="cust-phone">0901 234 567</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">2.5M</div>
+            <div class="cust-orders">32 đơn</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="location.href='customer-detail.html'">
+          <div class="cust-avatar c2">TB</div>
+          <div class="cust-body">
+            <div class="cust-name">Trần Thị B</div>
+            <div class="cust-phone">0912 345 678</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">1.8M</div>
+            <div class="cust-debt has">Nợ 120K</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="toast('Chi tiết: Lê Hoàng C')">
+          <div class="cust-avatar c3">LC</div>
+          <div class="cust-body">
+            <div class="cust-name">Lê Hoàng C</div>
+            <div class="cust-phone">0923 456 789</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">950K</div>
+            <div class="cust-orders">15 đơn</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="toast('Chi tiết: Phạm Minh D')">
+          <div class="cust-avatar c4">PD</div>
+          <div class="cust-body">
+            <div class="cust-name">Phạm Minh D</div>
+            <div class="cust-phone">0934 567 890</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">3.2M</div>
+            <div class="cust-debt has">Nợ 450K</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="toast('Chi tiết: Hoàng Thị E')">
+          <div class="cust-avatar c5">HE</div>
+          <div class="cust-body">
+            <div class="cust-name">Hoàng Thị E</div>
+            <div class="cust-phone">0945 678 901</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">680K</div>
+            <div class="cust-orders">8 đơn</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="toast('Chi tiết: Vũ Đức F')">
+          <div class="cust-avatar c1">VF</div>
+          <div class="cust-body">
+            <div class="cust-name">Vũ Đức F</div>
+            <div class="cust-phone">0956 789 012</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">1.1M</div>
+            <div class="cust-debt has">Nợ 80K</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="toast('Chi tiết: Đỗ Thanh G')">
+          <div class="cust-avatar c2">DG</div>
+          <div class="cust-body">
+            <div class="cust-name">Đỗ Thanh G</div>
+            <div class="cust-phone">0967 890 123</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">420K</div>
+            <div class="cust-orders">5 đơn</div>
+          </div>
+        </div>
+
+        <div class="cust" onclick="toast('Chi tiết: Bùi Thị H')">
+          <div class="cust-avatar c3">BH</div>
+          <div class="cust-body">
+            <div class="cust-name">Bùi Thị H</div>
+            <div class="cust-phone">0978 901 234</div>
+          </div>
+          <div class="cust-right">
+            <div class="cust-total">1.5M</div>
+            <div class="cust-orders">22 đơn</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+  </script>
+</body>
+</html>

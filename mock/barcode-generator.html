@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Tạo mã vạch</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-16); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    .sec { margin-bottom:var(--sp-16); }
+    .sec-label {
+      font-size:12px; font-weight:800; color:var(--text-3);
+      text-transform:uppercase; letter-spacing:0.8px;
+      margin-bottom:var(--sp-12);
+    }
+
+    /* ─── Select Product ─── */
+    .prod-select {
+      height:48px; border-radius:var(--r-lg);
+      border:1px solid var(--border); background:var(--bg-card);
+      display:flex; align-items:center; padding:0 var(--sp-16); gap:var(--sp-12);
+      cursor:pointer; transition:all 0.2s;
+    }
+    .prod-select:hover { border-color:var(--primary); }
+    .prod-select .material-symbols-rounded { font-size:20px; color:var(--text-3); }
+    .prod-select-text { flex:1; font-size:14px; font-weight:600; }
+    .prod-select-chev { font-size:18px; color:var(--text-3); }
+    .prod-selected { display:flex; flex-direction:column; gap:var(--sp-6); }
+    .prod-tag {
+      display:inline-flex; align-items:center; gap:var(--sp-6);
+      padding:var(--sp-6) var(--sp-12); border-radius:var(--r-full);
+      background:var(--primary-soft); font-size:12px; font-weight:700;
+      color:var(--primary-light);
+    }
+    .prod-tag .material-symbols-rounded { font-size:14px; cursor:pointer; }
+
+    /* ─── Barcode type ─── */
+    .bc-types { display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-8); }
+    .bc-type {
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      border:2px solid var(--border); background:var(--bg-card);
+      cursor:pointer; transition:all 0.2s; text-align:center;
+    }
+    .bc-type:hover { border-color:var(--border-l); }
+    .bc-type.on { border-color:var(--primary); background:var(--primary-soft); }
+    .bc-type-name { font-size:14px; font-weight:800; margin-bottom:2px; }
+    .bc-type.on .bc-type-name { color:var(--primary-light); }
+    .bc-type-desc { font-size:10px; color:var(--text-3); }
+
+    /* ─── Options ─── */
+    .opts { display:flex; flex-direction:column; gap:var(--sp-8); }
+    .opt {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+    }
+    .opt-info { display:flex; flex-direction:column; }
+    .opt-name { font-size:13px; font-weight:700; }
+    .opt-desc { font-size:11px; color:var(--text-3); }
+    .opt-toggle {
+      width:48px; height:28px; border-radius:14px; border:none;
+      background:var(--bg-input); position:relative; cursor:pointer; transition:all 0.25s;
+    }
+    .opt-toggle::after {
+      content:''; position:absolute; width:22px; height:22px;
+      border-radius:50%; background:#fff; top:3px; left:3px;
+      transition:all 0.25s; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+    }
+    .opt-toggle.on { background:var(--primary); }
+    .opt-toggle.on::after { left:23px; }
+
+    /* qty row */
+    .qty-row {
+      display:flex; align-items:center; gap:var(--sp-12);
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+    }
+    .qty-row label { flex:1; font-size:13px; font-weight:700; }
+    .qty-ctrl { display:flex; align-items:center; gap:var(--sp-8); }
+    .qty-btn {
+      width:32px; height:32px; border-radius:var(--r-full);
+      border:1px solid var(--border); background:var(--bg-input);
+      color:var(--text-2); cursor:pointer; display:flex;
+      align-items:center; justify-content:center; transition:all 0.15s;
+    }
+    .qty-btn:hover { border-color:var(--primary); color:var(--primary-light); }
+    .qty-btn .material-symbols-rounded { font-size:18px; }
+    .qty-val { font-size:16px; font-weight:900; min-width:24px; text-align:center; }
+
+    /* ─── Preview ─── */
+    .preview-card {
+      padding:var(--sp-20); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      display:flex; flex-direction:column; align-items:center;
+      margin-bottom:var(--sp-16);
+    }
+    .barcode-visual {
+      width:200px; height:60px; margin-bottom:var(--sp-12);
+      display:flex; align-items:flex-end; gap:1px; justify-content:center;
+    }
+    .bar { width:2px; background:var(--text-1); border-radius:1px; }
+    .barcode-number { font-size:14px; font-weight:700; letter-spacing:2px; color:var(--text-2); margin-bottom:var(--sp-4); }
+    .barcode-prodname { font-size:12px; color:var(--text-3); font-weight:600; }
+    .barcode-price { font-size:16px; font-weight:900; color:var(--accent); margin-top:var(--sp-4); }
+
+    /* ─── Action buttons ─── */
+    .actions { display:flex; gap:var(--sp-8); }
+    .action-btn {
+      flex:1; height:52px; border:none; border-radius:var(--r-2xl);
+      font-size:14px; font-weight:800; font-family:inherit;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:var(--sp-6);
+      transition:all 0.25s;
+    }
+    .action-btn .material-symbols-rounded { font-size:20px; }
+    .action-btn.primary { background:var(--grad-primary); color:#fff; box-shadow:var(--shadow-primary); }
+    .action-btn.primary:hover { filter:brightness(1.08); }
+    .action-btn.primary:active { transform:scale(0.97); }
+    .action-btn.secondary { background:var(--bg-input); color:var(--text-1); border:1px solid var(--border); }
+    .action-btn.secondary:hover { background:var(--bg-card); }
+
+    [data-theme="light"] .preview-card { box-shadow:var(--shadow-md); }
+    [data-theme="light"] .bc-type { box-shadow:var(--shadow-sm); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Tạo mã vạch</span>
+    </div>
+
+    <div class="page-body">
+      <div class="sec">
+        <div class="sec-label">Sản phẩm đã chọn</div>
+        <div class="prod-selected">
+          <div class="prod-tag"><span>Coca Cola 330ml</span><span class="material-symbols-rounded" onclick="toast('Bỏ chọn')">close</span></div>
+          <div class="prod-tag"><span>Pepsi 330ml</span><span class="material-symbols-rounded" onclick="toast('Bỏ chọn')">close</span></div>
+        </div>
+        <div class="prod-select" style="margin-top:var(--sp-8)" onclick="toast('Chọn thêm sản phẩm')">
+          <span class="material-symbols-rounded">add_circle</span>
+          <span class="prod-select-text" style="color:var(--text-3)">Thêm sản phẩm...</span>
+          <span class="material-symbols-rounded prod-select-chev">chevron_right</span>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Loại mã vạch</div>
+        <div class="bc-types">
+          <div class="bc-type on" onclick="setBc(this)"><div class="bc-type-name">EAN-13</div><div class="bc-type-desc">Tiêu chuẩn quốc tế</div></div>
+          <div class="bc-type" onclick="setBc(this)"><div class="bc-type-name">QR Code</div><div class="bc-type-desc">Mã QR đa dụng</div></div>
+          <div class="bc-type" onclick="setBc(this)"><div class="bc-type-name">Code-128</div><div class="bc-type-desc">Mật độ cao</div></div>
+          <div class="bc-type" onclick="setBc(this)"><div class="bc-type-name">Code-39</div><div class="bc-type-desc">Alphanumeric</div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Tùy chọn nhãn</div>
+        <div class="opts">
+          <div class="opt">
+            <div class="opt-info"><span class="opt-name">Hiển thị tên SP</span><span class="opt-desc">In tên sản phẩm trên nhãn</span></div>
+            <button class="opt-toggle on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="opt">
+            <div class="opt-info"><span class="opt-name">Hiển thị giá bán</span><span class="opt-desc">In giá bán lẻ trên nhãn</span></div>
+            <button class="opt-toggle on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="qty-row">
+            <label>Số nhãn mỗi SP</label>
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="changeQty(-1)"><span class="material-symbols-rounded">remove</span></button>
+              <span class="qty-val" id="labelQty">4</span>
+              <button class="qty-btn" onclick="changeQty(1)"><span class="material-symbols-rounded">add</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-label">Xem trước</div>
+        <div class="preview-card" id="preview">
+          <!-- Barcode bars generated by JS -->
+          <div class="barcode-visual" id="barcodeVis"></div>
+          <div class="barcode-number">8 935049 000124</div>
+          <div class="barcode-prodname">Coca Cola 330ml</div>
+          <div class="barcode-price">10,000đ</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="action-btn secondary" onclick="toast('Lưu ảnh mã vạch')">
+          <span class="material-symbols-rounded">save</span>Lưu
+        </button>
+        <button class="action-btn primary" onclick="toast('Đang in mã vạch...')">
+          <span class="material-symbols-rounded">print</span>In nhãn
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+    function setBc(el){document.querySelectorAll('.bc-type').forEach(c=>c.classList.remove('on'));el.classList.add('on');toast('Chọn: '+el.querySelector('.bc-type-name').textContent)}
+    function changeQty(d){const el=document.getElementById('labelQty');let v=parseInt(el.textContent)+d;if(v<1)v=1;if(v>100)v=100;el.textContent=v}
+
+    // Generate barcode bars
+    (function(){
+      const vis=document.getElementById('barcodeVis');
+      const pattern=[3,1,2,1,3,1,1,3,2,1,1,2,3,1,2,3,1,1,2,1,3,2,1,1,3,1,2,1,1,3,2,1,3,1,2,3,1,2,1,1,3,2,1,1,2,3,1,2];
+      pattern.forEach((w,i)=>{
+        const bar=document.createElement('div');
+        bar.className='bar';
+        bar.style.width=w+'px';
+        bar.style.height=(30+Math.random()*30)+'px';
+        if(i%2===1) bar.style.background='transparent';
+        vis.appendChild(bar);
+      });
+    })();
+  </script>
+</body>
+</html>

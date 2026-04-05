@@ -1,83 +1,85 @@
 package com.minipos.ui.product
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.minipos.core.theme.AppColors
 import com.minipos.R
-import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.utils.CurrencyFormatter
-import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Product
-import com.minipos.domain.model.ProductVariant
 import com.minipos.ui.scanner.BarcodeScannerScreen
 import com.minipos.ui.scanner.ImageViewerScreen
-import com.minipos.ui.scanner.ProductImagePicker
 import java.io.File
+import com.minipos.ui.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductListScreen(
     onBack: () -> Unit,
+    onNavigateToForm: (String?) -> Unit = {},
     viewModel: ProductListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val formState by viewModel.formState.collectAsState()
-    val variantFormState by viewModel.variantFormState.collectAsState()
 
-    if (state.showForm) {
-        ProductFormSheet(
-            formState = formState,
-            categories = state.categories,
-            isEditing = state.editingProduct != null,
-            productId = state.editingProduct?.id ?: remember { UuidGenerator.generate() },
-            variants = state.variants,
-            onFieldChange = { viewModel.updateFormField(it) },
-            onSave = { viewModel.saveProduct() },
-            onDismiss = { viewModel.dismissForm() },
-            onScanBarcode = { viewModel.showBarcodeScanner() },
-            onGenerateBarcode = { viewModel.generateBarcode() },
-            onAddVariant = { viewModel.showCreateVariantForm() },
-            onEditVariant = { viewModel.showEditVariantForm(it) },
-            onDeleteVariant = { viewModel.deleteVariant(it) },
-        )
+    // Refresh data when screen resumes (e.g., coming back from ProductFormScreen)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
-    // Variant form dialog
-    if (state.showVariantForm) {
-        VariantFormDialog(
-            formState = variantFormState,
-            isEditing = state.editingVariant != null,
-            onFieldChange = { viewModel.updateVariantFormField(it) },
-            onSave = { viewModel.saveVariant() },
-            onDismiss = { viewModel.dismissVariantForm() },
-        )
+    // Build category lookup map for display
+    val categoryMap = remember(state.categories) {
+        state.categories.associateBy { it.id }
+    }
+
+    if (state.showForm) {
+        // Navigate to full-screen product form instead of dialog
+        LaunchedEffect(state.showForm) {
+            val editingId = state.editingProduct?.id
+            viewModel.dismissForm()
+            onNavigateToForm(editingId)
+        }
     }
 
     // Full-screen barcode scanner overlay
@@ -91,89 +93,175 @@ fun ProductListScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.products_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.showCreateForm() }) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_product_cd))
-                    }
-                },
-            )
-        },
+        containerColor = AppColors.Background,
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
         ) {
-            // Search bar
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = { viewModel.search(it) },
-                placeholder = { Text(stringResource(R.string.product_search_hint)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+            // ── Top Bar: back + title + gradient Add button ──
+            MiniPosTopBar(
+                title = stringResource(R.string.products_title),
+                onBack = onBack,
+                actions = {
+                    // Gradient circle add button (40dp) matching HTML .add-btn
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MiniPosGradients.primary())
+                            .clickable { onNavigateToForm(null) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = stringResource(R.string.add_product_cd),
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                },
             )
 
-            // Category filter
-            LazyRow(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // ── Page body ──
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // ── Search + Scan row ──
                 item {
-                    FilterChip(
-                        selected = state.selectedCategory == null,
-                        onClick = { viewModel.filterByCategory(null) },
-                        label = { Text(stringResource(R.string.filter_all)) },
-                    )
-                }
-                items(state.categories) { category ->
-                    FilterChip(
-                        selected = state.selectedCategory?.id == category.id,
-                        onClick = { viewModel.filterByCategory(category) },
-                        label = { Text(category.name) },
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (state.products.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(64.dp), tint = AppColors.TextTertiary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(stringResource(R.string.no_products), style = MaterialTheme.typography.titleMedium, color = AppColors.TextSecondary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.showCreateForm() }, shape = RoundedCornerShape(8.dp)) {
-                            Text(stringResource(R.string.add_first_product))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MiniPosSearchBar(
+                            value = state.searchQuery,
+                            onValueChange = { viewModel.search(it) },
+                            placeholder = stringResource(R.string.product_search_hint),
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Scan barcode button (44dp circle)
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, AppColors.Border, CircleShape)
+                                .background(AppColors.Surface)
+                                .clickable { viewModel.showBarcodeScanner() },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.QrCodeScanner,
+                                contentDescription = stringResource(R.string.prod_scan_barcode),
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(22.dp),
+                            )
                         }
                     }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+
+                // ── Category filter chips ──
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ProductFilterChip(
+                            label = stringResource(R.string.filter_all),
+                            isActive = state.selectedCategory == null,
+                            onClick = { viewModel.filterByCategory(null) },
+                        )
+                        state.categories.forEach { category ->
+                            ProductFilterChip(
+                                label = category.name,
+                                isActive = state.selectedCategory?.id == category.id,
+                                onClick = { viewModel.filterByCategory(category) },
+                            )
+                        }
+                    }
+                }
+
+                // ── Product count ──
+                item {
+                    Text(
+                        text = stringResource(R.string.prod_showing_count, state.products.size),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextTertiary,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+
+                // ── Loading / Empty / List ──
+                if (state.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(color = AppColors.Primary)
+                        }
+                    }
+                } else if (state.products.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(AppColors.SurfaceElevated),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.Inventory2,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = AppColors.TextTertiary,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                stringResource(R.string.no_products),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextSecondary,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            MiniPosGradientButton(
+                                text = stringResource(R.string.add_first_product),
+                                onClick = { onNavigateToForm(null) },
+                                modifier = Modifier.width(200.dp),
+                                height = 44.dp,
+                            )
+                        }
+                    }
+                } else {
                     items(state.products) { product ->
-                        ProductListItem(
+                        val currentStock = state.stockMap[product.id] ?: 0.0
+                        val categoryName = product.categoryId?.let { categoryMap[it]?.name }
+
+                        ProductCard(
                             product = product,
-                            currentStock = state.stockMap[product.id] ?: 0.0,
-                            onClick = { viewModel.showEditForm(product) },
+                            currentStock = currentStock,
+                            categoryName = categoryName,
+                            onClick = { onNavigateToForm(product.id) },
                             onDelete = { viewModel.deleteProduct(product) },
                         )
                     }
@@ -183,26 +271,104 @@ fun ProductListScreen(
     }
 }
 
+// ═══════════════════════════════════════════════
+// FILTER CHIP (matching HTML .chip)
+// ═══════════════════════════════════════════════
+
 @Composable
-private fun ProductListItem(
+private fun ProductFilterChip(
+    label: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+) {
+    val bgColor = if (isActive) {
+        Brush.linearGradient(listOf(AppColors.Primary, AppColors.PrimaryLight))
+    } else {
+        Brush.linearGradient(listOf(AppColors.Surface, AppColors.Surface))
+    }
+    val borderColor = if (isActive) Color.Transparent else AppColors.Border
+    val textColor = if (isActive) Color.White else AppColors.TextSecondary
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusFull))
+            .background(bgColor)
+            .then(
+                if (!isActive) Modifier.border(
+                    1.dp,
+                    borderColor,
+                    RoundedCornerShape(MiniPosTokens.RadiusFull)
+                ) else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor,
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════
+// PRODUCT CARD (matching HTML .prod)
+// ═══════════════════════════════════════════════
+
+/**
+ * Maps a category name to its gradient colors and icon.
+ */
+@Composable
+private fun getCategoryStyle(categoryName: String?): Triple<List<Color>, List<Color>, ImageVector> {
+    return when (categoryName?.lowercase()) {
+        "nước uống", "đồ uống", "drinks" -> Triple(
+            listOf(Color(0xFF4BB8F0), Color(0xFF2196F3)),
+            listOf(Color(0xFF4BB8F0), Color(0xFF2196F3)),
+            Icons.Rounded.LocalCafe,
+        )
+        "thực phẩm", "food" -> Triple(
+            listOf(Color(0xFFFF8A65), Color(0xFFF44336)),
+            listOf(Color(0xFFFF8A65), Color(0xFFF44336)),
+            Icons.Rounded.Restaurant,
+        )
+        "bánh kẹo", "snack", "snacks" -> Triple(
+            listOf(Color(0xFFFFD54F), Color(0xFFFFB300)),
+            listOf(Color(0xFFFFD54F), Color(0xFFFFB300)),
+            Icons.Rounded.Cookie,
+        )
+        "gia dụng", "đồ dùng", "household" -> Triple(
+            listOf(Color(0xFF81C784), Color(0xFF388E3C)),
+            listOf(Color(0xFF81C784), Color(0xFF388E3C)),
+            Icons.Rounded.CleaningServices,
+        )
+        "sữa", "dairy" -> Triple(
+            listOf(Color(0xFFCE93D8), Color(0xFF8E24AA)),
+            listOf(Color(0xFFCE93D8), Color(0xFF8E24AA)),
+            Icons.Rounded.WaterDrop,
+        )
+        else -> Triple(
+            listOf(Color(0xFF90A4AE), Color(0xFF546E7A)),
+            listOf(Color(0xFF90A4AE), Color(0xFF546E7A)),
+            Icons.Rounded.Inventory2,
+        )
+    }
+}
+
+@Composable
+private fun ProductCard(
     product: Product,
     currentStock: Double,
+    categoryName: String?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showImageViewer by remember { mutableStateOf(false) }
 
-    // Build all images for viewer
-    val allImages = remember(product) {
-        buildList {
-            product.imagePath?.let { add(it) }
-            addAll(product.additionalImages)
-        }
-    }
-
-    // Full-screen image viewer
-    if (showImageViewer && allImages.isNotEmpty()) {
+    // Full-screen image viewer (single image only)
+    if (showImageViewer && product.imagePath != null) {
         Dialog(
             onDismissRequest = { showImageViewer = false },
             properties = DialogProperties(
@@ -211,7 +377,7 @@ private fun ProductListItem(
             ),
         ) {
             ImageViewerScreen(
-                images = allImages,
+                images = listOf(product.imagePath!!),
                 initialIndex = 0,
                 onClose = { showImageViewer = false },
             )
@@ -234,501 +400,129 @@ private fun ProductListItem(
         )
     }
 
-    Card(
+    val stockInt = currentStock.toLong().toInt()
+    val isLow = product.trackInventory && stockInt in 1..product.minStock
+    val isOut = product.trackInventory && stockInt <= 0
+
+    val (gradientColors, _, categoryIcon) = getCategoryStyle(categoryName)
+
+    // Card matching HTML .prod
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (product.imagePath != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(File(product.imagePath))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = product.name,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { showImageViewer = true },
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Icon(
-                    Icons.Default.Inventory2,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = AppColors.Primary,
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    product.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val stockDisplay = if (currentStock == currentStock.toLong().toDouble()) {
-                    currentStock.toLong().toString()
-                } else {
-                    currentStock.toString()
-                }
-                val skuUnit = buildString {
-                    append("SKU: ${product.sku} · $stockDisplay ${product.unit}")
-                    if (allImages.size > 1) append("  📷${allImages.size}")
-                }
-                Text(
-                    skuUnit,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.widthIn(max = 130.dp)) {
-                Text(
-                    CurrencyFormatter.format(product.sellingPrice),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.Primary,
-                    maxLines = 1,
-                )
-                if (product.costPrice > 0) {
-                    Text(
-                        stringResource(R.string.cost_prefix, CurrencyFormatter.format(product.costPrice)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.TextTertiary,
-                        maxLines = 1,
-                    )
-                }
-            }
-            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete_label), tint = AppColors.TextTertiary, modifier = Modifier.size(18.dp))
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProductFormSheet(
-    formState: ProductFormState,
-    categories: List<com.minipos.domain.model.Category>,
-    isEditing: Boolean,
-    productId: String,
-    variants: List<com.minipos.domain.model.ProductVariant>,
-    onFieldChange: (ProductFormState.() -> ProductFormState) -> Unit,
-    onSave: () -> Unit,
-    onDismiss: () -> Unit,
-    onScanBarcode: () -> Unit,
-    onGenerateBarcode: () -> Unit,
-    onAddVariant: () -> Unit,
-    onEditVariant: (com.minipos.domain.model.ProductVariant) -> Unit,
-    onDeleteVariant: (com.minipos.domain.model.ProductVariant) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isEditing) stringResource(R.string.edit_product_title) else stringResource(R.string.add_product_title)) },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    OutlinedTextField(
-                        value = formState.name,
-                        onValueChange = { v -> onFieldChange { copy(name = v) } },
-                        label = { Text(stringResource(R.string.product_name_required)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = formState.sku,
-                            onValueChange = { v -> onFieldChange { copy(sku = v) } },
-                            label = { Text("SKU") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                        OutlinedTextField(
-                            value = formState.barcode,
-                            onValueChange = { v -> onFieldChange { copy(barcode = v) } },
-                            label = { Text(stringResource(R.string.product_barcode_label)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp),
-                            trailingIcon = {
-                                Row {
-                                    IconButton(onClick = onGenerateBarcode, modifier = Modifier.size(24.dp)) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.generate_barcode_cd), tint = AppColors.Accent, modifier = Modifier.size(18.dp))
-                                    }
-                                    IconButton(onClick = onScanBarcode, modifier = Modifier.size(24.dp)) {
-                                        Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_barcode_cd), tint = AppColors.Primary, modifier = Modifier.size(18.dp))
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
-                // Barcode preview
-                if (formState.barcode.length == 13) {
-                    item {
-                        val barcodeBitmap = remember(formState.barcode) {
-                            try { BarcodeGenerator.generateBarcodeBitmap(formState.barcode, width = 300, height = 100, showText = true) }
-                            catch (_: Exception) { null }
-                        }
-                        if (barcodeBitmap != null) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Image(
-                                    bitmap = barcodeBitmap.asImageBitmap(),
-                                    contentDescription = "Barcode preview",
-                                    modifier = Modifier.height(60.dp),
-                                    contentScale = ContentScale.Fit,
-                                )
-                            }
-                        }
-                    }
-                }
-                item {
-                    // Category dropdown as filter chips
-                    Text(stringResource(R.string.category_label), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        item {
-                            FilterChip(
-                                selected = formState.categoryId == null,
-                                onClick = { onFieldChange { copy(categoryId = null) } },
-                                label = { Text(stringResource(R.string.no_category_chip)) },
-                            )
-                        }
-                        items(categories) { cat ->
-                            FilterChip(
-                                selected = formState.categoryId == cat.id,
-                                onClick = { onFieldChange { copy(categoryId = cat.id) } },
-                                label = { Text(cat.name) },
-                            )
-                        }
-                    }
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = formState.costPrice,
-                            onValueChange = { v -> onFieldChange { copy(costPrice = v.filter { it.isDigit() }) } },
-                            label = { Text(stringResource(R.string.cost_price_label)) },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            suffix = { Text(stringResource(R.string.currency_symbol)) },
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                        OutlinedTextField(
-                            value = formState.sellingPrice,
-                            onValueChange = { v -> onFieldChange { copy(sellingPrice = v.filter { it.isDigit() }) } },
-                            label = { Text(stringResource(R.string.selling_price_label)) },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            suffix = { Text(stringResource(R.string.currency_symbol)) },
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                    }
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = formState.unit,
-                            onValueChange = { v -> onFieldChange { copy(unit = v) } },
-                            label = { Text(stringResource(R.string.unit_label)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                        OutlinedTextField(
-                            value = formState.minStock,
-                            onValueChange = { v -> onFieldChange { copy(minStock = v.filter { it.isDigit() }) } },
-                            label = { Text(stringResource(R.string.min_stock_label)) },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                    }
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(R.string.track_inventory))
-                        Switch(
-                            checked = formState.trackInventory,
-                            onCheckedChange = { v -> onFieldChange { copy(trackInventory = v) } },
-                        )
-                    }
-                }
-                // Has Variants toggle
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(R.string.has_variants_label))
-                        Switch(
-                            checked = formState.hasVariants,
-                            onCheckedChange = { v -> onFieldChange { copy(hasVariants = v) } },
-                        )
-                    }
-                }
-                // Variants list
-                if (formState.hasVariants) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(R.string.variants_label),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            TextButton(onClick = onAddVariant) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.add_variant))
-                            }
-                        }
-                    }
-                    if (variants.isEmpty()) {
-                        item {
-                            Text(
-                                stringResource(R.string.no_variants_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextTertiary,
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            )
-                        }
-                    } else {
-                        items(variants) { variant ->
-                            VariantItem(
-                                variant = variant,
-                                onEdit = { onEditVariant(variant) },
-                                onDelete = { onDeleteVariant(variant) },
-                            )
-                        }
-                    }
-                }
-                item {
-                    ProductImagePicker(
-                        mainImagePath = formState.imagePath,
-                        additionalImages = formState.additionalImages,
-                        onMainImageChanged = { path -> onFieldChange { copy(imagePath = path) } },
-                        onAdditionalImagesChanged = { images -> onFieldChange { copy(additionalImages = images) } },
-                        productId = productId,
-                    )
-                }
-                if (formState.error != null) {
-                    item {
-                        Text(formState.error, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onSave,
-                enabled = !formState.isSaving,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                if (formState.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text(stringResource(R.string.save_btn))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel_btn_label)) }
-        },
-    )
-}
-
-@Composable
-private fun VariantItem(
-    variant: ProductVariant,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.delete_variant_title)) },
-            text = { Text(stringResource(R.string.delete_variant_confirm, variant.variantName)) },
-            confirmButton = {
-                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
-                    Text(stringResource(R.string.delete_label), color = AppColors.Error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel_btn_label)) }
-            },
-        )
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onEdit),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Default.Style,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = AppColors.Accent,
+        // ── Category gradient icon (48dp) ──
+        if (product.imagePath != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(File(product.imagePath))
+                    .crossfade(true)
+                    .build(),
+                contentDescription = product.name,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                    .clickable { showImageViewer = true },
+                contentScale = ContentScale.Crop,
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    variant.variantName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
-                val details = buildString {
-                    append("SKU: ${variant.sku}")
-                    variant.sellingPrice?.let { append(" · ${CurrencyFormatter.format(it)}") }
-                }
-                Text(
-                    details,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                    .background(Brush.linearGradient(gradientColors)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    categoryIcon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
                 )
             }
-            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete_label), tint = AppColors.TextTertiary, modifier = Modifier.size(16.dp))
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // ── Body: name + meta ──
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = product.name,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = product.sku,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextTertiary,
+                )
+                Text(
+                    text = "·",
+                    fontSize = 11.sp,
+                    color = AppColors.TextTertiary,
+                )
+                Text(
+                    text = categoryName ?: stringResource(R.string.prod_no_category),
+                    fontSize = 11.sp,
+                    color = AppColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // ── Right: price + stock status ──
+        Column(
+            horizontalAlignment = Alignment.End,
+        ) {
+            // Price (accent color, 14sp, extra bold)
+            Text(
+                text = CurrencyFormatter.format(product.sellingPrice),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                color = AppColors.Accent,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            // Stock status text (colored)
+            when {
+                isOut -> Text(
+                    text = stringResource(R.string.prod_stock_out),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Error,
+                )
+                isLow -> Text(
+                    text = stringResource(R.string.prod_stock_low, stockInt),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Warning,
+                )
+                product.trackInventory -> Text(
+                    text = stringResource(R.string.prod_stock_ok, stockInt),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Success,
+                )
             }
         }
     }
-}
-
-@Composable
-private fun VariantFormDialog(
-    formState: VariantFormState,
-    isEditing: Boolean,
-    onFieldChange: (VariantFormState.() -> VariantFormState) -> Unit,
-    onSave: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isEditing) stringResource(R.string.edit_variant_title) else stringResource(R.string.add_variant_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = formState.variantName,
-                    onValueChange = { v -> onFieldChange { copy(variantName = v) } },
-                    label = { Text(stringResource(R.string.variant_name_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = formState.sku,
-                        onValueChange = { v -> onFieldChange { copy(sku = v) } },
-                        label = { Text("SKU") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    OutlinedTextField(
-                        value = formState.barcode,
-                        onValueChange = { v -> onFieldChange { copy(barcode = v) } },
-                        label = { Text(stringResource(R.string.product_barcode_label)) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = formState.costPrice,
-                        onValueChange = { v -> onFieldChange { copy(costPrice = v.filter { it.isDigit() }) } },
-                        label = { Text(stringResource(R.string.cost_price_label)) },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        suffix = { Text(stringResource(R.string.currency_symbol)) },
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    OutlinedTextField(
-                        value = formState.sellingPrice,
-                        onValueChange = { v -> onFieldChange { copy(sellingPrice = v.filter { it.isDigit() }) } },
-                        label = { Text(stringResource(R.string.selling_price_label)) },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        suffix = { Text(stringResource(R.string.currency_symbol)) },
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                }
-                OutlinedTextField(
-                    value = formState.attributes,
-                    onValueChange = { v -> onFieldChange { copy(attributes = v) } },
-                    label = { Text(stringResource(R.string.variant_attributes_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    placeholder = { Text(stringResource(R.string.variant_attributes_hint)) },
-                )
-                if (formState.error != null) {
-                    Text(formState.error, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onSave,
-                enabled = !formState.isSaving,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                if (formState.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text(stringResource(R.string.save_btn))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel_btn_label)) }
-        },
-    )
 }

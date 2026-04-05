@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mini POS — Điều chỉnh kho</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .phone { overflow:hidden; }
+    .topbar { height:56px; display:flex; align-items:center; gap:var(--sp-12); padding:0 var(--sp-8) 0 var(--sp-4); flex-shrink:0; position:relative; z-index:1; }
+    .back-btn { width:44px; height:44px; border-radius:var(--r-full); border:none; background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .back-btn:hover { background:var(--bg-input); color:var(--text-1); }
+    .back-btn .material-symbols-rounded { font-size:24px; }
+    .topbar-title { font-size:18px; font-weight:800; flex:1; }
+
+    .page-body { flex:1; overflow-y:auto; padding:0 var(--sp-16) var(--sp-16); position:relative; z-index:1; }
+    .page-body::-webkit-scrollbar { width:0; }
+
+    /* ─── Type selector ─── */
+    .type-tabs {
+      display:flex; gap:var(--sp-4); padding:var(--sp-4);
+      border-radius:var(--r-lg); background:var(--bg-input);
+      margin-bottom:var(--sp-16);
+    }
+    .type-tab {
+      flex:1; height:40px; border:none; border-radius:var(--r-md);
+      background:transparent; color:var(--text-3);
+      font-size:12px; font-weight:700; font-family:inherit;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:var(--sp-4);
+      transition:all 0.2s;
+    }
+    .type-tab.on { background:var(--bg-card); color:var(--text-1); box-shadow:var(--shadow-sm); }
+    .type-tab .material-symbols-rounded { font-size:18px; }
+
+    /* ─── Info banner ─── */
+    .info-banner {
+      display:flex; align-items:flex-start; gap:var(--sp-8);
+      padding:var(--sp-12) var(--sp-16); border-radius:var(--r-lg);
+      background:rgba(108,92,231,0.06); border:1px solid rgba(108,92,231,0.15);
+      margin-bottom:var(--sp-16);
+    }
+    .info-banner .material-symbols-rounded { font-size:20px; color:var(--primary-light); flex-shrink:0; margin-top:1px; }
+    .info-banner p { font-size:12px; color:var(--text-2); line-height:1.5; }
+
+    /* ─── Form fields ─── */
+    .section { margin-bottom:var(--sp-16); }
+    .sec-label {
+      font-size:12px; font-weight:800; color:var(--text-3);
+      text-transform:uppercase; letter-spacing:0.8px;
+      margin-bottom:var(--sp-12);
+    }
+    .field { margin-bottom:var(--sp-12); }
+    .field-label { font-size:12px; font-weight:700; color:var(--text-2); margin-bottom:var(--sp-4); display:flex; align-items:center; gap:var(--sp-4); }
+    .field-label .req { color:var(--error); }
+    .field-input {
+      width:100%; height:48px; border-radius:var(--r-lg);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:14px; color:var(--text-1); padding:0 var(--sp-16);
+      font-family:inherit; outline:none; transition:all 0.2s;
+      box-sizing:border-box;
+    }
+    .field-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
+    .field-input::placeholder { color:var(--text-3); }
+    .field-row { display:flex; gap:var(--sp-12); }
+    .field-row .field { flex:1; }
+    .field-textarea {
+      width:100%; min-height:72px; border-radius:var(--r-lg);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:14px; color:var(--text-1); padding:var(--sp-12) var(--sp-16);
+      font-family:inherit; outline:none; resize:vertical; transition:all 0.2s;
+      box-sizing:border-box;
+    }
+    .field-textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-glow); }
+    .field-textarea::placeholder { color:var(--text-3); }
+    .field-hint { font-size:11px; color:var(--text-3); margin-top:var(--sp-4); }
+
+    /* ─── Search product ─── */
+    .search-add {
+      display:flex; gap:var(--sp-8); margin-bottom:var(--sp-12);
+    }
+    .search-add .search-bar {
+      flex:1; height:44px; background:var(--bg-input); border:1px solid var(--border);
+      border-radius:var(--r-2xl); display:flex; align-items:center;
+      padding:0 var(--sp-6) 0 var(--sp-16); gap:var(--sp-8);
+    }
+    .search-add .search-bar .material-symbols-rounded { color:var(--text-3); font-size:20px; }
+    .search-add .search-bar input { flex:1; border:none; background:transparent; font-size:13px; font-family:inherit; color:var(--text-1); outline:none; }
+    .search-add .search-bar input::placeholder { color:var(--text-3); }
+    .scan-btn {
+      width:44px; height:44px; border-radius:var(--r-full);
+      border:none; background:var(--grad-primary); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; box-shadow:var(--shadow-primary); transition:all 0.2s; flex-shrink:0;
+    }
+    .scan-btn:active { transform:scale(0.9); }
+
+    /* ─── Adjust items ─── */
+    .adj-list { display:flex; flex-direction:column; gap:var(--sp-8); }
+    .adj-item {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+    }
+    .adj-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--sp-8); }
+    .adj-name { font-size:14px; font-weight:700; }
+    .adj-sku { font-size:11px; color:var(--text-3); }
+    .adj-del {
+      width:32px; height:32px; border-radius:var(--r-full);
+      border:none; background:var(--error-soft); color:var(--error);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all 0.15s;
+    }
+    .adj-del:hover { background:rgba(255,82,82,0.2); }
+    .adj-del .material-symbols-rounded { font-size:18px; }
+
+    .adj-stock {
+      display:flex; align-items:center; gap:var(--sp-12);
+      padding:var(--sp-8) var(--sp-12); border-radius:var(--r-md);
+      background:var(--bg-input); margin-bottom:var(--sp-8);
+    }
+    .adj-stock-label { font-size:11px; color:var(--text-3); font-weight:600; }
+    .adj-stock-val { font-size:14px; font-weight:800; }
+    .adj-stock-arrow { color:var(--text-3); }
+    .adj-stock-arrow .material-symbols-rounded { font-size:20px; }
+    .adj-stock-new { color:var(--primary-light); }
+
+    .adj-fields { display:flex; gap:var(--sp-8); }
+    .adj-field { flex:1; }
+    .adj-field label { font-size:10px; color:var(--text-3); font-weight:600; display:block; margin-bottom:3px; }
+    .adj-field input {
+      width:100%; height:40px; border-radius:var(--r-sm);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:14px; font-weight:700; color:var(--text-1);
+      padding:0 var(--sp-8); text-align:center;
+      font-family:inherit; outline:none; transition:all 0.15s;
+      box-sizing:border-box;
+    }
+    .adj-field input:focus { border-color:var(--primary); }
+    .adj-field select {
+      width:100%; height:40px; border-radius:var(--r-sm);
+      border:1px solid var(--border); background:var(--bg-input);
+      font-size:12px; font-weight:600; color:var(--text-1);
+      padding:0 var(--sp-8);
+      font-family:inherit; outline:none; transition:all 0.15s;
+      box-sizing:border-box; -webkit-appearance:none; appearance:none;
+    }
+    .adj-field select:focus { border-color:var(--primary); }
+
+    .adj-diff {
+      display:flex; align-items:center; justify-content:flex-end;
+      gap:var(--sp-6); margin-top:var(--sp-8);
+      font-size:12px; font-weight:800;
+    }
+    .adj-diff.plus { color:var(--success); }
+    .adj-diff.minus { color:var(--error); }
+    .adj-diff .material-symbols-rounded { font-size:16px; }
+
+    /* ─── Add button ─── */
+    .add-item-btn {
+      width:100%; height:44px; border-radius:var(--r-lg);
+      border:2px dashed var(--border-l); background:transparent;
+      color:var(--text-3); font-size:13px; font-weight:700;
+      font-family:inherit; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:var(--sp-6);
+      transition:all 0.2s; margin-top:var(--sp-8); margin-bottom:var(--sp-20);
+    }
+    .add-item-btn:hover { border-color:var(--primary); color:var(--primary-light); background:rgba(108,92,231,0.04); }
+    .add-item-btn .material-symbols-rounded { font-size:18px; }
+
+    /* ─── Summary ─── */
+    .summary {
+      padding:var(--sp-16); border-radius:var(--r-lg);
+      background:var(--bg-card); border:1px solid var(--border);
+      margin-bottom:var(--sp-16);
+    }
+    .sum-row { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; color:var(--text-2); }
+    .sum-row .plus { color:var(--success); font-weight:700; }
+    .sum-row .minus { color:var(--error); font-weight:700; }
+    .sum-row.total { font-size:15px; font-weight:900; color:var(--text-1); padding-top:var(--sp-8); margin-top:var(--sp-4); border-top:2px solid var(--border-l); }
+
+    /* ─── Confirm button ─── */
+    .confirm-btn {
+      width:100%; height:56px; border:none; border-radius:var(--r-2xl);
+      background:var(--grad-primary); color:#fff;
+      font-size:16px; font-weight:800; font-family:inherit;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:var(--sp-8);
+      box-shadow:var(--shadow-primary); transition:all 0.25s;
+    }
+    .confirm-btn:hover { filter:brightness(1.08); box-shadow:var(--shadow-fab); }
+    .confirm-btn:active { transform:scale(0.97); }
+    .confirm-btn .material-symbols-rounded { font-size:22px; }
+
+    [data-theme="light"] .adj-item { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .summary { box-shadow:var(--shadow-sm); }
+    [data-theme="light"] .type-tab.on { box-shadow:var(--shadow-md); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"><div class="ti"><span class="material-symbols-rounded">check</span></div><span id="tmsg"></span></div>
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="si">
+        <span class="material-symbols-rounded">signal_cellular_alt</span>
+        <span class="material-symbols-rounded">wifi</span>
+        <span class="material-symbols-rounded">battery_full</span>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="back-btn" onclick="history.back()"><span class="material-symbols-rounded">arrow_back</span></button>
+      <span class="topbar-title">Kiểm kho / Điều chỉnh</span>
+    </div>
+
+    <div class="page-body">
+      <!-- Type selector -->
+      <div class="type-tabs">
+        <button class="type-tab on" onclick="pickTab(this)">
+          <span class="material-symbols-rounded">inventory_2</span>Kiểm kho
+        </button>
+        <button class="type-tab" onclick="pickTab(this)">
+          <span class="material-symbols-rounded">add_circle</span>Nhập thêm
+        </button>
+        <button class="type-tab" onclick="pickTab(this)">
+          <span class="material-symbols-rounded">remove_circle</span>Xuất / Hủy
+        </button>
+      </div>
+
+      <!-- Info banner -->
+      <div class="info-banner">
+        <span class="material-symbols-rounded">info</span>
+        <p>Nhập số lượng <strong>thực tế đếm được</strong> trong kho. Hệ thống sẽ tự tính chênh lệch so với tồn kho trên phần mềm.</p>
+      </div>
+
+      <!-- Session info -->
+      <div class="section">
+        <div class="field-row">
+          <div class="field">
+            <div class="field-label">Mã phiên</div>
+            <input class="field-input" value="KK-0012" readonly style="color:var(--text-3)">
+          </div>
+          <div class="field">
+            <div class="field-label">Ngày kiểm</div>
+            <input class="field-input" value="05/04/2026" readonly>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Lý do điều chỉnh <span class="req">*</span></div>
+          <input class="field-input" placeholder="VD: Kiểm kho định kỳ tháng 4" value="Kiểm kho định kỳ tháng 4">
+        </div>
+      </div>
+
+      <!-- Search & scan -->
+      <div class="sec-label">Sản phẩm kiểm kho</div>
+      <div class="search-add">
+        <div class="search-bar">
+          <span class="material-symbols-rounded">search</span>
+          <input placeholder="Tìm hoặc quét sản phẩm...">
+        </div>
+        <button class="scan-btn"><span class="material-symbols-rounded">qr_code_scanner</span></button>
+      </div>
+
+      <!-- Adjust items -->
+      <div class="adj-list">
+        <!-- Item 1: Match -->
+        <div class="adj-item">
+          <div class="adj-top">
+            <div>
+              <div class="adj-name">Coca Cola 330ml</div>
+              <div class="adj-sku">SKU: DRINK-001</div>
+            </div>
+            <button class="adj-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="adj-stock">
+            <div style="flex:1">
+              <div class="adj-stock-label">Tồn kho hệ thống</div>
+              <div class="adj-stock-val">85</div>
+            </div>
+            <div class="adj-stock-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+            <div style="flex:1;text-align:right">
+              <div class="adj-stock-label">Thực tế đếm</div>
+              <div class="adj-stock-val adj-stock-new">85</div>
+            </div>
+          </div>
+          <div class="adj-fields">
+            <div class="adj-field">
+              <label>Số lượng thực tế</label>
+              <input value="85" type="number">
+            </div>
+            <div class="adj-field">
+              <label>Vị trí kệ</label>
+              <input value="A1-02" placeholder="VD: A1-02">
+            </div>
+          </div>
+          <div class="adj-diff" style="color:var(--success)">
+            <span class="material-symbols-rounded">check_circle</span>Khớp
+          </div>
+        </div>
+
+        <!-- Item 2: Shortage -->
+        <div class="adj-item">
+          <div class="adj-top">
+            <div>
+              <div class="adj-name">Pepsi 330ml</div>
+              <div class="adj-sku">SKU: DRINK-002</div>
+            </div>
+            <button class="adj-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="adj-stock">
+            <div style="flex:1">
+              <div class="adj-stock-label">Tồn kho hệ thống</div>
+              <div class="adj-stock-val">15</div>
+            </div>
+            <div class="adj-stock-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+            <div style="flex:1;text-align:right">
+              <div class="adj-stock-label">Thực tế đếm</div>
+              <div class="adj-stock-val" style="color:var(--error)">12</div>
+            </div>
+          </div>
+          <div class="adj-fields">
+            <div class="adj-field">
+              <label>Số lượng thực tế</label>
+              <input value="12" type="number">
+            </div>
+            <div class="adj-field">
+              <label>Lý do chênh lệch</label>
+              <select>
+                <option>Hao hụt</option>
+                <option>Hàng hỏng</option>
+                <option>Mất mát</option>
+                <option selected>Khác</option>
+              </select>
+            </div>
+          </div>
+          <div class="adj-diff minus">
+            <span class="material-symbols-rounded">trending_down</span>Thiếu 3
+          </div>
+        </div>
+
+        <!-- Item 3: Surplus -->
+        <div class="adj-item">
+          <div class="adj-top">
+            <div>
+              <div class="adj-name">Mì Hảo Hảo</div>
+              <div class="adj-sku">SKU: FOOD-004</div>
+            </div>
+            <button class="adj-del" onclick="toast('Bỏ sản phẩm')"><span class="material-symbols-rounded">close</span></button>
+          </div>
+          <div class="adj-stock">
+            <div style="flex:1">
+              <div class="adj-stock-label">Tồn kho hệ thống</div>
+              <div class="adj-stock-val">70</div>
+            </div>
+            <div class="adj-stock-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+            <div style="flex:1;text-align:right">
+              <div class="adj-stock-label">Thực tế đếm</div>
+              <div class="adj-stock-val" style="color:var(--success)">72</div>
+            </div>
+          </div>
+          <div class="adj-fields">
+            <div class="adj-field">
+              <label>Số lượng thực tế</label>
+              <input value="72" type="number">
+            </div>
+            <div class="adj-field">
+              <label>Lý do chênh lệch</label>
+              <select>
+                <option selected>Nhập chưa cập nhật</option>
+                <option>Đếm sai lần trước</option>
+                <option>Khác</option>
+              </select>
+            </div>
+          </div>
+          <div class="adj-diff plus">
+            <span class="material-symbols-rounded">trending_up</span>Thừa 2
+          </div>
+        </div>
+      </div>
+
+      <button class="add-item-btn" onclick="toast('Thêm sản phẩm kiểm kho')">
+        <span class="material-symbols-rounded">add</span>Thêm sản phẩm
+      </button>
+
+      <!-- Reason / notes -->
+      <div class="section">
+        <div class="field">
+          <div class="field-label">Ghi chú phiên kiểm kho</div>
+          <textarea class="field-textarea" placeholder="Ghi chú thêm (không bắt buộc)...">Kiểm kho đầu tháng 4/2026. Kho A1.</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="summary">
+        <div class="sum-row"><span>Tổng SP kiểm</span><span>3 sản phẩm</span></div>
+        <div class="sum-row"><span>Khớp</span><span class="plus">1 SP</span></div>
+        <div class="sum-row"><span>Thiếu</span><span class="minus">1 SP (−3)</span></div>
+        <div class="sum-row"><span>Thừa</span><span class="plus">1 SP (+2)</span></div>
+        <div class="sum-row total"><span>Chênh lệch ròng</span><span style="color:var(--error)">−1</span></div>
+      </div>
+
+      <button class="confirm-btn" onclick="toast('Phiên kiểm kho đã được lưu!')">
+        <span class="material-symbols-rounded">verified</span>Xác nhận kiểm kho
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function(){const t=localStorage.getItem('pos-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+    let tt;function toast(m){const el=document.getElementById('toast');document.getElementById('tmsg').textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400)}
+    function pickTab(el){document.querySelectorAll('.type-tab').forEach(c=>c.classList.remove('on'));el.classList.add('on')}
+  </script>
+</body>
+</html>

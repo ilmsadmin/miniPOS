@@ -4,10 +4,14 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.R
+import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.Category
+import com.minipos.domain.model.Customer
+import com.minipos.domain.model.Discount
 import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.repository.CategoryRepository
+import com.minipos.domain.repository.CustomerRepository
 import com.minipos.domain.repository.ProductRepository
 import com.minipos.domain.repository.StoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +31,13 @@ data class PosStep1State(
     val showVariantPicker: Boolean = false,
     val variantPickerProduct: Product? = null,
     val variantPickerVariants: List<ProductVariant> = emptyList(),
+    // Customer picker (merged from Step 3)
+    val recentCustomers: List<Customer> = emptyList(),
+    val customerSearchResults: List<Customer> = emptyList(),
+    val customerSearchQuery: String = "",
+    val showCreateCustomerForm: Boolean = false,
+    // Order discount (merged from Step 2)
+    val showOrderDiscount: Boolean = false,
 )
 
 @HiltViewModel
@@ -35,6 +46,7 @@ class PosStep1ViewModel @Inject constructor(
     private val storeRepository: StoreRepository,
     private val categoryRepository: CategoryRepository,
     private val productRepository: ProductRepository,
+    private val customerRepository: CustomerRepository,
     val cartHolder: PosCartHolder,
 ) : ViewModel() {
 
@@ -43,6 +55,7 @@ class PosStep1ViewModel @Inject constructor(
 
     init {
         loadData()
+        loadRecentCustomers()
         // Observe stock errors from cartHolder
         viewModelScope.launch {
             cartHolder.stockError.collect { error ->
@@ -180,5 +193,78 @@ class PosStep1ViewModel @Inject constructor(
             }
             _state.update { it.copy(stockError = app.getString(R.string.msg_barcode_not_found, barcode)) }
         }
+    }
+
+    // ═══════════════════════════════════════
+    // Customer management (merged from Step 3)
+    // ═══════════════════════════════════════
+
+    private fun loadRecentCustomers() {
+        viewModelScope.launch {
+            val store = storeRepository.getStore() ?: return@launch
+            val recent = customerRepository.getRecent(store.id, 20)
+            _state.update { it.copy(recentCustomers = recent) }
+        }
+    }
+
+    fun searchCustomer(query: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(customerSearchQuery = query) }
+            if (query.isBlank()) return@launch
+            val store = storeRepository.getStore() ?: return@launch
+            val results = customerRepository.search(store.id, query)
+            _state.update { it.copy(customerSearchResults = results) }
+        }
+    }
+
+    fun selectCustomer(customer: Customer?) {
+        cartHolder.setCustomer(customer)
+    }
+
+    fun toggleCreateCustomerForm() {
+        _state.update { it.copy(showCreateCustomerForm = !it.showCreateCustomerForm) }
+    }
+
+    fun quickCreateCustomer(name: String, phone: String?) {
+        viewModelScope.launch {
+            val store = storeRepository.getStore() ?: return@launch
+            val customer = Customer(
+                id = UuidGenerator.generate(),
+                storeId = store.id,
+                name = name,
+                phone = phone,
+                createdAt = System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis(),
+            )
+            val result = customerRepository.create(customer)
+            if (result is com.minipos.domain.model.Result.Success) {
+                cartHolder.setCustomer(result.data)
+                _state.update { it.copy(showCreateCustomerForm = false) }
+                loadRecentCustomers()
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // Cart management (merged from Step 2)
+    // ═══════════════════════════════════════
+
+    fun updateQuantity(index: Int, quantity: Double) {
+        cartHolder.updateItemQuantity(index, quantity)
+    }
+
+    fun removeItem(index: Int) {
+        cartHolder.removeItem(index)
+    }
+
+    fun clearCart() {
+        cartHolder.clearCart()
+    }
+
+    fun showOrderDiscountDialog() { _state.update { it.copy(showOrderDiscount = true) } }
+    fun dismissOrderDiscountDialog() { _state.update { it.copy(showOrderDiscount = false) } }
+
+    fun setOrderDiscount(discount: Discount?) {
+        cartHolder.setOrderDiscount(discount)
     }
 }
