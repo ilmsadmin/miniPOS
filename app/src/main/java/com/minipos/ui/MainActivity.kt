@@ -99,6 +99,7 @@ fun MiniPosApp() {
                 composable(Screen.JoinStore.route) {
                     JoinStoreScreen(
                         onBack = { onboardingNavController.popBackStack() },
+                        onJoinComplete = { viewModel.onOnboardingComplete() },
                     )
                 }
             }
@@ -107,14 +108,18 @@ fun MiniPosApp() {
             PinLockScreen(onUnlocked = { viewModel.unlock() })
         }
         AppState.Login -> {
-            LoginScreen(onLoginSuccess = { viewModel.onLoginSuccess() })
+            val canGoBack by viewModel.loginCanGoBack.collectAsState()
+            LoginScreen(
+                onLoginSuccess = { viewModel.onLoginSuccess() },
+                onBack = if (canGoBack) ({ viewModel.cancelSwitchUser() }) else null,
+            )
         }
         AppState.Home -> {
             MiniPosNavGraph(
                 navController = navController,
                 startDestination = Screen.Home.route,
                 onLogout = { viewModel.logout() },
-                onSwitchUser = { viewModel.logout() },
+                onSwitchUser = { viewModel.switchUser() },
             )
         }
     }

@@ -156,6 +156,21 @@ class WifiSyncManager @Inject constructor(
                         applySyncPayload(sb.toString(), storeCode)
                         writer.println("ACK")
                     }
+                    // New device joining the store — send full snapshot so the guest can bootstrap
+                    requestLine.startsWith("JOIN_REQUEST") -> {
+                        // Verify store code sent by guest matches ours
+                        val requestedCode = requestLine.substringAfter("JOIN_REQUEST:").trim()
+                        if (requestedCode.uppercase() != storeCode.uppercase()) {
+                            writer.println("ERROR:STORE_CODE_MISMATCH")
+                            Log.w(TAG, "JOIN_REQUEST rejected: code mismatch (got=$requestedCode expected=$storeCode)")
+                            return
+                        }
+                        val payload = buildSyncPayload(storeCode)
+                        writer.println("JOIN_OK")
+                        writer.println(payload)
+                        writer.println("END")
+                        Log.d(TAG, "JOIN_REQUEST accepted — sent full snapshot")
+                    }
                     else -> Log.w(TAG, "Unknown request: $requestLine")
                 }
             }
@@ -294,6 +309,249 @@ class WifiSyncManager @Inject constructor(
                 Log.e(TAG, "Sync failed", e)
                 _status.value = SyncStatus.Error(e.message ?: "Unknown error")
             }
+        }
+    }
+
+    /**
+     * Called by a NEW device (no store yet) to bootstrap from an existing host.
+     * Sends a JOIN_REQUEST to [device] with [storeCode], receives a full DB snapshot,
+     * applies it locally, then marks the device as onboarded.
+     */
+    fun joinStore(device: DiscoveredDevice, storeCode: String) {
+        scope.launch {
+            _status.value = SyncStatus.Connecting(device.deviceName)
+            try {
+                val payload = requestJoinSnapshot(device, storeCode) ?: run {
+                    _status.value = SyncStatus.Error("Could not connect to ${device.deviceName}")
+                    return@launch
+                }
+
+                _status.value = SyncStatus.Syncing(device.deviceName)
+                applyJoinSnapshot(payload, storeCode)
+
+                val now = System.currentTimeMillis()
+                _status.value = SyncStatus.Success(device.deviceName, now)
+                Log.d(TAG, "Join completed — store bootstrapped from ${device.deviceName}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Join failed", e)
+                _status.value = SyncStatus.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    /** Sends JOIN_REQUEST to host and returns the encrypted snapshot string. */
+    private fun requestJoinSnapshot(device: DiscoveredDevice, storeCode: String): String? {
+        return try {
+            Socket(device.host, device.port).use { socket ->
+                socket.soTimeout = 15_000
+                val writer = PrintWriter(BufferedWriter(OutputStreamWriter(socket.getOutputStream())), true)
+                val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+                writer.println("JOIN_REQUEST:${storeCode.uppercase()}")
+                val firstLine = reader.readLine() ?: return null
+                if (firstLine != "JOIN_OK") {
+                    Log.e(TAG, "Join rejected by host: $firstLine")
+                    return null
+                }
+                // Read snapshot lines until "END"
+                val sb = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null && line != "END") {
+                    sb.appendLine(line)
+                }
+                sb.toString().trim()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "requestJoinSnapshot failed", e)
+            null
+        }
+    }
+
+    /**
+     * Applies a full DB snapshot from the host onto a fresh (empty) local database,
+     * then writes preferences so the app treats this device as onboarded.
+     *
+     * Unlike [applySyncPayload] this always overwrites because the local DB is empty.
+     * PIN/password fields are set blank — the new user must set their own PIN on first login.
+     */
+    private suspend fun applyJoinSnapshot(payload: String, storeCode: String) {
+        if (payload.isBlank()) return
+        try {
+            val decrypted = decryptPayload(payload)
+            val root = JSONObject(decrypted)
+            val remoteStoreCode = root.optString("storeCode")
+            if (remoteStoreCode.isNotEmpty() && remoteStoreCode.uppercase() != storeCode.uppercase()) {
+                Log.w(TAG, "applyJoinSnapshot: store code mismatch")
+                return
+            }
+
+            val now = System.currentTimeMillis()
+            val deviceId = appPreferences.getDeviceIdSync()
+
+            // ── Store ────────────────────────────────────────────────────────
+            val storeObj = root.optJSONObject("store") ?: return
+            val storeId = storeObj.getString("id")
+            database.storeDao().insert(StoreEntity(
+                id = storeId,
+                name = storeObj.getString("name"),
+                code = storeObj.getString("code"),
+                address = storeObj.optString("address").takeNonNull(),
+                phone = storeObj.optString("phone").takeNonNull(),
+                settings = storeObj.optString("settings").takeNonNull(),
+                currency = storeObj.optString("currency", "VND"),
+                createdAt = now, updatedAt = now, deviceId = deviceId,
+            ))
+
+            // ── Users — keep display info; pin/password stay blank ────────────
+            root.optJSONArray("users")?.forEachObject { u ->
+                val id = u.getString("id")
+                if (database.userDao().getById(id) == null) {
+                    database.userDao().insert(UserEntity(
+                        id = id, storeId = storeId,
+                        displayName = u.getString("displayName"),
+                        role = u.getString("role"),
+                        pinHash = "",           // NEW device — user sets their own PIN
+                        passwordHash = null,
+                        isActive = u.optBoolean("isActive", true),
+                        isDeleted = u.optBoolean("isDeleted", false),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Categories ───────────────────────────────────────────────────
+            root.optJSONArray("categories")?.forEachObject { c ->
+                val id = c.getString("id")
+                if (database.categoryDao().getById(id) == null) {
+                    database.categoryDao().insert(CategoryEntity(
+                        id = id, storeId = storeId,
+                        name = c.getString("name"),
+                        parentId = c.optString("parentId").takeNonNull(),
+                        description = c.optString("description").takeNonNull(),
+                        icon = c.optString("icon").takeNonNull(),
+                        color = c.optString("color").takeNonNull(),
+                        sortOrder = c.optInt("sortOrder", 0),
+                        isActive = c.optBoolean("isActive", true),
+                        isDeleted = c.optBoolean("isDeleted", false),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Suppliers ────────────────────────────────────────────────────
+            root.optJSONArray("suppliers")?.forEachObject { s ->
+                val id = s.getString("id")
+                if (database.supplierDao().getById(id) == null) {
+                    database.supplierDao().insert(SupplierEntity(
+                        id = id, storeId = storeId,
+                        name = s.getString("name"),
+                        contactPerson = s.optString("contactPerson").takeNonNull(),
+                        phone = s.optString("phone").takeNonNull(),
+                        mobile = s.optString("mobile").takeNonNull(),
+                        email = s.optString("email").takeNonNull(),
+                        address = s.optString("address").takeNonNull(),
+                        isActive = s.optBoolean("isActive", true),
+                        isDeleted = s.optBoolean("isDeleted", false),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Products ─────────────────────────────────────────────────────
+            root.optJSONArray("products")?.forEachObject { p ->
+                val id = p.getString("id")
+                if (database.productDao().getById(id) == null) {
+                    database.productDao().insert(ProductEntity(
+                        id = id, storeId = storeId,
+                        name = p.getString("name"),
+                        sku = p.getString("sku"),
+                        barcode = p.optString("barcode").takeNonNull(),
+                        description = p.optString("description").takeNonNull(),
+                        categoryId = p.optString("categoryId").takeNonNull(),
+                        supplierId = p.optString("supplierId").takeNonNull(),
+                        sellingPrice = p.getDouble("sellingPrice"),
+                        costPrice = p.optDouble("costPrice", 0.0),
+                        unit = p.optString("unit", "pcs"),
+                        imagePath = p.optString("imagePath").takeNonNull(),
+                        minStock = p.optInt("minStock", 0),
+                        maxStock = p.optInt("maxStock", -1).takeIf { it >= 0 },
+                        isActive = p.optBoolean("isActive", true),
+                        isDeleted = p.optBoolean("isDeleted", false),
+                        trackInventory = p.optBoolean("trackInventory", true),
+                        taxRate = p.optDouble("taxRate", 0.0),
+                        hasVariants = p.optBoolean("hasVariants", false),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Product Variants ──────────────────────────────────────────────
+            root.optJSONArray("productVariants")?.forEachObject { v ->
+                val id = v.getString("id")
+                if (database.productVariantDao().getById(id) == null) {
+                    database.productVariantDao().insert(ProductVariantEntity(
+                        id = id, storeId = storeId,
+                        productId = v.getString("productId"),
+                        variantName = v.getString("variantName"),
+                        sku = v.getString("sku"),
+                        barcode = v.optString("barcode").takeNonNull(),
+                        costPrice = v.optDouble("costPrice", Double.NaN).takeIf { !it.isNaN() },
+                        sellingPrice = v.optDouble("sellingPrice", Double.NaN).takeIf { !it.isNaN() },
+                        attributes = v.optString("attributes", "{}"),
+                        isActive = v.optBoolean("isActive", true),
+                        isDeleted = v.optBoolean("isDeleted", false),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Customers ────────────────────────────────────────────────────
+            root.optJSONArray("customers")?.forEachObject { c ->
+                val id = c.getString("id")
+                if (database.customerDao().getById(id) == null) {
+                    database.customerDao().insert(CustomerEntity(
+                        id = id, storeId = storeId,
+                        name = c.getString("name"),
+                        phone = c.optString("phone").takeNonNull(),
+                        email = c.optString("email").takeNonNull(),
+                        address = c.optString("address").takeNonNull(),
+                        totalSpent = c.optDouble("totalSpent", 0.0),
+                        visitCount = c.optInt("visitCount", 0),
+                        lastVisitAt = c.optLong("lastVisitAt", -1L).takeIf { it >= 0 },
+                        isDeleted = c.optBoolean("isDeleted", false),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Inventory ────────────────────────────────────────────────────
+            root.optJSONArray("inventory")?.forEachObject { inv ->
+                val invId = inv.getString("id")
+                val productId = inv.getString("productId")
+                val variantId = inv.optString("variantId").takeNonNull()
+                val existing = if (variantId != null)
+                    database.inventoryDao().getByVariant(storeId, productId, variantId)
+                else
+                    database.inventoryDao().getByProduct(storeId, productId)
+                if (existing == null) {
+                    database.inventoryDao().insert(InventoryEntity(
+                        id = invId, storeId = storeId,
+                        productId = productId, variantId = variantId,
+                        quantity = inv.getDouble("quantity"),
+                        reservedQty = inv.optDouble("reservedQty", 0.0),
+                        createdAt = now, updatedAt = now, deviceId = deviceId,
+                    ))
+                }
+            }
+
+            // ── Save preferences so the app knows this device is onboarded ───
+            appPreferences.setCurrentStore(storeId)
+            appPreferences.setOnboarded(true)
+            // Do NOT set currentUserId or isLoggedIn — user must choose & authenticate on Login screen
+
+            Log.d(TAG, "Join snapshot applied — storeId=$storeId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error applying join snapshot", e)
+            throw e
         }
     }
 

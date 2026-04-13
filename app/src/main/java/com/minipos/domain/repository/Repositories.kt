@@ -35,6 +35,9 @@ interface UserRepository {
     suspend fun clearPin(userId: String): Result<Unit>
     suspend fun hasPin(userId: String): Boolean
     suspend fun verifyPin(userId: String, pin: String): Boolean
+    suspend fun setPassword(userId: String, newPassword: String): Result<Unit>
+    suspend fun hasPassword(userId: String): Boolean
+    suspend fun verifyPassword(userId: String, password: String): Boolean
 }
 
 interface CategoryRepository {

@@ -36,6 +36,7 @@ data class LoginState(
     // Forgot PIN flow (OWNER only)
     val showForgotPin: Boolean = false,
     val forgotPinStep: ForgotPinStep = ForgotPinStep.ENTER_PASSWORD,
+    val ownerHasPassword: Boolean = false,  // whether selected owner has a password set
     val password: String = "",
     val newPin: String = "",
 )
@@ -89,13 +90,22 @@ class LoginViewModel @Inject constructor(
 
             // Auto-select nếu chỉ có đúng 1 user (OWNER duy nhất — setup mới)
             if (sorted.size == 1) {
-                _state.update { it.copy(selectedUser = sorted.first(), pin = "", error = null) }
+                val singleUser = sorted.first()
+                val hasPassword = if (singleUser.role == UserRole.OWNER) userRepository.hasPassword(singleUser.id) else false
+                _state.update { it.copy(selectedUser = singleUser, pin = "", error = null, ownerHasPassword = hasPassword) }
             }
         }
     }
 
     fun selectUser(user: User) {
         _state.update { it.copy(selectedUser = user, pin = "", error = null) }
+        // Pre-load password status for OWNER so ForgotPin UI knows which flow to show
+        if (user.role == UserRole.OWNER) {
+            viewModelScope.launch {
+                val hasPassword = userRepository.hasPassword(user.id)
+                _state.update { it.copy(ownerHasPassword = hasPassword) }
+            }
+        }
     }
 
     fun clearSelection() {
@@ -146,7 +156,9 @@ class LoginViewModel @Inject constructor(
     // ── Forgot PIN flow ────────────────────────────────────────────────
 
     fun showForgotPin() {
-        _state.update { it.copy(showForgotPin = true, forgotPinStep = ForgotPinStep.ENTER_PASSWORD, password = "", newPin = "", error = null) }
+        val hasPassword = _state.value.ownerHasPassword
+        val initialStep = if (hasPassword) ForgotPinStep.ENTER_PASSWORD else ForgotPinStep.RESET_PIN
+        _state.update { it.copy(showForgotPin = true, forgotPinStep = initialStep, password = "", newPin = "", error = null) }
     }
 
     fun hideForgotPin() {
@@ -179,14 +191,21 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /** Step 2: set new PIN (already verified password), then login */
+    /** Step 2: set new PIN, then login.
+     *  If owner has no password (ownerHasPassword = false), resets directly without password verification. */
     fun resetPinAndLogin() {
         val user = _state.value.selectedUser ?: return
         val password = _state.value.password
         val newPin = _state.value.newPin
+        val hasPassword = _state.value.ownerHasPassword
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.resetPinWithPassword(user.id, password, newPin)) {
+            val resetResult = if (hasPassword) {
+                authRepository.resetPinWithPassword(user.id, password, newPin)
+            } else {
+                userRepository.resetPin(user.id, newPin)
+            }
+            when (resetResult) {
                 is Result.Success -> {
                     // PIN reset — now login with new PIN automatically
                     when (val loginResult = authRepository.login(user.id, newPin)) {
@@ -199,7 +218,7 @@ class LoginViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _state.update { it.copy(isLoading = false, error = result.message) }
+                    _state.update { it.copy(isLoading = false, error = resetResult.message) }
                 }
             }
         }

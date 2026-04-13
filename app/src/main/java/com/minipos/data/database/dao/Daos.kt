@@ -86,6 +86,9 @@ interface UserDao {
     @Query("UPDATE users SET pin_hash = :pinHash, updated_at = :timestamp WHERE id = :userId")
     suspend fun updatePinHash(userId: String, pinHash: String, timestamp: Long)
 
+    @Query("UPDATE users SET password_hash = :passwordHash, updated_at = :timestamp WHERE id = :userId")
+    suspend fun updatePasswordHash(userId: String, passwordHash: String, timestamp: Long)
+
     @Query("UPDATE users SET is_deleted = 1, deleted_at = :timestamp, updated_at = :timestamp WHERE id = :userId")
     suspend fun softDelete(userId: String, timestamp: Long)
 }

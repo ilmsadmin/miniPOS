@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
@@ -141,6 +142,7 @@ fun SettingsScreen(
             ownerHasPin = state.currentUserHasPin,
             onDismiss = { viewModel.dismissStoreInfoDialog() },
             onChangePin = { viewModel.dismissStoreInfoDialog(); viewModel.showChangePinDialog() },
+            onChangePassword = { viewModel.dismissStoreInfoDialog(); viewModel.showChangePasswordDialog() },
             onSave = { name, address, phone, ownerName ->
                 viewModel.updateStoreInfo(name, address, phone)
                 if (ownerName.isNotBlank()) viewModel.updateOwnerName(ownerName)
@@ -157,6 +159,15 @@ fun SettingsScreen(
             onVerifyPin = { viewModel.verifyCurrentPin(it) },
             onSaveNewPin = { viewModel.saveNewPin(it) },
             onDismiss = { viewModel.dismissChangePinDialog() },
+        )
+    }
+
+    // Change Password Dialog (OWNER only)
+    if (state.showChangePasswordDialog) {
+        ChangePasswordBottomSheet(
+            hasExistingPassword = state.currentUserHasPassword,
+            onSave = { current, new -> viewModel.saveOwnerPassword(current, new) },
+            onDismiss = { viewModel.dismissChangePasswordDialog() },
         )
     }
 
@@ -476,6 +487,7 @@ private fun StoreInfoDialog(
     ownerHasPin: Boolean,
     onDismiss: () -> Unit,
     onChangePin: () -> Unit,
+    onChangePassword: () -> Unit,
     onSave: (name: String, address: String?, phone: String?, ownerName: String) -> Unit,
 ) {
     var name by remember { mutableStateOf(store?.name ?: "") }
@@ -561,6 +573,12 @@ private fun StoreInfoDialog(
             icon = Icons.Rounded.Lock,
             onClick = onChangePin,
         )
+        Spacer(Modifier.height(8.dp))
+        BottomSheetOutlineButton(
+            text = if (ownerHasPin) stringResource(R.string.change_password_title) else stringResource(R.string.set_password_title),
+            icon = Icons.Rounded.Key,
+            onClick = onChangePassword,
+        )
 
         Spacer(Modifier.height(12.dp))
     }
@@ -582,6 +600,9 @@ internal fun ChangePinBottomSheet(
     var newPin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
+    var showCurrentPin by remember { mutableStateOf(false) }
+    var showNewPin by remember { mutableStateOf(false) }
+    var showConfirmPin by remember { mutableStateOf(false) }
 
     // If no existing PIN, skip verification step
     val isVerified = !hasExistingPin || pinVerified
@@ -654,7 +675,18 @@ internal fun ChangePinBottomSheet(
                 },
                 placeholder = stringResource(R.string.pin_current_hint),
                 keyboardType = KeyboardType.NumberPassword,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (showCurrentPin) VisualTransformation.None else PasswordVisualTransformation(),
+                autoFocus = true,
+                trailingIcon = {
+                    IconButton(onClick = { showCurrentPin = !showCurrentPin }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (showCurrentPin) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = null,
+                            tint = AppColors.TextSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                },
             )
 
             // Show verify error from ViewModel
@@ -730,7 +762,18 @@ internal fun ChangePinBottomSheet(
                 },
                 placeholder = stringResource(R.string.pin_4_6_label),
                 keyboardType = KeyboardType.NumberPassword,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (showNewPin) VisualTransformation.None else PasswordVisualTransformation(),
+                autoFocus = true,
+                trailingIcon = {
+                    IconButton(onClick = { showNewPin = !showNewPin }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (showNewPin) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = null,
+                            tint = AppColors.TextSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                },
             )
             Spacer(Modifier.height(12.dp))
 
@@ -744,7 +787,17 @@ internal fun ChangePinBottomSheet(
                 },
                 placeholder = stringResource(R.string.confirm_password),
                 keyboardType = KeyboardType.NumberPassword,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (showConfirmPin) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showConfirmPin = !showConfirmPin }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (showConfirmPin) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = null,
+                            tint = AppColors.TextSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                },
             )
 
             if (pinError != null) {
@@ -753,6 +806,128 @@ internal fun ChangePinBottomSheet(
             }
         }
 
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+// ============ Change Password Bottom Sheet (OWNER only) ============
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ChangePasswordBottomSheet(
+    hasExistingPassword: Boolean,
+    onSave: (currentPassword: String, newPassword: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var showCurrent by remember { mutableStateOf(false) }
+    var showNew by remember { mutableStateOf(false) }
+    var showConfirm by remember { mutableStateOf(false) }
+
+    MiniPosBottomSheet(
+        visible = true,
+        title = if (hasExistingPassword) stringResource(R.string.change_password_title) else stringResource(R.string.set_password_title),
+        onDismiss = onDismiss,
+        footer = {
+            val pwLengthError = stringResource(R.string.error_password_length)
+            val pwMismatchError = stringResource(R.string.error_password_mismatch)
+            val pwCurrentRequired = stringResource(R.string.pin_current_required)
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.save),
+                icon = Icons.Rounded.Check,
+                onClick = {
+                    if (hasExistingPassword && currentPassword.isBlank()) {
+                        passwordError = pwCurrentRequired; return@BottomSheetPrimaryButton
+                    }
+                    if (newPassword.length < 6) {
+                        passwordError = pwLengthError; return@BottomSheetPrimaryButton
+                    }
+                    if (newPassword != confirmPassword) {
+                        passwordError = pwMismatchError; return@BottomSheetPrimaryButton
+                    }
+                    passwordError = null
+                    onSave(currentPassword, newPassword)
+                },
+            )
+        },
+    ) {
+        Text(
+            stringResource(if (hasExistingPassword) R.string.change_password_desc else R.string.set_password_desc),
+            fontSize = 13.sp,
+            color = AppColors.TextSecondary,
+        )
+        Spacer(Modifier.height(16.dp))
+
+        if (hasExistingPassword) {
+            BottomSheetField(
+                label = stringResource(R.string.current_password_label),
+                value = currentPassword,
+                onValueChange = { currentPassword = it; passwordError = null },
+                placeholder = stringResource(R.string.login_password_hint),
+                keyboardType = KeyboardType.Password,
+                visualTransformation = if (showCurrent) VisualTransformation.None else PasswordVisualTransformation(),
+                autoFocus = true,
+                trailingIcon = {
+                    IconButton(onClick = { showCurrent = !showCurrent }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (showCurrent) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = null,
+                            tint = AppColors.TextSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
+        BottomSheetField(
+            label = stringResource(R.string.new_password_label),
+            value = newPassword,
+            onValueChange = { newPassword = it; passwordError = null },
+            placeholder = stringResource(R.string.admin_password_hint),
+            keyboardType = KeyboardType.Password,
+            visualTransformation = if (showNew) VisualTransformation.None else PasswordVisualTransformation(),
+            autoFocus = !hasExistingPassword,
+            trailingIcon = {
+                IconButton(onClick = { showNew = !showNew }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        if (showNew) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                        contentDescription = null,
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            },
+        )
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.confirm_password_required),
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it; passwordError = null },
+            placeholder = stringResource(R.string.confirm_password),
+            keyboardType = KeyboardType.Password,
+            visualTransformation = if (showConfirm) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showConfirm = !showConfirm }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        if (showConfirm) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                        contentDescription = null,
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            },
+        )
+
+        if (passwordError != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(passwordError!!, fontSize = 11.sp, color = AppColors.Error)
+        }
         Spacer(Modifier.height(12.dp))
     }
 }

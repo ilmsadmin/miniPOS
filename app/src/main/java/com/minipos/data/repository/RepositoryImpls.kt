@@ -145,6 +145,27 @@ class UserRepositoryImpl @Inject constructor(
         if (entity.pinHash.isBlank()) return false
         return HashUtils.verifyPin(pin, entity.pinHash)
     }
+
+    override suspend fun setPassword(userId: String, newPassword: String): Result<Unit> {
+        return try {
+            val hash = HashUtils.hashPassword(newPassword)
+            userDao.updatePasswordHash(userId, hash, DateUtils.now())
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_reset_pin))
+        }
+    }
+
+    override suspend fun hasPassword(userId: String): Boolean {
+        return userDao.getById(userId)?.passwordHash?.isNotBlank() == true
+    }
+
+    override suspend fun verifyPassword(userId: String, password: String): Boolean {
+        val entity = userDao.getById(userId) ?: return false
+        val hash = entity.passwordHash ?: return false
+        if (hash.isBlank()) return false
+        return HashUtils.verifyPassword(password, hash)
+    }
 }
 
 // ============ Category Repository ============

@@ -49,6 +49,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -71,6 +72,7 @@ fun LoginScreen(
         ForgotPinOverlay(
             user = state.selectedUser!!,
             step = state.forgotPinStep,
+            ownerHasPassword = state.ownerHasPassword,
             password = state.password,
             newPin = state.newPin,
             error = state.error,
@@ -120,42 +122,65 @@ fun LoginScreen(
                 },
         ) {
             // Header
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 56.dp, bottom = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .padding(top = 48.dp, bottom = 24.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .shadow(12.dp, CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(AppColors.Primary, AppColors.PrimaryLight)),
-                            CircleShape,
-                        ),
-                    contentAlignment = Alignment.Center,
+                // Back button — chỉ hiện khi đến từ Home (Switch User)
+                if (onBack != null) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.InputBackground),
+                    ) {
+                        Icon(
+                            Icons.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = AppColors.TextPrimary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        Icons.Rounded.Storefront,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp),
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .shadow(12.dp, CircleShape)
+                            .background(
+                                Brush.linearGradient(listOf(AppColors.Primary, AppColors.PrimaryLight)),
+                                CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Storefront,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        state.storeName.ifBlank { stringResource(R.string.app_name) },
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppColors.Primary,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.login_screen_subtitle),
+                        fontSize = 13.sp,
+                        color = AppColors.TextTertiary,
                     )
                 }
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    state.storeName.ifBlank { stringResource(R.string.app_name) },
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AppColors.Primary,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.login_screen_subtitle),
-                    fontSize = 13.sp,
-                    color = AppColors.TextTertiary,
-                )
             }
 
             if (state.isLoading) {
@@ -683,6 +708,7 @@ private fun PinInputContent(
 private fun ForgotPinOverlay(
     user: User,
     step: ForgotPinStep,
+    ownerHasPassword: Boolean,
     password: String,
     newPin: String,
     error: String?,
@@ -710,7 +736,7 @@ private fun ForgotPinOverlay(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Box(
             modifier = Modifier
@@ -725,6 +751,8 @@ private fun ForgotPinOverlay(
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(AppColors.Background)
                     .clickable(enabled = false, onClick = {}) // block dismiss from inner clicks
+                    .imePadding()
+                    .navigationBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 28.dp),
             ) {
                 // Handle bar
@@ -772,24 +800,26 @@ private fun ForgotPinOverlay(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Step indicator
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    StepDot(active = true, done = step == ForgotPinStep.RESET_PIN, label = "1")
-                    Box(
-                        modifier = Modifier
-                            .width(32.dp)
-                            .height(2.dp)
-                            .background(
-                                if (step == ForgotPinStep.RESET_PIN) AppColors.Primary else AppColors.BorderLight,
-                            ),
-                    )
-                    StepDot(active = step == ForgotPinStep.RESET_PIN, done = false, label = "2")
+                // Step indicator — only show when owner has a password (2-step flow)
+                if (ownerHasPassword) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StepDot(active = true, done = step == ForgotPinStep.RESET_PIN, label = "1")
+                        Box(
+                            modifier = Modifier
+                                .width(32.dp)
+                                .height(2.dp)
+                                .background(
+                                    if (step == ForgotPinStep.RESET_PIN) AppColors.Primary else AppColors.BorderLight,
+                                ),
+                        )
+                        StepDot(active = step == ForgotPinStep.RESET_PIN, done = false, label = "2")
+                    }
+                    Spacer(Modifier.height(24.dp))
                 }
-                Spacer(Modifier.height(24.dp))
 
                 Column(
                     modifier = Modifier
@@ -818,6 +848,7 @@ private fun ForgotPinOverlay(
                                         value = password,
                                         hint = stringResource(R.string.login_password_hint),
                                         isPassword = !showPassword,
+                                        autoFocus = true,
                                         onToggleVisibility = { showPassword = !showPassword },
                                         onValueChange = onPasswordChanged,
                                         onDone = { if (password.isNotBlank()) onVerifyPassword(); focusManager.clearFocus() },
@@ -834,7 +865,10 @@ private fun ForgotPinOverlay(
                                 }
                                 ForgotPinStep.RESET_PIN -> {
                                     Text(
-                                        stringResource(R.string.login_reset_pin_new),
+                                        if (ownerHasPassword)
+                                            stringResource(R.string.login_reset_pin_new)
+                                        else
+                                            stringResource(R.string.set_new_pin_step),
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = AppColors.TextSecondary,
@@ -846,6 +880,7 @@ private fun ForgotPinOverlay(
                                         isPassword = !showNewPin,
                                         isNumeric = true,
                                         maxLength = 6,
+                                        autoFocus = true,
                                         onToggleVisibility = { showNewPin = !showNewPin },
                                         onValueChange = { v ->
                                             if (v.length <= 6 && v.all { it.isDigit() }) onNewPinChanged(v)
@@ -947,10 +982,20 @@ private fun PasswordInputField(
     isNumeric: Boolean = false,
     maxLength: Int = 100,
     error: String?,
+    autoFocus: Boolean = false,
     onToggleVisibility: () -> Unit,
     onValueChange: (String) -> Unit,
     onDone: () -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
+
+    if (autoFocus) {
+        LaunchedEffect(Unit) {
+            delay(200)
+            try { focusRequester.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -964,6 +1009,7 @@ private fun PasswordInputField(
                 else AppColors.BorderLight,
                 shape = RoundedCornerShape(MiniPosTokens.RadiusXl),
             )
+            .clickable { focusRequester.requestFocus() }
             .padding(horizontal = 20.dp),
     ) {
         Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -985,7 +1031,9 @@ private fun PasswordInputField(
                 ),
                 keyboardActions = KeyboardActions(onDone = { onDone() }),
                 visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester),
                 decorationBox = { inner ->
                     Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
                         if (value.isEmpty()) {

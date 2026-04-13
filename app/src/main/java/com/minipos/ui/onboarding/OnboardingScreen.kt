@@ -247,10 +247,10 @@ fun OnboardingScreen(
 
                 // Buttons
                 if (isLastPage) {
-                    // "Bắt đầu sử dụng" button — animated gradient
-                    StartButton(
-                        onClick = onCreateStore,
-                    )
+                    // Primary: "Tạo cửa hàng mới"
+                    StartButton(onClick = onCreateStore)
+                    // Secondary: "Tham gia cửa hàng đã có"
+                    JoinStoreButton(onClick = onJoinStore)
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -747,5 +747,35 @@ private fun StartButton(onClick: () -> Unit) {
                 fontWeight = FontWeight.ExtraBold,
             )
         }
+    }
+}
+
+// ═══════════════════════════════════════
+// JOIN STORE BUTTON (Last slide — secondary outline)
+// ═══════════════════════════════════════
+
+@Composable
+private fun JoinStoreButton(onClick: () -> Unit) {
+    val primary = AppColors.Primary
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(MiniPosTokens.Radius2xl),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, primary.copy(alpha = 0.5f)),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = primary),
+    ) {
+        Icon(
+            Icons.Rounded.Sync,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            stringResource(R.string.join_store),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }

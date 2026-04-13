@@ -45,6 +45,8 @@ data class SettingsState(
     val showChangePinDialog: Boolean = false,
     val pinVerified: Boolean = false,
     val pinVerifyError: String? = null,
+    val showChangePasswordDialog: Boolean = false,
+    val currentUserHasPassword: Boolean = false,
 
     // Backup/Restore
     val isBackingUp: Boolean = false,
@@ -80,9 +82,10 @@ class SettingsViewModel @Inject constructor(
             val userId = appPreferences.currentUserId.first()
             val currentUser = userId?.let { userRepository.getUserById(it) }
             val hasPin = userId?.let { userRepository.hasPin(it) } ?: false
+            val hasPassword = userId?.let { userRepository.hasPassword(it) } ?: false
             val users = store?.let { userRepository.getActiveUsers(it.id) } ?: emptyList()
             _state.update {
-                it.copy(store = store, currentUser = currentUser, currentUserHasPin = hasPin, users = users, isLoading = false)
+                it.copy(store = store, currentUser = currentUser, currentUserHasPin = hasPin, currentUserHasPassword = hasPassword, users = users, isLoading = false)
             }
         }
     }
@@ -172,6 +175,45 @@ class SettingsViewModel @Inject constructor(
 
     fun showChangePinDialog() { _state.update { it.copy(showChangePinDialog = true, pinVerified = false, pinVerifyError = null) } }
     fun dismissChangePinDialog() { _state.update { it.copy(showChangePinDialog = false, pinVerified = false, pinVerifyError = null) } }
+
+    // ============ Change Password (OWNER only) ============
+
+    fun showChangePasswordDialog() {
+        if (_state.value.currentUser?.role != UserRole.OWNER) {
+            _state.update { it.copy(message = str(R.string.error_owner_only)) }
+            return
+        }
+        _state.update { it.copy(showChangePasswordDialog = true) }
+    }
+    fun dismissChangePasswordDialog() { _state.update { it.copy(showChangePasswordDialog = false) } }
+
+    fun saveOwnerPassword(currentPassword: String, newPassword: String) {
+        viewModelScope.launch {
+            val user = _state.value.currentUser ?: return@launch
+            // If user already has a password, verify it first
+            if (_state.value.currentUserHasPassword) {
+                val valid = userRepository.verifyPassword(user.id, currentPassword)
+                if (!valid) {
+                    _state.update { it.copy(message = str(R.string.error_wrong_password)) }
+                    return@launch
+                }
+            }
+            when (val result = userRepository.setPassword(user.id, newPassword)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            showChangePasswordDialog = false,
+                            currentUserHasPassword = true,
+                            message = str(R.string.msg_password_updated),
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(message = result.message) }
+                }
+            }
+        }
+    }
 
     fun verifyCurrentPin(pin: String) {
         viewModelScope.launch {

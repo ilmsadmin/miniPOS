@@ -1129,7 +1129,20 @@ fun BottomSheetField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     fontWeight: FontWeight = FontWeight.Normal,
     textColor: Color = AppColors.TextPrimary,
+    autoFocus: Boolean = false,
+    focusRequester: FocusRequester? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
+    val localFocusRequester = remember { focusRequester ?: FocusRequester() }
+
+    if (autoFocus) {
+        LaunchedEffect(Unit) {
+            delay(150)
+            try { localFocusRequester.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -1153,22 +1166,29 @@ fun BottomSheetField(
             ),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            keyboardActions = keyboardActions,
             visualTransformation = visualTransformation,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .background(AppColors.InputBackground, RoundedCornerShape(MiniPosTokens.RadiusLg))
                 .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .focusRequester(localFocusRequester),
             decorationBox = { inner ->
-                Box(
+                Row(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.CenterStart,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (value.isEmpty() && placeholder.isNotEmpty()) {
-                        Text(placeholder, fontSize = 14.sp, color = AppColors.TextTertiary)
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        if (value.isEmpty() && placeholder.isNotEmpty()) {
+                            Text(placeholder, fontSize = 14.sp, color = AppColors.TextTertiary)
+                        }
+                        inner()
                     }
-                    inner()
+                    if (trailingIcon != null) {
+                        trailingIcon()
+                    }
                 }
             },
         )

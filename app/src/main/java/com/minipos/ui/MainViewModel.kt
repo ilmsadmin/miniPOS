@@ -81,7 +81,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             appPreferences.setOnboarded(true)
             authRepository.ensureDefaultStore()
-            // createStore() đã set isLoggedIn = true → dùng determineHomeOrLock
+            // createStore() sets isLoggedIn = true → go to Locked/Home
+            // joinStore() does NOT set isLoggedIn → go to Login so user can choose their account
             _appState.value = determineHomeOrLock()
         }
     }
@@ -94,12 +95,29 @@ class MainViewModel @Inject constructor(
         _appState.value = AppState.Locked
     }
 
+    // true khi user vào màn hình chọn tài khoản từ Home (Switch User), false khi login lần đầu
+    private val _loginCanGoBack = MutableStateFlow(false)
+    val loginCanGoBack: StateFlow<Boolean> = _loginCanGoBack
+
     /** Called after user explicitly logs out — show user-selection Login screen */
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
+            _loginCanGoBack.value = false
             _appState.value = AppState.Login
         }
+    }
+
+    /** Called from HomeScreen "Switch User" — show user-selection without fully logging out */
+    fun switchUser() {
+        _loginCanGoBack.value = true
+        _appState.value = AppState.Login
+    }
+
+    /** Called when user presses back on the Login screen (only available in switchUser mode) */
+    fun cancelSwitchUser() {
+        _loginCanGoBack.value = false
+        _appState.value = AppState.Home
     }
 
     /** Called by LoginScreen when a user has successfully authenticated */

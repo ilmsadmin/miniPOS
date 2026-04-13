@@ -70,6 +70,8 @@ fun CreateStoreScreen(
 private fun StoreInfoStep(state: CreateStoreState, viewModel: CreateStoreViewModel) {
     var showPin by remember { mutableStateOf(false) }
     var showPinConfirm by remember { mutableStateOf(false) }
+    var showPassword by remember { mutableStateOf(false) }
+    var showPasswordConfirm by remember { mutableStateOf(false) }
 
     OutlinedTextField(
         value = state.storeName,
@@ -177,6 +179,71 @@ private fun StoreInfoStep(state: CreateStoreState, viewModel: CreateStoreViewMod
         isError = state.ownerPinConfirm.isNotEmpty() && state.ownerPin != state.ownerPinConfirm,
         supportingText = if (state.ownerPinConfirm.isNotEmpty() && state.ownerPin != state.ownerPinConfirm) {
             { Text(stringResource(R.string.pin_mismatch_error), color = AppColors.Error) }
+        } else null,
+    )
+    Spacer(modifier = Modifier.height(24.dp))
+
+    HorizontalDivider(color = AppColors.Divider)
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = stringResource(R.string.owner_password_section),
+        style = MaterialTheme.typography.titleSmall,
+        color = AppColors.TextSecondary,
+    )
+    Text(
+        text = stringResource(R.string.owner_password_section_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = AppColors.TextTertiary,
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedTextField(
+        value = state.ownerPassword,
+        onValueChange = { viewModel.updateOwnerPassword(it) },
+        label = { Text(stringResource(R.string.admin_password)) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = { showPassword = !showPassword }) {
+                Icon(
+                    if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = null,
+                )
+            }
+        },
+        isError = state.ownerPassword.isNotBlank() && state.ownerPassword.length < 6,
+        supportingText = if (state.ownerPassword.isNotBlank() && state.ownerPassword.length < 6) {
+            { Text(stringResource(R.string.error_password_length), color = AppColors.Error) }
+        } else {
+            { Text(stringResource(R.string.admin_password_hint)) }
+        },
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedTextField(
+        value = state.ownerPasswordConfirm,
+        onValueChange = { viewModel.updateOwnerPasswordConfirm(it) },
+        label = { Text(stringResource(R.string.confirm_password)) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        visualTransformation = if (showPasswordConfirm) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = { showPasswordConfirm = !showPasswordConfirm }) {
+                Icon(
+                    if (showPasswordConfirm) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = null,
+                )
+            }
+        },
+        isError = state.ownerPasswordConfirm.isNotEmpty() && state.ownerPassword != state.ownerPasswordConfirm,
+        supportingText = if (state.ownerPasswordConfirm.isNotEmpty() && state.ownerPassword != state.ownerPasswordConfirm) {
+            { Text(stringResource(R.string.error_password_mismatch), color = AppColors.Error) }
         } else null,
     )
     Spacer(modifier = Modifier.height(32.dp))

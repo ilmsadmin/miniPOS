@@ -1515,4 +1515,15 @@
     <string name="sa_audit_export_success">Xuất báo cáo kiểm kho thành công</string>
     <string name="sa_audit_export_error">Xuất báo cáo kiểm kho thất bại</string>
     <string name="sa_diff_reason_title">Lý do chênh lệch</string>
+
+    <!-- Password management -->
+    <string name="change_password_title">Đổi mật khẩu</string>
+    <string name="set_password_title">Tạo mật khẩu</string>
+    <string name="change_password_desc">Nhập mật khẩu hiện tại, sau đó đặt mật khẩu mới</string>
+    <string name="set_password_desc">Đặt mật khẩu chủ cửa hàng cho các thao tác nhạy cảm (ví dụ: đặt lại PIN)</string>
+    <string name="current_password_label">Mật khẩu hiện tại</string>
+    <string name="new_password_label">Mật khẩu mới</string>
+    <string name="msg_password_updated">Cập nhật mật khẩu thành công</string>
+    <string name="owner_password_section">Mật khẩu chủ cửa hàng (Không bắt buộc)</string>
+    <string name="owner_password_section_hint">Dùng để đặt lại PIN và các thao tác nhạy cảm. Nên đặt.</string>
 </resources>

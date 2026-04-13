@@ -13,7 +13,7 @@
     <string name="welcome_title">ViPOS</string>
     <string name="welcome_subtitle">Simple point-of-sale system\nfor your store</string>
     <string name="create_store">Create New Store</string>
-    <string name="join_store">Join a Store</string>
+    <string name="join_store">Tham gia cửa hàng đã có</string>
     <string name="restore_from_gdrive">Restore from Google Drive</string>
 
     <!-- Onboarding Slides -->
@@ -766,6 +766,15 @@
     <string name="change_pin_desc">Update your security PIN</string>
     <string name="set_pin_title">Set PIN</string>
     <string name="set_pin_desc">Set up a PIN to protect your account</string>
+    <string name="change_password_title">Change Password</string>
+    <string name="change_password_desc">Enter your current password then set a new one</string>
+    <string name="set_password_title">Set Password</string>
+    <string name="set_password_desc">Set an owner password for sensitive operations (e.g. reset PIN)</string>
+    <string name="current_password_label">Current Password</string>
+    <string name="new_password_label">New Password</string>
+    <string name="msg_password_updated">Password updated successfully</string>
+    <string name="owner_password_section">Owner Password (Optional)</string>
+    <string name="owner_password_section_hint">Used for resetting PIN and sensitive operations. Recommended.</string>
     <string name="verify_pin_step">Step 1: Verify current PIN</string>
     <string name="new_pin_step">Step 2: Set new PIN</string>
     <string name="set_new_pin_step">Enter new PIN</string>

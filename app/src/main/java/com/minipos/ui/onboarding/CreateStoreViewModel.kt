@@ -22,17 +22,22 @@ data class CreateStoreState(
     val ownerName: String = "",
     val ownerPin: String = "",
     val ownerPinConfirm: String = "",
+    val ownerPassword: String = "",
+    val ownerPasswordConfirm: String = "",
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
     val error: String? = null,
 ) {
     val pinValid: Boolean
         get() = ownerPin.length in 4..6 && ownerPin == ownerPinConfirm
+    val passwordValid: Boolean
+        get() = ownerPassword.isBlank() || (ownerPassword.length >= 6 && ownerPassword == ownerPasswordConfirm)
     val canCreate: Boolean
         get() = storeName.isNotBlank() &&
                 storeCode.length >= 4 &&
                 ownerName.isNotBlank() &&
-                pinValid
+                pinValid &&
+                passwordValid
 }
 
 @HiltViewModel
@@ -51,6 +56,8 @@ class CreateStoreViewModel @Inject constructor(
     fun updateOwnerName(value: String) = _state.update { it.copy(ownerName = value, error = null) }
     fun updateOwnerPin(value: String) = _state.update { it.copy(ownerPin = value.take(6), error = null) }
     fun updateOwnerPinConfirm(value: String) = _state.update { it.copy(ownerPinConfirm = value.take(6), error = null) }
+    fun updateOwnerPassword(value: String) = _state.update { it.copy(ownerPassword = value, error = null) }
+    fun updateOwnerPasswordConfirm(value: String) = _state.update { it.copy(ownerPasswordConfirm = value, error = null) }
 
     fun createStore() {
         val s = _state.value
@@ -71,6 +78,17 @@ class CreateStoreViewModel @Inject constructor(
             return
         }
 
+        if (s.ownerPassword.isNotBlank()) {
+            if (s.ownerPassword.length < 6) {
+                _state.update { it.copy(error = app.getString(R.string.error_password_length)) }
+                return
+            }
+            if (s.ownerPassword != s.ownerPasswordConfirm) {
+                _state.update { it.copy(error = app.getString(R.string.error_password_mismatch)) }
+                return
+            }
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             val result = authRepository.createStore(
@@ -80,7 +98,7 @@ class CreateStoreViewModel @Inject constructor(
                 phone = s.storePhone.ifBlank { null },
                 ownerName = s.ownerName,
                 ownerPin = s.ownerPin,
-                ownerPassword = "",
+                ownerPassword = s.ownerPassword,
             )
             when (result) {
                 is Result.Success -> _state.update { it.copy(isLoading = false, isSuccess = true) }
