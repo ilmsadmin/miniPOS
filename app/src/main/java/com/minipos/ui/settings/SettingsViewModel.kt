@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.R
+import com.minipos.core.auth.PermissionChecker
 import com.minipos.core.backup.BackupFileInfo
 import com.minipos.core.backup.BackupManager
 import com.minipos.core.backup.BackupResult
@@ -31,10 +32,14 @@ data class SettingsState(
     val users: List<User> = emptyList(),
     val isLoading: Boolean = true,
     val message: String? = null,
+    // Permissions
+    val cashierPerms: CashierPermissions = CashierPermissions(),
+    val effectivePermissions: Set<Permission> = emptySet(),
 
     // Dialog states
     val showStoreInfoDialog: Boolean = false,
     val showSalesSettingsDialog: Boolean = false,
+    val showCashierPermissionsDialog: Boolean = false,
     val showUserManagementSheet: Boolean = false,
     val showAddUserDialog: Boolean = false,
     val showEditUserDialog: User? = null,
@@ -55,7 +60,9 @@ data class SettingsState(
     val showRestorePickerDialog: Boolean = false,
     val restoreConfirmFile: BackupFileInfo? = null,
     val lastBackupResult: String? = null,
-)
+) {
+    fun can(permission: Permission): Boolean = effectivePermissions.contains(permission)
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -84,8 +91,16 @@ class SettingsViewModel @Inject constructor(
             val hasPin = userId?.let { userRepository.hasPin(it) } ?: false
             val hasPassword = userId?.let { userRepository.hasPassword(it) } ?: false
             val users = store?.let { userRepository.getActiveUsers(it.id) } ?: emptyList()
+            val cashierPerms = store?.settings?.cashierPermissions ?: CashierPermissions()
+            val effectivePermissions = currentUser?.let {
+                PermissionChecker.getEffectivePermissions(it.role, cashierPerms)
+            } ?: emptySet()
             _state.update {
-                it.copy(store = store, currentUser = currentUser, currentUserHasPin = hasPin, currentUserHasPassword = hasPassword, users = users, isLoading = false)
+                it.copy(
+                    store = store, currentUser = currentUser, currentUserHasPin = hasPin,
+                    currentUserHasPassword = hasPassword, users = users, isLoading = false,
+                    cashierPerms = cashierPerms, effectivePermissions = effectivePermissions,
+                )
             }
         }
     }
@@ -111,7 +126,7 @@ class SettingsViewModel @Inject constructor(
     // ============ Store Info ============
 
     fun showStoreInfoDialog() {
-        if (_state.value.currentUser?.role != UserRole.OWNER) {
+        if (!_state.value.can(Permission.STORE_EDIT)) {
             _state.update { it.copy(message = str(R.string.error_owner_only)) }
             return
         }
@@ -179,7 +194,7 @@ class SettingsViewModel @Inject constructor(
     // ============ Change Password (OWNER only) ============
 
     fun showChangePasswordDialog() {
-        if (_state.value.currentUser?.role != UserRole.OWNER) {
+        if (!_state.value.can(Permission.STORE_SETTINGS)) {
             _state.update { it.copy(message = str(R.string.error_owner_only)) }
             return
         }
@@ -252,7 +267,7 @@ class SettingsViewModel @Inject constructor(
     // ============ Sales Settings ============
 
     fun showSalesSettingsDialog() {
-        if (_state.value.currentUser?.role != UserRole.OWNER) {
+        if (!_state.value.can(Permission.STORE_SETTINGS)) {
             _state.update { it.copy(message = str(R.string.error_owner_only)) }
             return
         }
@@ -275,12 +290,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ============ User Management (OWNER only) ============
+    // ============ User Management (OWNER + MANAGER) ============
 
-    private fun isOwner() = _state.value.currentUser?.role == UserRole.OWNER
+    /** OWNER có thể quản lý tất cả; MANAGER chỉ được quản lý Cashier */
+    private fun canManageUser(targetRole: UserRole): Boolean {
+        val actorRole = _state.value.currentUser?.role ?: return false
+        return PermissionChecker.canManageUser(actorRole, targetRole)
+    }
+
+    private fun requireUserPermission(permission: Permission): Boolean {
+        return if (_state.value.can(permission)) true
+        else { _state.update { it.copy(message = str(R.string.error_owner_only)) }; false }
+    }
 
     fun showUserManagement() {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!requireUserPermission(Permission.USER_VIEW)) return
         _state.update { it.copy(showUserManagementSheet = true) }
     }
     fun dismissUserManagement() { _state.update { it.copy(showUserManagementSheet = false) } }
@@ -298,7 +322,11 @@ class SettingsViewModel @Inject constructor(
     fun dismissDeleteUserConfirm() { _state.update { it.copy(showDeleteUserConfirm = null) } }
 
     fun addUser(name: String, pin: String, role: UserRole) {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!requireUserPermission(Permission.USER_CREATE)) return
+        if (!canManageUser(role)) {
+            _state.update { it.copy(message = "Bạn không có quyền tạo tài khoản với vai trò này") }
+            return
+        }
         viewModelScope.launch {
             val storeId = _state.value.store?.id ?: return@launch
             when (val result = userRepository.createUser(storeId, name, pin, role)) {
@@ -314,7 +342,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateUser(user: User) {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!requireUserPermission(Permission.USER_EDIT)) return
+        if (!canManageUser(user.role)) {
+            _state.update { it.copy(message = "Bạn không có quyền chỉnh sửa tài khoản này") }
+            return
+        }
         viewModelScope.launch {
             val storeId = _state.value.store?.id ?: return@launch
             when (val result = userRepository.updateUser(user)) {
@@ -330,8 +362,14 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun resetUserPin(userId: String, newPin: String) {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!requireUserPermission(Permission.USER_RESET_PIN)) return
         viewModelScope.launch {
+            // Prevent resetting pin of higher-role user
+            val targetUser = userRepository.getUserById(userId)
+            if (targetUser != null && !canManageUser(targetUser.role)) {
+                _state.update { it.copy(message = "Bạn không có quyền reset PIN của tài khoản này") }
+                return@launch
+            }
             when (val result = userRepository.resetPin(userId, newPin)) {
                 is Result.Success -> {
                     _state.update { it.copy(showResetPinDialog = null, message = str(R.string.msg_pin_reset)) }
@@ -344,8 +382,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun deleteUser(userId: String) {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!requireUserPermission(Permission.USER_DEACTIVATE)) return
         viewModelScope.launch {
+            val targetUser = userRepository.getUserById(userId)
+            if (targetUser != null && !canManageUser(targetUser.role)) {
+                _state.update { it.copy(message = "Bạn không có quyền xóa tài khoản này") }
+                return@launch
+            }
             val storeId = _state.value.store?.id ?: return@launch
             when (val result = userRepository.deleteUser(userId)) {
                 is Result.Success -> {
@@ -359,17 +402,52 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // ============ Cashier Permissions (OWNER only) ============
+
+    fun showCashierPermissionsDialog() {
+        if (!_state.value.can(Permission.STORE_SETTINGS)) {
+            _state.update { it.copy(message = str(R.string.error_owner_only)) }
+            return
+        }
+        _state.update { it.copy(showCashierPermissionsDialog = true) }
+    }
+    fun dismissCashierPermissionsDialog() { _state.update { it.copy(showCashierPermissionsDialog = false) } }
+
+    fun saveCashierPermissions(cashierPerms: CashierPermissions) {
+        if (!_state.value.can(Permission.STORE_SETTINGS)) {
+            _state.update { it.copy(message = str(R.string.error_owner_only)) }
+            return
+        }
+        viewModelScope.launch {
+            val store = _state.value.store ?: return@launch
+            val updated = store.copy(settings = store.settings.copy(cashierPermissions = cashierPerms))
+            when (val result = storeRepository.updateStore(updated)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            store = result.data,
+                            cashierPerms = cashierPerms,
+                            showCashierPermissionsDialog = false,
+                            message = "Đã lưu cài đặt quyền thu ngân",
+                        )
+                    }
+                }
+                is Result.Error -> _state.update { it.copy(message = result.message) }
+            }
+        }
+    }
+
     // ============ Backup/Restore ============
 
     fun showBackupDialog() {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!_state.value.can(Permission.DATA_BACKUP)) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         val files = backupManager.listBackups()
         _state.update { it.copy(showBackupDialog = true, backupFiles = files) }
     }
     fun dismissBackupDialog() { _state.update { it.copy(showBackupDialog = false) } }
 
     fun createBackup() {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!_state.value.can(Permission.DATA_BACKUP)) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         viewModelScope.launch {
             _state.update { it.copy(isBackingUp = true) }
             when (val result = backupManager.createBackup()) {
@@ -399,7 +477,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun showRestoreDialog() {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!_state.value.can(Permission.DATA_RESTORE)) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         val files = backupManager.listBackups()
         _state.update { it.copy(showRestoreDialog = true, backupFiles = files) }
     }
@@ -411,7 +489,7 @@ class SettingsViewModel @Inject constructor(
     fun cancelRestoreConfirm() { _state.update { it.copy(restoreConfirmFile = null) } }
 
     fun executeRestore(filePath: String) {
-        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        if (!_state.value.can(Permission.DATA_RESTORE)) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         viewModelScope.launch {
             _state.update { it.copy(isRestoring = true, restoreConfirmFile = null) }
             when (val result = backupManager.restoreBackup(filePath)) {

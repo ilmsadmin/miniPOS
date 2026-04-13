@@ -106,21 +106,23 @@ fun ProductListScreen(
                 title = stringResource(R.string.products_title),
                 onBack = onBack,
                 actions = {
-                    // Gradient circle add button (40dp) matching HTML .add-btn
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MiniPosGradients.primary())
-                            .clickable { onNavigateToForm(null) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = stringResource(R.string.add_product_cd),
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
+                    // Only show Add button if user can create products
+                    if (state.canCreate) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MiniPosGradients.primary())
+                                .clickable { onNavigateToForm(null) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.add_product_cd),
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 },
             )
@@ -260,12 +262,14 @@ fun ProductListScreen(
                                 color = AppColors.TextSecondary,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            MiniPosGradientButton(
-                                text = stringResource(R.string.add_first_product),
-                                onClick = { onNavigateToForm(null) },
-                                modifier = Modifier.width(200.dp),
-                                height = 44.dp,
-                            )
+                            if (state.canCreate) {
+                                MiniPosGradientButton(
+                                    text = stringResource(R.string.add_first_product),
+                                    onClick = { onNavigateToForm(null) },
+                                    modifier = Modifier.width(200.dp),
+                                    height = 44.dp,
+                                )
+                            }
                         }
                     }
                 } else {
@@ -277,8 +281,8 @@ fun ProductListScreen(
                             product = product,
                             currentStock = currentStock,
                             categoryName = categoryName,
-                            onClick = { onNavigateToForm(product.id) },
-                            onDelete = { viewModel.deleteProduct(product) },
+                            onClick = { if (state.canEdit) onNavigateToForm(product.id) },
+                            onDelete = if (state.canDelete) {{ viewModel.deleteProduct(product) }} else null,
                         )
                     }
                 }
@@ -459,7 +463,7 @@ private fun ProductCard(
     currentStock: Double,
     categoryName: String?,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showImageViewer by remember { mutableStateOf(false) }
@@ -487,7 +491,7 @@ private fun ProductCard(
             title = { Text(stringResource(R.string.delete_product_title)) },
             text = { Text(stringResource(R.string.delete_product_confirm, product.name)) },
             confirmButton = {
-                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
+                TextButton(onClick = { showDeleteConfirm = false; onDelete?.invoke() }) {
                     Text(stringResource(R.string.delete_label), color = AppColors.Error)
                 }
             },

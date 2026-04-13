@@ -56,6 +56,7 @@ import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.CartItem
 import com.minipos.domain.model.Customer
 import com.minipos.domain.model.Discount
+import com.minipos.domain.model.Permission
 import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.model.UserRole
@@ -260,6 +261,7 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             val cartEmptyHint = stringResource(R.string.toast_cart_empty_hint)
+            val permDeniedMsg = stringResource(R.string.error_permission_denied)
             HomeBottomNav(
                 onNavigate = onNavigate,
                 onPosClick = {
@@ -270,6 +272,13 @@ fun HomeScreen(
                         toastMessage = cartEmptyHint
                         showToast = true
                     }
+                },
+                canViewInventory = homeState.can(Permission.INVENTORY_VIEW),
+                canViewReports = homeState.can(Permission.REPORT_VIEW),
+                canViewManagement = homeState.can(Permission.PRODUCT_CREATE) || homeState.can(Permission.CATEGORY_CREATE) || homeState.can(Permission.SUPPLIER_VIEW),
+                onPermissionDenied = {
+                    toastMessage = permDeniedMsg
+                    showToast = true
                 },
             )
         },
@@ -980,6 +989,10 @@ private fun HomeBottomNav(
     onNavigate: (String) -> Unit,
     onPosClick: () -> Unit,
     currentRoute: String? = null,
+    canViewInventory: Boolean = true,
+    canViewReports: Boolean = true,
+    canViewManagement: Boolean = true,
+    onPermissionDenied: () -> Unit = {},
 ) {
     // Pulse animation for FAB ring — plays 3 times then stops to save battery
     var pulseScale by remember { mutableFloatStateOf(1f) }
@@ -1019,13 +1032,40 @@ private fun HomeBottomNav(
             verticalAlignment = Alignment.Bottom,
         ) {
             // Kho hàng
-            NavItem(icon = Icons.Rounded.Warehouse, label = stringResource(R.string.nav_inventory), isActive = currentRoute == Screen.InventoryHub.route, onClick = { onNavigate(Screen.InventoryHub.route) })
+            NavItem(
+                icon = Icons.Rounded.Warehouse,
+                label = stringResource(R.string.nav_inventory),
+                isActive = currentRoute == Screen.InventoryHub.route,
+                locked = !canViewInventory,
+                onClick = {
+                    if (canViewInventory) onNavigate(Screen.InventoryHub.route)
+                    else onPermissionDenied()
+                },
+            )
             // Quản lý
-            NavItem(icon = Icons.Rounded.ListAlt, label = stringResource(R.string.nav_management), isActive = currentRoute == Screen.StoreManagement.route, onClick = { onNavigate(Screen.StoreManagement.route) })
+            NavItem(
+                icon = Icons.Rounded.ListAlt,
+                label = stringResource(R.string.nav_management),
+                isActive = currentRoute == Screen.StoreManagement.route,
+                locked = !canViewManagement,
+                onClick = {
+                    if (canViewManagement) onNavigate(Screen.StoreManagement.route)
+                    else onPermissionDenied()
+                },
+            )
             // Spacer for FAB
             Spacer(modifier = Modifier.width(72.dp))
             // Báo cáo
-            NavItem(icon = Icons.Rounded.BarChart, label = stringResource(R.string.nav_reports), isActive = currentRoute == Screen.Reports.route, onClick = { onNavigate(Screen.Reports.route) })
+            NavItem(
+                icon = Icons.Rounded.BarChart,
+                label = stringResource(R.string.nav_reports),
+                isActive = currentRoute == Screen.Reports.route,
+                locked = !canViewReports,
+                onClick = {
+                    if (canViewReports) onNavigate(Screen.Reports.route)
+                    else onPermissionDenied()
+                },
+            )
             // Thêm
             NavItem(icon = Icons.Rounded.MoreHoriz, label = stringResource(R.string.nav_more), isActive = currentRoute == Screen.Settings.route, onClick = { onNavigate(Screen.Settings.route) })
         }
@@ -1099,9 +1139,16 @@ private fun NavItem(
     label: String,
     onClick: () -> Unit,
     isActive: Boolean = false,
+    locked: Boolean = false,
 ) {
     val iconTint by animateColorAsState(
-        if (isActive) AppColors.Primary else AppColors.TextTertiary, tween(150), label = "navTint"
+        when {
+            locked -> AppColors.TextTertiary.copy(alpha = 0.4f)
+            isActive -> AppColors.Primary
+            else -> AppColors.TextTertiary
+        },
+        tween(150),
+        label = "navTint",
     )
     Column(
         modifier = Modifier
@@ -1122,8 +1169,32 @@ private fun NavItem(
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(22.dp))
+            // Lock badge — top-right corner when locked
+            if (locked) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 6.dp, y = (-2).dp)
+                        .size(13.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.TextTertiary.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Lock,
+                        contentDescription = null,
+                        tint = AppColors.Background,
+                        modifier = Modifier.size(8.dp),
+                    )
+                }
+            }
         }
-        Text(label, fontSize = 11.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold, color = iconTint)
+        Text(
+            label,
+            fontSize = 11.sp,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
+            color = iconTint,
+        )
     }
 }
 

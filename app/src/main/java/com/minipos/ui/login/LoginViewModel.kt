@@ -64,7 +64,9 @@ class LoginViewModel @Inject constructor(
                 _state.update { it.copy(isLoading = false) }
                 return@launch
             }
-            val users = userRepository.getActiveUsers(store.id)
+            // Dùng getAllUsers để hiển thị tất cả tài khoản (kể cả inactive).
+            // AuthRepository.login() sẽ chặn user bị vô hiệu hóa khi họ cố đăng nhập.
+            val users = userRepository.getAllUsers(store.id)
             // Chỉ hiện badge "Đang dùng" nếu user thực sự đang đăng nhập (isLoggedIn = true)
             // Không dùng currentUserId khi app mới khởi động mà chưa login
             val isLoggedIn = appPreferences.isLoggedInSync()

@@ -4,9 +4,12 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.R
+import com.minipos.core.auth.PermissionChecker
 import com.minipos.core.theme.ThemeManager
 import com.minipos.core.theme.ThemeMode
 import com.minipos.data.preferences.AppPreferences
+import com.minipos.domain.model.CashierPermissions
+import com.minipos.domain.model.Permission
 import com.minipos.domain.model.Store
 import com.minipos.domain.model.User
 import com.minipos.domain.model.UserRole
@@ -38,6 +41,9 @@ data class HomeState(
     val todayRevenue: Double = 0.0,
     val todayOrders: Int = 0,
     val lowStockCount: Int = 0,
+    // Permissions state — computed from role + cashierPerms
+    val cashierPerms: CashierPermissions = CashierPermissions(),
+    val effectivePermissions: Set<Permission> = emptySet(),
     // PIN change state
     val showChangePinSheet: Boolean = false,
     val pinVerified: Boolean = false,
@@ -49,7 +55,10 @@ data class HomeState(
     val setupProductCount: Int = 0,
     val setupSupplierCount: Int = 0,
     val setupOrderCount: Int = 0,
-)
+) {
+    /** Shortcut: kiểm tra quyền từ UI state */
+    fun can(permission: Permission): Boolean = effectivePermissions.contains(permission)
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -82,6 +91,10 @@ class HomeViewModel @Inject constructor(
             val hasPin = userId?.let { userRepository.hasPin(it) } ?: false
 
             if (session != null && store != null) {
+                val cashierPerms = store.settings.cashierPermissions
+                val effectivePermissions = PermissionChecker.getEffectivePermissions(
+                    currentUser?.role ?: session.role, cashierPerms
+                )
                 _state.update {
                     it.copy(
                         storeName = store.name,
@@ -90,6 +103,8 @@ class HomeViewModel @Inject constructor(
                         store = store,
                         currentUser = currentUser,
                         currentUserHasPin = hasPin,
+                        cashierPerms = cashierPerms,
+                        effectivePermissions = effectivePermissions,
                     )
                 }
                 // Observe orders to auto-refresh dashboard data
@@ -131,12 +146,17 @@ class HomeViewModel @Inject constructor(
             val userId = appPreferences.currentUserId.first() ?: return@launch
             val currentUser = userRepository.getUserById(userId) ?: return@launch
             val hasPin = userRepository.hasPin(userId)
+            val store = storeRepository.getStore()
+            val cashierPerms = store?.settings?.cashierPermissions ?: CashierPermissions()
+            val effectivePermissions = PermissionChecker.getEffectivePermissions(currentUser.role, cashierPerms)
             _state.update {
                 it.copy(
                     userName = currentUser.displayName,
                     userRole = currentUser.role,
                     currentUser = currentUser,
                     currentUserHasPin = hasPin,
+                    cashierPerms = cashierPerms,
+                    effectivePermissions = effectivePermissions,
                 )
             }
         }

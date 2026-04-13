@@ -31,6 +31,7 @@ interface UserRepository {
     suspend fun getUserById(userId: String): User?
     fun observeUsers(storeId: String): Flow<List<User>>
     suspend fun getActiveUsers(storeId: String): List<User>
+    suspend fun getAllUsers(storeId: String): List<User>
     suspend fun resetPin(userId: String, newPin: String): Result<Unit>
     suspend fun clearPin(userId: String): Result<Unit>
     suspend fun hasPin(userId: String): Boolean

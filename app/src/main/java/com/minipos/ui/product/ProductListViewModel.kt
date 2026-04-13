@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.minipos.R
 import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.utils.UuidGenerator
+import com.minipos.core.auth.SessionManager
 import com.minipos.domain.model.Category
+import com.minipos.domain.model.Permission
 import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.model.Result
@@ -33,6 +35,10 @@ data class ProductListState(
     val editingProduct: Product? = null,
     val isLoading: Boolean = true,
     val showBarcodeScanner: Boolean = false,
+    // Permission flags
+    val canCreate: Boolean = true,
+    val canEdit: Boolean = true,
+    val canDelete: Boolean = true,
     // Variants
     val variants: List<ProductVariant> = emptyList(),
     val pendingVariants: List<ProductVariant> = emptyList(), // variants added before product is saved
@@ -78,6 +84,7 @@ class ProductListViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val categoryRepository: CategoryRepository,
     private val inventoryRepository: InventoryRepository,
+    private val sessionManager: SessionManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductListState())
@@ -111,7 +118,20 @@ class ProductListViewModel @Inject constructor(
             val stockMap = products.associate { p ->
                 p.id to inventoryRepository.getTotalStock(storeId, p.id, p.hasVariants)
             }
-            _state.update { it.copy(products = products, stockMap = stockMap, categories = categories, isLoading = false) }
+            val canCreate = sessionManager.can(Permission.PRODUCT_CREATE)
+            val canEdit = sessionManager.can(Permission.PRODUCT_EDIT)
+            val canDelete = sessionManager.can(Permission.PRODUCT_DELETE)
+            _state.update {
+                it.copy(
+                    products = products,
+                    stockMap = stockMap,
+                    categories = categories,
+                    isLoading = false,
+                    canCreate = canCreate,
+                    canEdit = canEdit,
+                    canDelete = canDelete,
+                )
+            }
         }
     }
 

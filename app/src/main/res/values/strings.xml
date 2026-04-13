@@ -339,6 +339,7 @@
     <string name="error_login">Login failed</string>
     <string name="error_account_no_pin">This account has no PIN set. Please contact the store owner.</string>
     <string name="error_owner_only">Only the store owner can perform this action.</string>
+    <string name="error_permission_denied">You don\'t have permission to access this feature.</string>
     <string name="error_no_password_set">No password has been set for this account.</string>
     <string name="error_wrong_password">Incorrect password. Please try again.</string>
     <string name="error_store_not_found">Store not found</string>

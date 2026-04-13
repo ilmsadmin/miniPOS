@@ -331,6 +331,7 @@
     <string name="error_login">Lỗi đăng nhập</string>
     <string name="error_account_no_pin">Tài khoản này chưa có mã PIN. Vui lòng liên hệ chủ cửa hàng.</string>
     <string name="error_owner_only">Chỉ chủ cửa hàng mới có quyền thực hiện thao tác này.</string>
+    <string name="error_permission_denied">Bạn không có quyền truy cập tính năng này.</string>
     <string name="error_store_not_found">Cửa hàng không tồn tại</string>
     <string name="error_update_store">Lỗi cập nhật cửa hàng</string>
     <string name="error_create_user">Lỗi tạo người dùng</string>

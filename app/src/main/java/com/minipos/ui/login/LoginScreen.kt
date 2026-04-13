@@ -320,26 +320,26 @@ private fun UserCard(user: User, isCurrentUser: Boolean = false, onClick: () -> 
         UserRole.CASHIER -> Pair(listOf(Color(0xFFFF7675), Color(0xFFFDCB6E)), stringResource(R.string.role_cashier))
     }
 
-    val borderModifier = if (isCurrentUser) {
-        Modifier.border(
-            1.5.dp,
-            Brush.linearGradient(gradientColors),
-            RoundedCornerShape(MiniPosTokens.RadiusXl),
-        )
-    } else {
-        Modifier.border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl))
-    }
+    val shape = RoundedCornerShape(MiniPosTokens.RadiusXl)
 
+    // Border phải nằm TRƯỚC shadow+clip để không bị cắt
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isCurrentUser)
+                    Modifier.border(1.5.dp, Brush.linearGradient(gradientColors), shape)
+                else
+                    Modifier.border(1.dp, AppColors.Border, shape)
+            )
+            .shadow(if (isCurrentUser) 6.dp else 4.dp, shape)
+            .clip(shape)
+            .background(if (isCurrentUser) gradientColors.first().copy(alpha = 0.06f) else AppColors.Surface)
+            .clickable(onClick = onClick),
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(if (isCurrentUser) 6.dp else 4.dp, RoundedCornerShape(MiniPosTokens.RadiusXl))
-            .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
-            .background(
-                if (isCurrentUser) gradientColors.first().copy(alpha = 0.06f) else AppColors.Surface,
-            )
-            .then(borderModifier)
-            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -431,6 +431,7 @@ private fun UserCard(user: User, isCurrentUser: Boolean = false, onClick: () -> 
             )
         }
     }
+    } // end Box (border wrapper)
 }
 
 // ─── PIN Input ───

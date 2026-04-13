@@ -112,6 +112,9 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun getActiveUsers(storeId: String): List<User> =
         userDao.getActiveUsers(storeId).map { it.toDomain() }
 
+    override suspend fun getAllUsers(storeId: String): List<User> =
+        userDao.getAllUsers(storeId).map { it.toDomain() }
+
     override suspend fun resetPin(userId: String, newPin: String): Result<Unit> {
         return try {
             val entity = userDao.getById(userId) ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_user_not_found))
@@ -271,6 +274,7 @@ class ProductRepositoryImpl @Inject constructor(
                 maxStock = product.maxStock,
                 trackInventory = product.trackInventory,
                 taxRate = product.taxRate,
+                hasVariants = product.hasVariants,
                 createdAt = now,
                 updatedAt = now,
                 deviceId = deviceId,
