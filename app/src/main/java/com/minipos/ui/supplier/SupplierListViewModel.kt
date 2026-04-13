@@ -65,16 +65,21 @@ class SupplierListViewModel @Inject constructor(
 
     init { loadData() }
 
+    fun refreshData() { loadData() }
+
     private fun loadData() {
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
             storeId = store.id
             val suppliers = supplierRepository.getAll(storeId)
-            // Count products per supplier
+            // Count products per supplier: each product = 1 (root variant) + child variants
             val products = productRepository.getAll(storeId)
-            val counts = products.filter { it.supplierId != null }
-                .groupBy { it.supplierId!! }
-                .mapValues { it.value.size }
+            val counts = mutableMapOf<String, Int>()
+            products.filter { it.supplierId != null }.forEach { product ->
+                val supplierId = product.supplierId!!
+                val variantCount = productRepository.getVariantCount(product.id)
+                counts[supplierId] = (counts[supplierId] ?: 0) + 1 + variantCount
+            }
             val query = _state.value.searchQuery
             _state.update {
                 it.copy(

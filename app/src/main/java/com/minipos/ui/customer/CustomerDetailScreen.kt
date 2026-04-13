@@ -1,5 +1,7 @@
 package com.minipos.ui.customer
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,9 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.minipos.ui.components.MiniPosAlertDialog
+import com.minipos.ui.components.PopupType
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,9 +42,27 @@ fun CustomerDetailScreen(
     customerId: String,
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
+    onNavigateToPos: () -> Unit = {},
     viewModel: CustomerListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+
+    // Snackbar for messages
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showFeatureDialog by remember { mutableStateOf(false) }
+    var featureDialogTitle by remember { mutableStateOf("") }
+
+    // Feature coming-soon dialog
+    MiniPosAlertDialog(
+        visible = showFeatureDialog,
+        type = PopupType.INFO,
+        icon = Icons.Rounded.Info,
+        title = featureDialogTitle,
+        message = stringResource(R.string.feature_coming_soon_msg),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { showFeatureDialog = false },
+    )
 
     LaunchedEffect(customerId) {
         viewModel.loadCustomerDetail(customerId)
@@ -75,8 +98,37 @@ fun CustomerDetailScreen(
             IconButton(onClick = { customer?.let { onEdit(it.id) } }, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.cd_edit), tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
             }
-            IconButton(onClick = { /* more options */ }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more), tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+            Box {
+                var showMenu by remember { mutableStateOf(false) }
+                IconButton(onClick = { showMenu = true }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more), tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp))
+                }
+                MiniPosActionSheet(
+                    visible = showMenu,
+                    title = stringResource(R.string.customer_title),
+                    description = customer?.name ?: "",
+                    items = listOf(
+                        ActionSheetItem(stringResource(R.string.cd_quick_call), Icons.Rounded.Call) {
+                            showMenu = false
+                            customer?.phone?.let { phone ->
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                context.startActivity(intent)
+                            }
+                        },
+                        ActionSheetItem(stringResource(R.string.cd_quick_message), Icons.Rounded.Sms) {
+                            showMenu = false
+                            customer?.phone?.let { phone ->
+                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phone"))
+                                context.startActivity(intent)
+                            }
+                        },
+                        ActionSheetItem(stringResource(R.string.cd_quick_new_order), Icons.Rounded.AddShoppingCart) {
+                            showMenu = false
+                            onNavigateToPos()
+                        },
+                    ),
+                    onDismiss = { showMenu = false },
+                )
             }
         }
 
@@ -102,7 +154,7 @@ fun CustomerDetailScreen(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA)))),
+                            .background(Brush.linearGradient(listOf(Color(0xFF0E9AA0), Color(0xFF5AEDC5)))),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(customer.initials, fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
@@ -117,7 +169,7 @@ fun CustomerDetailScreen(
                         BadgePill(text = stringResource(R.string.cd_active), bgColor = AppColors.SuccessSoft, textColor = AppColors.Success)
                         if (customer.hasDebt) {
                             BadgePill(
-                                text = "Debt ${CurrencyFormatter.formatCompact(customer.debtAmount)}",
+                                text = stringResource(R.string.debt_badge, CurrencyFormatter.formatCompact(customer.debtAmount)),
                                 bgColor = AppColors.Error.copy(alpha = 0.12f),
                                 textColor = AppColors.Error,
                             )
@@ -137,21 +189,31 @@ fun CustomerDetailScreen(
                         label = stringResource(R.string.cd_quick_call),
                         iconColor = AppColors.Success,
                         modifier = Modifier.weight(1f),
-                        onClick = { /* call */ },
+                        onClick = {
+                            customer.phone?.let { phone ->
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                context.startActivity(intent)
+                            }
+                        },
                     )
                     QuickActionButton(
                         icon = Icons.Rounded.Sms,
                         label = stringResource(R.string.cd_quick_message),
                         iconColor = AppColors.Accent,
                         modifier = Modifier.weight(1f),
-                        onClick = { /* sms */ },
+                        onClick = {
+                            customer.phone?.let { phone ->
+                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phone"))
+                                context.startActivity(intent)
+                            }
+                        },
                     )
                     QuickActionButton(
                         icon = Icons.Rounded.AddShoppingCart,
                         label = stringResource(R.string.cd_quick_new_order),
                         iconColor = AppColors.PrimaryLight,
                         modifier = Modifier.weight(1f),
-                        onClick = { /* new order */ },
+                        onClick = { onNavigateToPos() },
                     )
                 }
 
@@ -220,7 +282,7 @@ fun CustomerDetailScreen(
                         ) {
                             Column {
                                 Text(stringResource(R.string.cd_current_balance), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                                Text("Limit: 500,000đ", fontSize = 11.sp, color = AppColors.TextTertiary)
+                                Text(stringResource(R.string.debt_limit_label, CurrencyFormatter.format(500000.0)), fontSize = 11.sp, color = AppColors.TextTertiary)
                             }
                             Text(
                                 CurrencyFormatter.format(customer.debtAmount),
@@ -258,7 +320,10 @@ fun CustomerDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             OutlinedButton(
-                                onClick = { /* collect debt */ },
+                                onClick = {
+                                    featureDialogTitle = context.getString(R.string.cd_collect)
+                                    showFeatureDialog = true
+                                },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(40.dp),
@@ -271,7 +336,10 @@ fun CustomerDetailScreen(
                                 Text(stringResource(R.string.cd_collect), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                             OutlinedButton(
-                                onClick = { /* debt history */ },
+                                onClick = {
+                                    featureDialogTitle = context.getString(R.string.cd_history)
+                                    showFeatureDialog = true
+                                },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(40.dp),

@@ -62,12 +62,12 @@ private val AvailableColors = listOf(
     listOf(Color(0xFFFFD54F), Color(0xFFFFB300)),
     listOf(Color(0xFF81C784), Color(0xFF388E3C)),
     listOf(Color(0xFFCE93D8), Color(0xFF8E24AA)),
-    listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA)),
+    listOf(Color(0xFF0E9AA0), Color(0xFF5AEDC5)),
     listOf(Color(0xFFFF6B6B), Color(0xFFEE5A24)),
     listOf(Color(0xFF90A4AE), Color(0xFF546E7A)),
 )
 
-private val ColorNames = listOf("blue", "red", "amber", "green", "purple", "indigo", "orange", "grey")
+private val ColorNames = listOf("blue", "red", "amber", "green", "purple", "teal", "orange", "grey")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -251,58 +251,42 @@ fun CategoryFormScreen(
             // ═══ PARENT CATEGORY SECTION ═══
             FormSectionLabel(stringResource(R.string.catf_parent_category))
 
-            // Parent category selector
-            var showParentDropdown by remember { mutableStateOf(false) }
-            val parentName = availableParents.find { it.id == selectedParentId }?.name
+            // Parent category selector — MiniPosSelectBox
+            val noParentLabel = stringResource(R.string.catf_no_parent)
+            val parentTitle = stringResource(R.string.catf_parent_category)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
-                    .background(AppColors.InputBackground)
-                    .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
-                    .clickable { showParentDropdown = true }
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
-                        .background(AppColors.SurfaceElevated),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.FolderOpen, contentDescription = null, tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = parentName ?: stringResource(R.string.catf_no_parent),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (parentName != null) AppColors.TextPrimary else AppColors.TextTertiary,
+            val parentItems = buildList {
+                add(
+                    SelectListItem(
+                        id = "__none__",
+                        name = noParentLabel,
+                        icon = Icons.Rounded.FolderOff,
+                        iconTint = AppColors.TextTertiary,
                     )
-                    Text("Tap to select parent", fontSize = 11.sp, color = AppColors.TextTertiary)
-                }
-                Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = AppColors.TextTertiary, modifier = Modifier.size(20.dp))
-            }
-
-            // Parent dropdown
-            DropdownMenu(
-                expanded = showParentDropdown,
-                onDismissRequest = { showParentDropdown = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.catf_no_parent), color = AppColors.TextSecondary) },
-                    onClick = { selectedParentId = null; showParentDropdown = false },
                 )
                 availableParents.forEach { cat ->
-                    DropdownMenuItem(
-                        text = { Text("${cat.icon ?: "📦"} ${cat.name}") },
-                        onClick = { selectedParentId = cat.id; showParentDropdown = false },
+                    val catIcon = categoryIconFromName(cat.icon) ?: Icons.Rounded.FolderOpen
+                    add(
+                        SelectListItem(
+                            id = cat.id,
+                            name = cat.name,
+                            icon = catIcon,
+                            iconTint = AppColors.Primary,
+                        )
                     )
                 }
             }
+
+            MiniPosSelectBox(
+                label = "",
+                title = parentTitle,
+                items = parentItems,
+                selectedId = selectedParentId ?: "__none__",
+                placeholder = noParentLabel,
+                onSelect = { item ->
+                    selectedParentId = if (item.id == "__none__") null else item.id
+                },
+            )
 
             Spacer(Modifier.height(20.dp))
 

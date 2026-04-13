@@ -24,6 +24,10 @@ class AppPreferences @Inject constructor(
         private val KEY_BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         private val KEY_LOGIN_ATTEMPTS = intPreferencesKey("login_attempts")
         private val KEY_LOCK_UNTIL = longPreferencesKey("lock_until")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")       // "system", "light", "dark"
+        private val KEY_LANGUAGE = stringPreferencesKey("language")            // "system", "en", "vi"
+        private val KEY_SETUP_GUIDE_DISMISSED = booleanPreferencesKey("setup_guide_dismissed")
+        private val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     }
 
     val currentStoreId: Flow<String?> = context.dataStore.data.map { it[KEY_CURRENT_STORE_ID] }
@@ -31,6 +35,10 @@ class AppPreferences @Inject constructor(
     val deviceId: Flow<String?> = context.dataStore.data.map { it[KEY_DEVICE_ID] }
     val isOnboarded: Flow<Boolean> = context.dataStore.data.map { it[KEY_IS_ONBOARDED] ?: false }
     val biometricEnabled: Flow<Boolean> = context.dataStore.data.map { it[KEY_BIOMETRIC_ENABLED] ?: false }
+    val themeMode: Flow<String> = context.dataStore.data.map { it[KEY_THEME_MODE] ?: "system" }
+    val language: Flow<String> = context.dataStore.data.map { it[KEY_LANGUAGE] ?: "system" }
+    val setupGuideDismissed: Flow<Boolean> = context.dataStore.data.map { it[KEY_SETUP_GUIDE_DISMISSED] ?: false }
+    val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { it[KEY_IS_LOGGED_IN] ?: false }
 
     suspend fun setCurrentStore(storeId: String) {
         context.dataStore.edit { it[KEY_CURRENT_STORE_ID] = storeId }
@@ -38,6 +46,14 @@ class AppPreferences @Inject constructor(
 
     suspend fun setCurrentUser(userId: String) {
         context.dataStore.edit { it[KEY_CURRENT_USER_ID] = userId }
+    }
+
+    suspend fun setLoggedIn(value: Boolean) {
+        context.dataStore.edit { it[KEY_IS_LOGGED_IN] = value }
+    }
+
+    suspend fun isLoggedInSync(): Boolean {
+        return context.dataStore.data.first()[KEY_IS_LOGGED_IN] ?: false
     }
 
     suspend fun setDeviceId(deviceId: String) {
@@ -76,11 +92,34 @@ class AppPreferences @Inject constructor(
         context.dataStore.edit { it[KEY_LOCK_UNTIL] = timestamp }
     }
 
+    suspend fun setThemeMode(mode: String) {
+        context.dataStore.edit { it[KEY_THEME_MODE] = mode }
+    }
+
+    suspend fun setLanguage(lang: String) {
+        context.dataStore.edit { it[KEY_LANGUAGE] = lang }
+    }
+
+    suspend fun setSetupGuideDismissed(dismissed: Boolean) {
+        context.dataStore.edit { it[KEY_SETUP_GUIDE_DISMISSED] = dismissed }
+    }
+
     suspend fun logout() {
         // Only reset session state; keep current user ID so PIN screen knows which user to verify
         context.dataStore.edit {
             it[KEY_LOGIN_ATTEMPTS] = 0
             it[KEY_LOCK_UNTIL] = 0
+            it[KEY_IS_LOGGED_IN] = false
+        }
+    }
+
+    /** Full logout — clears current user so Login screen is shown */
+    suspend fun clearCurrentUser() {
+        context.dataStore.edit {
+            it.remove(KEY_CURRENT_USER_ID)
+            it[KEY_LOGIN_ATTEMPTS] = 0
+            it[KEY_LOCK_UNTIL] = 0
+            it[KEY_IS_LOGGED_IN] = false
         }
     }
 

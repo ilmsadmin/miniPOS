@@ -11,20 +11,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +52,17 @@ fun StockManagementScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val items = viewModel.filteredItems
+    val context = LocalContext.current
+
+    // Quick stock add bottom sheet
+    if (state.quickAddItem != null) {
+        QuickStockAddSheet(
+            item = state.quickAddItem!!,
+            isSaving = state.quickAddSaving,
+            onConfirm = { qty, notes -> viewModel.quickAddStock(qty, notes) },
+            onDismiss = { viewModel.dismissQuickAdd() },
+        )
+    }
 
     // Toast
     if (state.toastMessage != null) {
@@ -70,10 +85,7 @@ fun StockManagementScreen(
             StockMgmtTopBar(
                 onBack = onBack,
                 onExport = {
-                    viewModel.showToast(
-                        // Mirroring the HTML toast: "Xuất báo cáo kho"
-                        "Xuất báo cáo kho"
-                    )
+                    viewModel.exportStockReport(context)
                 },
             )
 
@@ -133,7 +145,10 @@ fun StockManagementScreen(
                         items = items,
                         key = { it.productId },
                     ) { item ->
-                        StockItemCard(item = item)
+                        StockItemCard(
+                            item = item,
+                            onQuickAdd = { viewModel.showQuickAdd(item) },
+                        )
                     }
                 }
 
@@ -361,7 +376,7 @@ private fun getStockStatus(item: StockOverviewItem): StockStatus {
 }
 
 @Composable
-private fun StockItemCard(item: StockOverviewItem) {
+private fun StockItemCard(item: StockOverviewItem, onQuickAdd: () -> Unit) {
     val status = getStockStatus(item)
     val maxStock = (item.minStock * 3).coerceAtLeast(1) // Approximate max for progress bar
     val progress = (item.currentStock / maxStock).toFloat().coerceIn(0f, 1f)
@@ -390,6 +405,7 @@ private fun StockItemCard(item: StockOverviewItem) {
             .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
             .background(AppColors.Surface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .clickable(onClick = onQuickAdd)
             .animateContentSize()
             .padding(16.dp),
     ) {
@@ -462,11 +478,12 @@ private fun StockItemCard(item: StockOverviewItem) {
             )
         }
 
-        // Bottom row: cost price + stock value
+        // Bottom row: cost price + stock value + quick add button
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(
@@ -476,12 +493,33 @@ private fun StockItemCard(item: StockOverviewItem) {
                 fontSize = 11.sp,
                 color = AppColors.TextTertiary,
             )
-            Text(
-                text = CurrencyFormatter.format(item.stockValue),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.Accent,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = CurrencyFormatter.format(item.stockValue),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Accent,
+                )
+                // Quick add button
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.SuccessSoft)
+                        .clickable(onClick = onQuickAdd),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.quick_stock_add_title),
+                        tint = AppColors.Success,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -532,4 +570,176 @@ private fun AuditFab(onClick: () -> Unit) {
         icon = Icons.Default.Inventory2,
         height = 52.dp,
     )
+}
+
+// ═══════════════════════════════════════════════════════
+// QUICK STOCK ADD — Bottom sheet for fast stock addition
+// Skips purchase order flow, logs to stock_movements
+// ═══════════════════════════════════════════════════════
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickStockAddSheet(
+    item: StockOverviewItem,
+    isSaving: Boolean,
+    onConfirm: (Double, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var quantity by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    val parsedQty = quantity.toDoubleOrNull()
+    val isValid = parsedQty != null && parsedQty > 0
+
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.quick_stock_add_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = if (isSaving) stringResource(R.string.processing)
+                       else stringResource(R.string.quick_stock_add_confirm),
+                icon = Icons.Rounded.Check,
+                onClick = {
+                    if (isValid && !isSaving) {
+                        onConfirm(parsedQty!!, notes)
+                    }
+                },
+            )
+        },
+    ) {
+        // Product info
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.InputBackground, RoundedCornerShape(MiniPosTokens.RadiusLg))
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                    .background(AppColors.SurfaceElevated),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Inventory2,
+                    contentDescription = null,
+                    tint = AppColors.Primary,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.productName,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "SKU: ${item.productSku}",
+                    fontSize = 11.sp,
+                    color = AppColors.TextTertiary,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Current stock indicator
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.SurfaceElevated, RoundedCornerShape(MiniPosTokens.RadiusMd))
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.quick_stock_current),
+                    fontSize = 11.sp,
+                    color = AppColors.TextTertiary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "${item.currentStock.toLong()} ${item.productUnit}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AppColors.TextPrimary,
+                )
+            }
+            Icon(
+                Icons.Rounded.ArrowForward,
+                contentDescription = null,
+                tint = AppColors.TextTertiary,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = stringResource(R.string.quick_stock_after),
+                    fontSize = 11.sp,
+                    color = AppColors.TextTertiary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                val newStock = item.currentStock + (parsedQty ?: 0.0)
+                Text(
+                    text = "${newStock.toLong()} ${item.productUnit}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isValid) AppColors.Success else AppColors.TextSecondary,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Quantity input
+        BottomSheetField(
+            label = stringResource(R.string.quick_stock_qty_label),
+            value = quantity,
+            onValueChange = { quantity = it.filter { c -> c.isDigit() || c == '.' } },
+            placeholder = stringResource(R.string.quick_stock_qty_hint),
+            required = true,
+            keyboardType = KeyboardType.Number,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // Notes input
+        BottomSheetField(
+            label = stringResource(R.string.quick_stock_notes_label),
+            value = notes,
+            onValueChange = { notes = it },
+            placeholder = stringResource(R.string.quick_stock_notes_hint),
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // Info banner
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.InfoSoft, RoundedCornerShape(MiniPosTokens.RadiusMd))
+                .padding(10.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Rounded.Info,
+                contentDescription = null,
+                tint = AppColors.PrimaryLight,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = stringResource(R.string.quick_stock_info),
+                fontSize = 11.sp,
+                color = AppColors.TextSecondary,
+                lineHeight = 16.sp,
+            )
+        }
+    }
 }

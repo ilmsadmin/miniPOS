@@ -32,7 +32,7 @@ import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
-import com.minipos.domain.model.StockHistoryItem
+import com.minipos.domain.model.PurchaseOrder
 import com.minipos.ui.components.*
 
 // ═══════════════════════════════════════════════════════
@@ -44,6 +44,7 @@ import com.minipos.ui.components.*
 fun InventoryHubScreen(
     onBack: () -> Unit,
     onNavigate: (String) -> Unit,
+    onOpenPurchaseDetail: (String) -> Unit = {},
     viewModel: InventoryHubViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -95,7 +96,7 @@ fun InventoryHubScreen(
                         title = stringResource(R.string.inv_hub_recent_purchase),
                         icon = Icons.Rounded.LocalShipping,
                     )
-                    RecentPurchaseList(items = state.recentPurchases)
+                    RecentPurchaseList(items = state.recentPurchaseOrders, onOpenDetail = onOpenPurchaseDetail)
 
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -136,14 +137,14 @@ private fun QuickActionsGrid(onNavigate: (String) -> Unit) {
             icon = Icons.Rounded.Inventory,
             titleRes = R.string.inv_hub_purchase_in,
             descRes = R.string.inv_hub_purchase_in_desc,
-            gradientColors = listOf(Color(0xFF6C5CE7), Color(0xFFA29BFE)),
+            gradientColors = listOf(Color(0xFF0E9AA0), Color(0xFF2EC4B6)),
             route = com.minipos.ui.navigation.Screen.PurchaseOrder.route,
         ),
         QuickAction(
             icon = Icons.Rounded.History,
             titleRes = R.string.inv_hub_order_history,
             descRes = R.string.inv_hub_order_history_desc,
-            gradientColors = listOf(Color(0xFF00D2FF), Color(0xFF3B9FDB)),
+            gradientColors = listOf(Color(0xFF14B8B0), Color(0xFF5AEDC5)),
             route = com.minipos.ui.navigation.Screen.OrderList.route,
         ),
         QuickAction(
@@ -308,7 +309,7 @@ private fun StatCard(
 // ═══════════════════════════════════════════════════════
 
 @Composable
-private fun RecentPurchaseList(items: List<StockHistoryItem>) {
+private fun RecentPurchaseList(items: List<PurchaseOrder>, onOpenDetail: (String) -> Unit) {
     if (items.isEmpty()) {
         // Empty state
         Column(
@@ -335,20 +336,20 @@ private fun RecentPurchaseList(items: List<StockHistoryItem>) {
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items.forEach { item ->
-                RecentPurchaseItem(item = item)
+                RecentPurchaseItem(order = item, onClick = { onOpenDetail(item.id) })
             }
         }
     }
 }
 
 @Composable
-private fun RecentPurchaseItem(item: StockHistoryItem) {
+private fun RecentPurchaseItem(order: PurchaseOrder, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
             .background(AppColors.Surface)
-            .clickable { }
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -372,7 +373,7 @@ private fun RecentPurchaseItem(item: StockHistoryItem) {
         // Info
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.productName,
+                text = order.code,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary,
@@ -381,11 +382,11 @@ private fun RecentPurchaseItem(item: StockHistoryItem) {
             )
             Text(
                 text = buildString {
-                    if (!item.supplierName.isNullOrEmpty()) {
-                        append(stringResource(R.string.inv_hub_supplier_prefix, item.supplierName))
+                    if (!order.supplierName.isNullOrEmpty()) {
+                        append(stringResource(R.string.inv_hub_supplier_prefix, order.supplierName))
                         append(" — ")
                     }
-                    append(DateUtils.formatDate(item.createdAt))
+                    append(DateUtils.formatDate(order.createdAt))
                 },
                 fontSize = 11.sp,
                 color = AppColors.TextTertiary,
@@ -395,17 +396,16 @@ private fun RecentPurchaseItem(item: StockHistoryItem) {
         }
 
         // Amount
-        val totalValue = (item.unitCost ?: 0.0) * item.quantity
-        if (totalValue > 0) {
+        if (order.totalAmount > 0) {
             Text(
-                text = CurrencyFormatter.formatCompact(totalValue),
+                text = CurrencyFormatter.formatCompact(order.totalAmount),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = AppColors.Accent,
             )
         } else {
             Text(
-                text = "+${item.quantity.toInt()}",
+                text = "${order.totalItems} items",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = AppColors.Accent,

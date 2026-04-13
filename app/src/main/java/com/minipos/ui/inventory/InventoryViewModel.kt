@@ -121,8 +121,8 @@ class InventoryViewModel @Inject constructor(
             if (storeId.isEmpty()) return@launch
             val products = productRepository.getAll(storeId).filter { it.trackInventory }
             val items = products.map { product ->
-                val stock = inventoryRepository.getStock(storeId, product.id)
-                ProductStock(product = product, currentStock = stock?.quantity ?: 0.0)
+                val stock = inventoryRepository.getTotalStock(storeId, product.id, product.hasVariants)
+                ProductStock(product = product, currentStock = stock)
             }
             val suppliers = supplierRepository.getAll(storeId)
             _state.update { it.copy(stockCheckItems = items, suppliers = suppliers, isLoading = false) }

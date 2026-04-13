@@ -50,6 +50,20 @@ fun PurchaseScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showConfirmDialog by remember { mutableStateOf(false) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
+
+    // Barcode scanner overlay
+    if (showBarcodeScanner) {
+        com.minipos.ui.scanner.BarcodeScannerScreen(
+            onBarcodeScanned = { value, _ ->
+                viewModel.addProductByBarcode(value)
+                showBarcodeScanner = false
+            },
+            onClose = { showBarcodeScanner = false },
+            title = stringResource(R.string.scan_barcode_to_add),
+        )
+        return
+    }
 
     // Show messages
     LaunchedEffect(state.successMessage) {
@@ -193,7 +207,7 @@ fun PurchaseScreen(
                         SearchAndScanBar(
                             searchQuery = state.inlineSearchQuery,
                             onSearchChange = { viewModel.updateInlineSearch(it) },
-                            onScanClick = { /* TODO: open barcode scanner */ },
+                            onScanClick = { showBarcodeScanner = true },
                         )
                     }
 
@@ -357,95 +371,49 @@ private fun ReadOnlyField(
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SUPPLIER SELECTOR
+// SUPPLIER SELECTOR — MiniPosSelectBox
 // ═══════════════════════════════════════════════════════════════
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SupplierSelector(
     suppliers: List<com.minipos.domain.model.Supplier>,
     selectedSupplierId: String?,
     onSelectSupplier: (String?) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedName = suppliers.find { it.id == selectedSupplierId }?.name
-        ?: stringResource(R.string.purchase_no_supplier)
+    val noSupplierLabel = stringResource(R.string.purchase_no_supplier)
+    val selectTitle = stringResource(R.string.purchase_supplier_label)
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-    ) {
-        // Styled like the mock's select field
-        Box(
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-                .height(48.dp)
-                .background(AppColors.InputBackground, RoundedCornerShape(MiniPosTokens.RadiusMd))
-                .border(1.dp, AppColors.BorderLight, RoundedCornerShape(MiniPosTokens.RadiusMd))
-                .clickable { expanded = true }
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = selectedName,
-                    fontSize = 14.sp,
-                    color = AppColors.TextPrimary,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f),
-                )
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            }
-        }
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(R.string.purchase_no_supplier),
-                        color = AppColors.TextSecondary,
-                    )
-                },
-                onClick = {
-                    onSelectSupplier(null)
-                    expanded = false
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Block,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = AppColors.TextTertiary,
-                    )
-                },
+    val items = buildList {
+        add(
+            SelectListItem(
+                id = "__none__",
+                name = noSupplierLabel,
+                icon = Icons.Default.Block,
+                iconTint = AppColors.TextTertiary,
             )
-            suppliers.forEach { supplier ->
-                DropdownMenuItem(
-                    text = { Text(supplier.name) },
-                    onClick = {
-                        onSelectSupplier(supplier.id)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Business,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = AppColors.Primary,
-                        )
-                    },
+        )
+        suppliers.forEach { supplier ->
+            add(
+                SelectListItem(
+                    id = supplier.id,
+                    name = supplier.name,
+                    icon = Icons.Default.Business,
+                    iconTint = AppColors.Primary,
                 )
-            }
+            )
         }
     }
+
+    MiniPosSelectBox(
+        label = "",
+        title = selectTitle,
+        items = items,
+        selectedId = selectedSupplierId ?: "__none__",
+        placeholder = noSupplierLabel,
+        onSelect = { item ->
+            onSelectSupplier(if (item.id == "__none__") null else item.id)
+        },
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════

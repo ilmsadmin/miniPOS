@@ -10,6 +10,8 @@ interface AuthRepository {
     ): Result<Store>
     suspend fun ensureDefaultStore()
     suspend fun login(userId: String, pin: String): Result<AuthSession>
+    suspend fun loginWithPassword(userId: String, password: String): Result<AuthSession>
+    suspend fun resetPinWithPassword(userId: String, password: String, newPin: String): Result<Unit>
     suspend fun autoLogin()
     suspend fun logout()
     suspend fun getCurrentSession(): AuthSession?
@@ -58,9 +60,12 @@ interface ProductRepository {
     suspend fun createVariant(variant: ProductVariant): Result<ProductVariant>
     suspend fun updateVariant(variant: ProductVariant): Result<ProductVariant>
     suspend fun deleteVariant(variantId: String): Result<Unit>
+    suspend fun deleteAllVariants(productId: String): Result<Unit>
     fun observeVariants(productId: String): Flow<List<ProductVariant>>
     suspend fun getVariants(productId: String): List<ProductVariant>
     suspend fun getVariantByBarcode(storeId: String, barcode: String): ProductVariant?
+    suspend fun getVariantCount(productId: String): Int
+    suspend fun getNextVariantSku(productId: String, baseSku: String): String
 }
 
 interface SupplierRepository {
@@ -82,12 +87,33 @@ interface CustomerRepository {
 
 interface InventoryRepository {
     suspend fun getStock(storeId: String, productId: String): InventoryItem?
-    suspend fun adjustStock(storeId: String, productId: String, amount: Double, type: StockMovementType, userId: String, referenceId: String?, supplierId: String? = null): Result<Unit>
+    suspend fun getTotalStock(storeId: String, productId: String, hasVariants: Boolean = true): Double
+    suspend fun getVariantStock(storeId: String, productId: String, variantId: String): InventoryItem?
+    /** Observe inventory changes for a store — emits a signal whenever any inventory record is updated */
+    fun observeInventoryChanges(storeId: String): Flow<Long>
+    suspend fun adjustStock(storeId: String, productId: String, amount: Double, type: StockMovementType, userId: String, referenceId: String?, supplierId: String? = null, notes: String? = null): Result<Unit>
+    suspend fun adjustVariantStock(storeId: String, productId: String, variantId: String, amount: Double, type: StockMovementType, userId: String, referenceId: String?, supplierId: String? = null): Result<Unit>
     suspend fun getLowStockCount(storeId: String): Int
     suspend fun getAllStockOverview(storeId: String): List<StockOverviewItem>
     suspend fun getStockHistory(storeId: String, startTime: Long, endTime: Long): List<StockHistoryItem>
     suspend fun getStockHistoryByProduct(storeId: String, productId: String): List<StockHistoryItem>
     suspend fun getStockSummary(storeId: String, startTime: Long, endTime: Long): StockSummary
+    /** Merge all variant-level inventory back into product-level record and delete variant records */
+    suspend fun mergeVariantStockToProduct(storeId: String, productId: String): Result<Unit>
+    /** Save a purchase order with its items */
+    suspend fun savePurchaseOrder(
+        storeId: String, code: String, supplierId: String?, supplierName: String?,
+        totalAmount: Double, totalItems: Int, notes: String?, userId: String,
+        items: List<PurchaseOrderItem>,
+    ): Result<String>
+    /** Get recent purchase orders */
+    suspend fun getRecentPurchaseOrders(storeId: String, limit: Int = 10): List<PurchaseOrder>
+    /** Get a single purchase order by id */
+    suspend fun getPurchaseOrderById(id: String): PurchaseOrder?
+    /** Get line items for a purchase order */
+    suspend fun getPurchaseOrderItems(orderId: String): List<PurchaseOrderItem>
+    /** Generate next PO code */
+    suspend fun generatePurchaseOrderCode(storeId: String): String
 }
 
 interface OrderRepository {

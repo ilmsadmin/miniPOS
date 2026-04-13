@@ -12,6 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.minipos.ui.components.ConfirmButtonStyle
+import com.minipos.ui.components.MiniPosConfirmDialog
+import com.minipos.ui.components.PopupType
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -116,7 +119,7 @@ fun CustomerFormScreen(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA)))),
+                        .background(Brush.linearGradient(listOf(Color(0xFF0E9AA0), Color(0xFF5AEDC5)))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -474,22 +477,18 @@ fun FormDeleteButton(
 ) {
     var showConfirm by remember { mutableStateOf(false) }
 
-    if (showConfirm) {
-        AlertDialog(
-            onDismissRequest = { showConfirm = false },
-            title = { Text(stringResource(R.string.confirm_delete), fontWeight = FontWeight.Bold) },
-            confirmButton = {
-                TextButton(onClick = { showConfirm = false; onClick() }) {
-                    Text(stringResource(R.string.delete), color = AppColors.Error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
+    MiniPosConfirmDialog(
+        visible = showConfirm,
+        type = PopupType.DELETE,
+        icon = Icons.Rounded.Delete,
+        title = stringResource(R.string.confirm_delete),
+        message = text,
+        cancelText = stringResource(R.string.cancel),
+        confirmText = stringResource(R.string.delete),
+        confirmStyle = ConfirmButtonStyle.DANGER,
+        onCancel = { showConfirm = false },
+        onConfirm = { showConfirm = false; onClick() },
+    )
 
     OutlinedButton(
         onClick = { showConfirm = true },

@@ -1,5 +1,6 @@
 package com.minipos.ui.report
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,11 +21,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.R
 import com.minipos.core.theme.AppColors
@@ -39,6 +45,55 @@ fun ReportScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    var infoDialogTitle by remember { mutableStateOf<String?>(null) }
+    var infoDialogMessage by remember { mutableStateOf<String?>(null) }
+
+    // Info dialog for generic messages
+    if (infoDialogTitle != null) {
+        AlertDialog(
+            onDismissRequest = { infoDialogTitle = null; infoDialogMessage = null },
+            title = { Text(infoDialogTitle ?: "") },
+            text = { Text(infoDialogMessage ?: "") },
+            confirmButton = {
+                TextButton(onClick = { infoDialogTitle = null; infoDialogMessage = null }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+        )
+    }
+
+    // Detail report dialogs
+    when (state.activeDetailReport) {
+        DetailReportType.INVENTORY -> InventoryReportDialog(
+            data = state.inventoryReport,
+            isLoading = state.isDetailLoading,
+            onDismiss = { viewModel.closeDetailReport() },
+        )
+        DetailReportType.DEBT -> DebtReportDialog(
+            data = state.debtReport,
+            isLoading = state.isDetailLoading,
+            onDismiss = { viewModel.closeDetailReport() },
+        )
+        DetailReportType.PROFIT -> ProfitReportDialog(
+            data = state.profitReport,
+            isLoading = state.isDetailLoading,
+            onDismiss = { viewModel.closeDetailReport() },
+        )
+        DetailReportType.NONE -> {}
+    }
+
+    // Export message snackbar
+    LaunchedEffect(state.exportMessage) {
+        state.exportMessage?.let { msg ->
+            val text = when (msg) {
+                "success" -> context.getString(R.string.report_export_success)
+                else -> context.getString(R.string.report_export_error)
+            }
+            snackbarHostState.showSnackbar(text)
+            viewModel.clearExportMessage()
+        }
+    }
 
     val periodLabels = listOf(
         stringResource(R.string.report_today),
@@ -74,14 +129,24 @@ fun ReportScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     items(periodLabels.size) { index ->
-                        MiniPosFilterChip(
-                            label = periodLabels[index],
-                            selected = state.selectedTab == index,
-                            onClick = {
-                                if (index < 3) viewModel.selectTab(index)
-                                // "Custom" chip: show toast/snackbar for now
-                            },
-                        )
+                        if (index < 3) {
+                            MiniPosFilterChip(
+                                label = periodLabels[index],
+                                selected = state.selectedTab == index,
+                                onClick = { viewModel.selectTab(index) },
+                            )
+                        } else {
+                            // "Custom" chip with lock icon to indicate coming soon
+                            MiniPosFilterChip(
+                                label = periodLabels[index],
+                                selected = false,
+                                icon = Icons.Rounded.Lock,
+                                onClick = {
+                                    infoDialogTitle = periodLabels[index]
+                                    infoDialogMessage = context.getString(R.string.feature_coming_soon_msg)
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -246,7 +311,7 @@ fun ReportScreen(
                         DetailReportItem(
                             icon = Icons.Rounded.Inventory,
                             label = stringResource(R.string.report_inventory),
-                            onClick = { /* TODO */ },
+                            onClick = { viewModel.openDetailReport(DetailReportType.INVENTORY) },
                         )
                     }
                     item { Spacer(Modifier.height(8.dp)) }
@@ -254,7 +319,7 @@ fun ReportScreen(
                         DetailReportItem(
                             icon = Icons.Rounded.CreditScore,
                             label = stringResource(R.string.report_debt),
-                            onClick = { /* TODO */ },
+                            onClick = { viewModel.openDetailReport(DetailReportType.DEBT) },
                         )
                     }
                     item { Spacer(Modifier.height(8.dp)) }
@@ -262,7 +327,7 @@ fun ReportScreen(
                         DetailReportItem(
                             icon = Icons.Rounded.TrendingUp,
                             label = stringResource(R.string.report_profit),
-                            onClick = { /* TODO */ },
+                            onClick = { viewModel.openDetailReport(DetailReportType.PROFIT) },
                         )
                     }
                     item { Spacer(Modifier.height(8.dp)) }
@@ -270,7 +335,7 @@ fun ReportScreen(
                         DetailReportItem(
                             icon = Icons.Rounded.Download,
                             label = stringResource(R.string.report_export_excel),
-                            onClick = { /* TODO */ },
+                            onClick = { viewModel.exportSalesReport(context) },
                         )
                     }
                 }
@@ -350,68 +415,81 @@ private fun HourlyRevenueChart(
     data: List<HourlyRevenue>,
     modifier: Modifier = Modifier,
 ) {
-    val maxVal = data.maxOfOrNull { it.amount } ?: 1.0
+    val maxVal = remember(data) { data.maxOfOrNull { it.amount }?.takeIf { it > 0 } ?: 1.0 }
+    val primaryColor = AppColors.Primary
+    val accentColor = AppColors.Accent
+    val gridColor = AppColors.BorderLight.copy(alpha = 0.4f)
 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
             .background(AppColors.Surface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl))
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
-        Box(
+        // ── Chart area: Canvas for grid + bars ──
+        Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(140.dp),
         ) {
-            // Dashed lines
-            repeat(3) { i ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = (140.dp * i) / 3)
-                        .height(1.dp)
-                        .background(AppColors.BorderLight.copy(alpha = 0.3f)),
+            val chartH = size.height
+            val chartW = size.width
+            val barCount = data.size
+            if (barCount == 0) return@Canvas
+
+            val totalGap = (barCount - 1) * 3.dp.toPx()
+            val barW = ((chartW - totalGap) / barCount).coerceAtLeast(4f)
+
+            // Draw 4 horizontal grid lines
+            val gridLines = 4
+            repeat(gridLines) { i ->
+                val y = chartH * i / (gridLines - 1)
+                drawLine(
+                    color = gridColor,
+                    start = Offset(0f, y),
+                    end = Offset(chartW, y),
+                    strokeWidth = 1.dp.toPx(),
                 )
             }
 
-            // Bars
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                data.forEachIndexed { index, item ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        val pct = if (maxVal > 0) (item.amount / maxVal).toFloat() else 0f
-                        val barHeight = (128.dp * pct).coerceAtLeast(4.dp)
+            // Draw bars
+            data.forEachIndexed { index, item ->
+                val pct = (item.amount / maxVal).toFloat().coerceIn(0f, 1f)
+                val barH = (chartH * pct).coerceAtLeast(if (item.amount > 0) 6.dp.toPx() else 0f)
+                val x = index * (barW + 3.dp.toPx())
+                val top = chartH - barH
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(barHeight)
-                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                .background(
-                                    if (index % 2 == 0) MiniPosGradients.primary()
-                                    else MiniPosGradients.accent()
-                                ),
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        // Show label every 2 hours to avoid crowding
-                        if (index % 2 == 0) {
-                            Text(
-                                item.hour,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = AppColors.TextTertiary,
-                            )
-                        }
-                    }
+                val color = if (index % 2 == 0) primaryColor else accentColor
+                drawRoundRect(
+                    color = color.copy(alpha = if (item.amount > 0) 1f else 0.15f),
+                    topLeft = Offset(x, top),
+                    size = androidx.compose.ui.geometry.Size(barW, barH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx()),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // ── X-axis labels ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            // Show only every other label to avoid crowding
+            data.forEachIndexed { index, item ->
+                if (index % 2 == 0) {
+                    Text(
+                        text = item.hour,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextTertiary,
+                        modifier = Modifier.weight(2f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                } else {
+                    Spacer(Modifier.weight(2f))
                 }
             }
         }
@@ -528,6 +606,536 @@ private fun DetailReportItem(
             contentDescription = null,
             tint = AppColors.TextTertiary,
             modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+// ═══════════════════════════════════════
+// Inventory Report Dialog
+// ═══════════════════════════════════════
+
+@Composable
+private fun InventoryReportDialog(
+    data: InventoryReportData,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+                .background(AppColors.Background)
+                .padding(20.dp),
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Inventory, null, tint = AppColors.PrimaryLight, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.report_inventory),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = AppColors.TextPrimary,
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, null, tint = AppColors.TextTertiary)
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            if (isLoading) {
+                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppColors.Primary)
+                }
+            } else {
+                // Summary KPIs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DetailKpi(
+                        label = stringResource(R.string.report_inv_total_products),
+                        value = data.summary.totalProducts.toString(),
+                        color = AppColors.Primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DetailKpi(
+                        label = stringResource(R.string.report_inv_stock_value),
+                        value = CurrencyFormatter.formatCompact(data.summary.totalStockValue),
+                        color = AppColors.Success,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DetailKpi(
+                        label = stringResource(R.string.report_inv_low_stock),
+                        value = data.summary.lowStockCount.toString(),
+                        color = AppColors.Warning,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DetailKpi(
+                        label = stringResource(R.string.report_inv_out_of_stock),
+                        value = data.summary.outOfStockCount.toString(),
+                        color = AppColors.Error,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DetailKpi(
+                        label = stringResource(R.string.report_inv_stock_in),
+                        value = data.summary.totalStockIn.toInt().toString(),
+                        color = AppColors.Success,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DetailKpi(
+                        label = stringResource(R.string.report_inv_stock_out),
+                        value = data.summary.totalStockOut.toInt().toString(),
+                        color = AppColors.Error,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                // Stock overview list
+                if (data.stockOverview.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.report_inv_stock_overview),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppColors.TextTertiary,
+                        letterSpacing = 0.8.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 260.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(data.stockOverview.take(20)) { item ->
+                            val stockColor = when {
+                                item.currentStock <= 0 -> AppColors.Error
+                                item.currentStock <= item.minStock -> AppColors.Warning
+                                else -> AppColors.TextPrimary
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                                    .background(AppColors.Surface)
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        item.productName,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        item.productSku,
+                                        fontSize = 11.sp,
+                                        color = AppColors.TextTertiary,
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        "${item.currentStock.toInt()} ${item.productUnit}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = stockColor,
+                                    )
+                                    Text(
+                                        CurrencyFormatter.formatCompact(item.stockValue),
+                                        fontSize = 11.sp,
+                                        color = AppColors.TextTertiary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════
+// Debt Report Dialog
+// ═══════════════════════════════════════
+
+@Composable
+private fun DebtReportDialog(
+    data: DebtReportData,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+                .background(AppColors.Background)
+                .padding(20.dp),
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.CreditScore, null, tint = AppColors.PrimaryLight, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.report_debt),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = AppColors.TextPrimary,
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, null, tint = AppColors.TextTertiary)
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            if (isLoading) {
+                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppColors.Primary)
+                }
+            } else {
+                // Summary
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DetailKpi(
+                        label = stringResource(R.string.report_debt_total),
+                        value = CurrencyFormatter.formatCompact(data.totalDebt),
+                        color = AppColors.Error,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DetailKpi(
+                        label = stringResource(R.string.report_debt_customer_count),
+                        value = data.customersWithDebt.size.toString(),
+                        color = AppColors.Warning,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                if (data.customersWithDebt.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Rounded.CheckCircle,
+                                null,
+                                tint = AppColors.Success,
+                                modifier = Modifier.size(40.dp),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.report_debt_no_debt),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.TextTertiary,
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 300.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(data.customersWithDebt) { customer ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                                    .background(AppColors.Surface)
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    // Avatar
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(AppColors.PrimaryLight.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            customer.initials,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = AppColors.PrimaryLight,
+                                        )
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            customer.name,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = AppColors.TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        customer.phone?.let {
+                                            Text(it, fontSize = 11.sp, color = AppColors.TextTertiary)
+                                        }
+                                    }
+                                }
+                                Text(
+                                    CurrencyFormatter.format(customer.debtAmount),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = AppColors.Error,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════
+// Profit Report Dialog
+// ═══════════════════════════════════════
+
+@Composable
+private fun ProfitReportDialog(
+    data: ProfitReportData,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+                .background(AppColors.Background)
+                .padding(20.dp),
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.TrendingUp, null, tint = AppColors.PrimaryLight, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.report_profit),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = AppColors.TextPrimary,
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, null, tint = AppColors.TextTertiary)
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            if (isLoading) {
+                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppColors.Primary)
+                }
+            } else {
+                // Summary KPIs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DetailKpi(
+                        label = stringResource(R.string.report_profit_total_revenue),
+                        value = CurrencyFormatter.formatCompact(data.totalRevenue),
+                        color = AppColors.Primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DetailKpi(
+                        label = stringResource(R.string.report_profit_total_cost),
+                        value = CurrencyFormatter.formatCompact(data.totalCost),
+                        color = AppColors.Warning,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DetailKpi(
+                        label = stringResource(R.string.report_profit_gross_profit),
+                        value = CurrencyFormatter.formatCompact(data.grossProfit),
+                        color = if (data.grossProfit >= 0) AppColors.Success else AppColors.Error,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DetailKpi(
+                        label = stringResource(R.string.report_profit_margin),
+                        value = "${data.margin.toInt()}%",
+                        color = if (data.margin >= 0) AppColors.Success else AppColors.Error,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                // Profit by product
+                if (data.productProfits.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.report_profit_by_product),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppColors.TextTertiary,
+                        letterSpacing = 0.8.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 260.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(data.productProfits.take(20)) { item ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                                    .background(AppColors.Surface)
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        item.name,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        "×${item.quantitySold} · ${item.margin.toInt()}%",
+                                        fontSize = 11.sp,
+                                        color = AppColors.TextTertiary,
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        CurrencyFormatter.formatCompact(item.profit),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (item.profit >= 0) AppColors.Success else AppColors.Error,
+                                    )
+                                    Text(
+                                        CurrencyFormatter.formatCompact(item.revenue),
+                                        fontSize = 11.sp,
+                                        color = AppColors.TextTertiary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            stringResource(R.string.report_profit_no_data),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextTertiary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════
+// Shared: Detail KPI Card
+// ═══════════════════════════════════════
+
+@Composable
+private fun DetailKpi(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .padding(12.dp),
+    ) {
+        Text(
+            value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Black,
+            color = color,
+            letterSpacing = (-0.3).sp,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = AppColors.TextTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

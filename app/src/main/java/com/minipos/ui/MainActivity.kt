@@ -1,9 +1,10 @@
 package com.minipos.ui
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.MaterialTheme
@@ -16,25 +17,38 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.minipos.core.theme.MiniPosTheme
+import com.minipos.core.theme.ThemeManager
+import com.minipos.core.theme.ThemeMode
 import com.minipos.ui.navigation.MiniPosNavGraph
 import com.minipos.ui.navigation.Screen
 import com.minipos.ui.onboarding.CreateStoreScreen
 import com.minipos.ui.onboarding.JoinStoreScreen
 import com.minipos.ui.onboarding.OnboardingScreen
+import com.minipos.ui.login.LoginScreen
 import com.minipos.ui.pinlock.PinLockScreen
 import com.minipos.ui.splash.SplashScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var themeManager: ThemeManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splash = installSplashScreen()
+        // Install system splash — exits immediately, just shows dark bg
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Keep native splash until our Compose splash is ready
-        splash.setKeepOnScreenCondition { false }
         setContent {
-            MiniPosTheme {
+            val themeMode by themeManager.themeMode.collectAsState()
+            val isDark = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            MiniPosTheme(darkTheme = isDark) {
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
@@ -92,10 +106,15 @@ fun MiniPosApp() {
         AppState.Locked -> {
             PinLockScreen(onUnlocked = { viewModel.unlock() })
         }
+        AppState.Login -> {
+            LoginScreen(onLoginSuccess = { viewModel.onLoginSuccess() })
+        }
         AppState.Home -> {
             MiniPosNavGraph(
                 navController = navController,
                 startDestination = Screen.Home.route,
+                onLogout = { viewModel.logout() },
+                onSwitchUser = { viewModel.logout() },
             )
         }
     }

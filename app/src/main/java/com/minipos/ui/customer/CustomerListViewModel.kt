@@ -75,6 +75,8 @@ class CustomerListViewModel @Inject constructor(
 
     init { loadData() }
 
+    fun refreshData() { loadData() }
+
     private fun loadData() {
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch

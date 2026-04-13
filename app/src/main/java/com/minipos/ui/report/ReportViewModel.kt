@@ -1,16 +1,29 @@
 package com.minipos.ui.report
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
+import com.minipos.domain.model.Customer
 import com.minipos.domain.model.Order
+import com.minipos.domain.model.StockOverviewItem
+import com.minipos.domain.model.StockSummary
+import com.minipos.domain.repository.CustomerRepository
+import com.minipos.domain.repository.InventoryRepository
 import com.minipos.domain.repository.OrderRepository
 import com.minipos.domain.repository.StoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileWriter
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -24,6 +37,37 @@ data class HourlyRevenue(
     val hour: String,
     val amount: Double,
 )
+
+data class ProductProfit(
+    val name: String,
+    val revenue: Double,
+    val cost: Double,
+    val profit: Double,
+    val margin: Double, // percentage
+    val quantitySold: Int,
+)
+
+data class InventoryReportData(
+    val summary: StockSummary = StockSummary(),
+    val stockOverview: List<StockOverviewItem> = emptyList(),
+)
+
+data class DebtReportData(
+    val totalDebt: Double = 0.0,
+    val customersWithDebt: List<Customer> = emptyList(),
+)
+
+data class ProfitReportData(
+    val totalRevenue: Double = 0.0,
+    val totalCost: Double = 0.0,
+    val grossProfit: Double = 0.0,
+    val margin: Double = 0.0, // percentage
+    val productProfits: List<ProductProfit> = emptyList(),
+)
+
+enum class DetailReportType {
+    NONE, INVENTORY, DEBT, PROFIT
+}
 
 data class ReportState(
     val todayRevenue: Double = 0.0,
@@ -41,12 +85,22 @@ data class ReportState(
     val recentOrders: List<Order> = emptyList(),
     val isLoading: Boolean = true,
     val selectedTab: Int = 0, // 0=today, 1=week, 2=month
+    // Detail reports
+    val activeDetailReport: DetailReportType = DetailReportType.NONE,
+    val inventoryReport: InventoryReportData = InventoryReportData(),
+    val debtReport: DebtReportData = DebtReportData(),
+    val profitReport: ProfitReportData = ProfitReportData(),
+    val isDetailLoading: Boolean = false,
+    val exportMessage: String? = null,
 )
 
 @HiltViewModel
 class ReportViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val storeRepository: StoreRepository,
     private val orderRepository: OrderRepository,
+    private val inventoryRepository: InventoryRepository,
+    private val customerRepository: CustomerRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ReportState())
@@ -133,17 +187,24 @@ class ReportViewModel @Inject constructor(
     }
 
     private suspend fun computeTopProducts(orders: List<Order>): List<TopProduct> {
-        // Aggregate items across orders
+        // Aggregate items across orders, distributing order-level discount proportionally
         val itemMap = mutableMapOf<String, Pair<String, Pair<Int, Double>>>() // productId -> (name, (qty, total))
         for (order in orders) {
             val detail = orderRepository.getOrderDetail(order.id) ?: continue
+            val itemsSubtotal = detail.items.sumOf { it.totalPrice }
+            val orderDiscount = order.discountAmount
             for (item in detail.items) {
+                // Distribute order-level discount proportionally based on item's share of subtotal
+                val itemShare = if (itemsSubtotal > 0) item.totalPrice / itemsSubtotal else 0.0
+                val itemOrderDiscount = orderDiscount * itemShare
+                val adjustedTotal = item.totalPrice - itemOrderDiscount
+
                 val existing = itemMap[item.productId]
                 if (existing != null) {
                     itemMap[item.productId] = existing.first to
-                            Pair(existing.second.first + item.quantity.toInt(), existing.second.second + item.totalPrice)
+                            Pair(existing.second.first + item.quantity.toInt(), existing.second.second + adjustedTotal)
                 } else {
-                    itemMap[item.productId] = item.productName to Pair(item.quantity.toInt(), item.totalPrice)
+                    itemMap[item.productId] = item.productName to Pair(item.quantity.toInt(), adjustedTotal)
                 }
             }
         }
@@ -172,4 +233,204 @@ class ReportViewModel @Inject constructor(
             HourlyRevenue("${h}h", hourMap[h] ?: 0.0)
         }
     }
+
+    // ─── Detail Report Methods ───
+
+    fun openDetailReport(type: DetailReportType) {
+        _state.update { it.copy(activeDetailReport = type, isDetailLoading = true) }
+        viewModelScope.launch {
+            when (type) {
+                DetailReportType.INVENTORY -> loadInventoryReport()
+                DetailReportType.DEBT -> loadDebtReport()
+                DetailReportType.PROFIT -> loadProfitReport()
+                DetailReportType.NONE -> {}
+            }
+            _state.update { it.copy(isDetailLoading = false) }
+        }
+    }
+
+    fun closeDetailReport() {
+        _state.update { it.copy(activeDetailReport = DetailReportType.NONE) }
+    }
+
+    fun clearExportMessage() {
+        _state.update { it.copy(exportMessage = null) }
+    }
+
+    private suspend fun loadInventoryReport() {
+        val store = storeRepository.getStore() ?: return
+        val storeId = store.id
+        val now = System.currentTimeMillis()
+        val startTime = DateUtils.startOfDay(now) - (30 * 24 * 60 * 60 * 1000L)
+        val endTime = DateUtils.endOfDay(now)
+
+        val summary = inventoryRepository.getStockSummary(storeId, startTime, endTime)
+        val overview = inventoryRepository.getAllStockOverview(storeId)
+            .sortedByDescending { it.stockValue }
+
+        _state.update {
+            it.copy(
+                inventoryReport = InventoryReportData(
+                    summary = summary,
+                    stockOverview = overview,
+                )
+            )
+        }
+    }
+
+    private suspend fun loadDebtReport() {
+        val store = storeRepository.getStore() ?: return
+        val storeId = store.id
+
+        // Get all customers and filter those with debt
+        val allCustomers = customerRepository.search(storeId, "")
+        val customersWithDebt = allCustomers
+            .filter { it.debtAmount > 0 }
+            .sortedByDescending { it.debtAmount }
+        val totalDebt = customersWithDebt.sumOf { it.debtAmount }
+
+        _state.update {
+            it.copy(
+                debtReport = DebtReportData(
+                    totalDebt = totalDebt,
+                    customersWithDebt = customersWithDebt,
+                )
+            )
+        }
+    }
+
+    private suspend fun loadProfitReport() {
+        storeRepository.getStore() ?: return
+
+        val orders = allOrders[_state.value.selectedTab] ?: return
+
+        // Calculate profit per product, distributing order-level discount proportionally
+        val productMap = mutableMapOf<String, ProductProfitAccum>() // productId -> accumulator
+        for (order in orders) {
+            val detail = orderRepository.getOrderDetail(order.id) ?: continue
+            val itemsSubtotal = detail.items.sumOf { it.totalPrice }
+            val orderDiscount = order.discountAmount
+            for (item in detail.items) {
+                // Distribute order-level discount proportionally based on item's share of subtotal
+                val itemShare = if (itemsSubtotal > 0) item.totalPrice / itemsSubtotal else 0.0
+                val itemOrderDiscount = orderDiscount * itemShare
+                val adjustedRevenue = item.totalPrice - itemOrderDiscount
+
+                val existing = productMap[item.productId]
+                if (existing != null) {
+                    productMap[item.productId] = existing.copy(
+                        revenue = existing.revenue + adjustedRevenue,
+                        cost = existing.cost + (item.costPrice * item.quantity),
+                        quantity = existing.quantity + item.quantity.toInt(),
+                    )
+                } else {
+                    productMap[item.productId] = ProductProfitAccum(
+                        name = item.productName,
+                        revenue = adjustedRevenue,
+                        cost = item.costPrice * item.quantity,
+                        quantity = item.quantity.toInt(),
+                    )
+                }
+            }
+        }
+
+        val productProfits = productMap.values.map { accum ->
+            val profit = accum.revenue - accum.cost
+            val margin = if (accum.revenue > 0) (profit / accum.revenue * 100) else 0.0
+            ProductProfit(
+                name = accum.name,
+                revenue = accum.revenue,
+                cost = accum.cost,
+                profit = profit,
+                margin = margin,
+                quantitySold = accum.quantity,
+            )
+        }.sortedByDescending { it.profit }
+
+        val totalRevenue = productProfits.sumOf { it.revenue }
+        val totalCost = productProfits.sumOf { it.cost }
+        val grossProfit = totalRevenue - totalCost
+        val margin = if (totalRevenue > 0) (grossProfit / totalRevenue * 100) else 0.0
+
+        _state.update {
+            it.copy(
+                profitReport = ProfitReportData(
+                    totalRevenue = totalRevenue,
+                    totalCost = totalCost,
+                    grossProfit = grossProfit,
+                    margin = margin,
+                    productProfits = productProfits,
+                )
+            )
+        }
+    }
+
+    fun exportSalesReport(context: Context) {
+        viewModelScope.launch {
+            try {
+                val store = storeRepository.getStore() ?: return@launch
+                val orders = allOrders[_state.value.selectedTab] ?: return@launch
+                val periodLabel = when (_state.value.selectedTab) {
+                    0 -> "today"
+                    1 -> "week"
+                    else -> "month"
+                }
+
+                val fileName = "minipos_sales_${periodLabel}_${DateUtils.formatOrderDate(System.currentTimeMillis())}.csv"
+                val reportsDir = File(context.cacheDir, "reports").apply { mkdirs() }
+                val file = File(reportsDir, fileName)
+
+                FileWriter(file).use { writer ->
+                    // BOM for Excel UTF-8
+                    writer.write("\uFEFF")
+                    // Header
+                    writer.write("Order Code,Date,Customer,Subtotal,Discount,Tax,Total,Status\n")
+                    for (order in orders) {
+                        writer.write(
+                            "${order.orderCode}," +
+                            "${DateUtils.formatDateTime(order.createdAt)}," +
+                            "${(order.customerName ?: "-").replace(",", " ")}," +
+                            "${order.subtotal}," +
+                            "${order.discountAmount}," +
+                            "${order.taxAmount}," +
+                            "${order.totalAmount}," +
+                            "${order.status.name}\n"
+                        )
+                    }
+                    // Summary
+                    writer.write("\n")
+                    writer.write("Total Orders,${orders.size}\n")
+                    writer.write("Total Revenue,${orders.sumOf { it.totalAmount }}\n")
+                    writer.write("Store,${store.name}\n")
+                }
+
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file,
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "Mini POS - Sales Report ($periodLabel)")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, null).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+
+                _state.update { it.copy(exportMessage = "success") }
+            } catch (e: Exception) {
+                _state.update { it.copy(exportMessage = "error") }
+            }
+        }
+    }
+
+    private data class ProductProfitAccum(
+        val name: String,
+        val revenue: Double,
+        val cost: Double,
+        val quantity: Int,
+    )
 }

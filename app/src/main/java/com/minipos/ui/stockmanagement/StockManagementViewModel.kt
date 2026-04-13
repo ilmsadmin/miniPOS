@@ -1,15 +1,28 @@
 package com.minipos.ui.stockmanagement
 
+import android.app.Application
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.R
+import com.minipos.core.utils.CurrencyFormatter
+import com.minipos.core.utils.DateUtils
+import com.minipos.data.preferences.AppPreferences
+import com.minipos.domain.model.Result
+import com.minipos.domain.model.StockMovementType
 import com.minipos.domain.model.StockOverviewItem
 import com.minipos.domain.repository.InventoryRepository
 import com.minipos.domain.repository.StoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileWriter
 import javax.inject.Inject
 
 enum class StockFilter { ALL, IN_STOCK, LOW, OUT }
@@ -22,12 +35,17 @@ data class StockManagementState(
     val activeFilter: StockFilter = StockFilter.ALL,
     val sortMode: StockSortMode = StockSortMode.NAME_ASC,
     val toastMessage: String? = null,
+    // Quick stock add
+    val quickAddItem: StockOverviewItem? = null,
+    val quickAddSaving: Boolean = false,
 )
 
 @HiltViewModel
 class StockManagementViewModel @Inject constructor(
+    private val app: Application,
     private val storeRepository: StoreRepository,
     private val inventoryRepository: InventoryRepository,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(StockManagementState())
@@ -124,4 +142,115 @@ class StockManagementViewModel @Inject constructor(
     val inStockCount: Int get() = _state.value.allItems.count { it.currentStock > it.minStock }
     val lowCount: Int get() = _state.value.allItems.count { it.currentStock in 1.0..it.minStock.toDouble() }
     val outCount: Int get() = _state.value.allItems.count { it.currentStock <= 0 }
+
+    // ── Quick Stock Add ──
+
+    fun showQuickAdd(item: StockOverviewItem) {
+        _state.update { it.copy(quickAddItem = item) }
+    }
+
+    fun dismissQuickAdd() {
+        _state.update { it.copy(quickAddItem = null) }
+    }
+
+    fun quickAddStock(quantity: Double, notes: String) {
+        val item = _state.value.quickAddItem ?: return
+        _state.update { it.copy(quickAddSaving = true) }
+        viewModelScope.launch {
+            val userId = appPreferences.currentUserId.first() ?: return@launch
+            val result = inventoryRepository.adjustStock(
+                storeId = storeId,
+                productId = item.productId,
+                amount = quantity,
+                type = StockMovementType.ADJUSTMENT_IN,
+                userId = userId,
+                referenceId = null,
+                notes = notes.ifBlank { null },
+            )
+            when (result) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            quickAddItem = null,
+                            quickAddSaving = false,
+                        )
+                    }
+                    loadData()
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(quickAddSaving = false, toastMessage = result.message) }
+                }
+            }
+        }
+    }
+
+    // ── Export Stock Report as CSV ──
+
+    fun exportStockReport(context: Context) {
+        viewModelScope.launch {
+            try {
+                val store = storeRepository.getStore() ?: return@launch
+                val items = _state.value.allItems
+                if (items.isEmpty()) return@launch
+
+                val dateStr = DateUtils.formatOrderDate(System.currentTimeMillis())
+                val fileName = "minipos_stock_report_${dateStr}.csv"
+                val reportsDir = File(context.cacheDir, "reports").apply { mkdirs() }
+                val file = File(reportsDir, fileName)
+
+                FileWriter(file).use { writer ->
+                    // BOM for Excel UTF-8
+                    writer.write("\uFEFF")
+                    // Header
+                    writer.write("Product,SKU,Unit,Current Stock,Min Stock,Cost Price,Selling Price,Stock Value,Status\n")
+                    for (item in items) {
+                        val status = when {
+                            item.currentStock <= 0 -> "OUT_OF_STOCK"
+                            item.currentStock <= item.minStock -> "LOW_STOCK"
+                            else -> "IN_STOCK"
+                        }
+                        writer.write(
+                            "${item.productName.replace(",", " ")}," +
+                            "${item.productSku}," +
+                            "${item.productUnit}," +
+                            "${item.currentStock}," +
+                            "${item.minStock}," +
+                            "${item.costPrice}," +
+                            "${item.sellingPrice}," +
+                            "${item.stockValue}," +
+                            "$status\n"
+                        )
+                    }
+                    // Summary
+                    writer.write("\n")
+                    writer.write("Total Products,${items.size}\n")
+                    writer.write("Total Stock Value,${items.sumOf { it.stockValue }}\n")
+                    writer.write("Low Stock,${items.count { it.currentStock in 1.0..it.minStock.toDouble() }}\n")
+                    writer.write("Out of Stock,${items.count { it.currentStock <= 0 }}\n")
+                    writer.write("Store,${store.name}\n")
+                    writer.write("Date,$dateStr\n")
+                }
+
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file,
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "Mini POS - Stock Report ($dateStr)")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, null).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+
+                _state.update { it.copy(toastMessage = app.getString(R.string.stock_export_success)) }
+            } catch (e: Exception) {
+                _state.update { it.copy(toastMessage = app.getString(R.string.stock_export_error)) }
+            }
+        }
+    }
 }

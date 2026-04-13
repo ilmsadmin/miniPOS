@@ -59,7 +59,6 @@ fun PosStep4Screen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
                     .height(56.dp)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -334,34 +333,29 @@ fun PosStep4Screen(
                         modifier = Modifier.size(20.dp),
                         tint = AppColors.TextTertiary,
                     )
-                    Box(
+                    OutlinedTextField(
+                        value = state.notes,
+                        onValueChange = { viewModel.updateNotes(it) },
+                        label = { Text(stringResource(R.string.notes_label)) },
+                        singleLine = true,
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
-                            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
-                            .background(AppColors.InputBackground)
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        if (state.notes.isEmpty()) {
-                            Text(
-                                stringResource(R.string.notes_label),
-                                color = AppColors.TextTertiary,
-                                fontSize = 13.sp,
-                            )
-                        }
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = state.notes,
-                            onValueChange = { viewModel.updateNotes(it) },
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = AppColors.TextPrimary,
-                                fontSize = 13.sp,
-                            ),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                            .height(52.dp),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = AppColors.TextPrimary,
+                            fontSize = 13.sp,
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AppColors.Primary,
+                            unfocusedBorderColor = AppColors.Border,
+                            focusedLabelColor = AppColors.Primary,
+                            unfocusedLabelColor = AppColors.TextTertiary,
+                            cursorColor = AppColors.Primary,
+                            focusedContainerColor = AppColors.InputBackground,
+                            unfocusedContainerColor = AppColors.InputBackground,
+                        ),
+                        shape = RoundedCornerShape(MiniPosTokens.RadiusLg),
+                    )
                 }
 
                 // Error

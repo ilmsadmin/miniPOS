@@ -59,6 +59,7 @@ import kotlin.random.Random
 fun PosStep5Screen(
     onNewOrder: () -> Unit,
     onGoHome: () -> Unit,
+    onViewOrderDetail: ((String) -> Unit)? = null,
     viewModel: PosStep5ViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -66,11 +67,16 @@ fun PosStep5Screen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // ── Auto-redirect countdown ──
-    var countdown by remember { mutableIntStateOf(5) }
+    // 15 seconds gives cashier enough time to print/share before being redirected.
+    // Pause when any dialog/overlay is active so an in-progress action never gets cut off.
+    var countdown by remember { mutableIntStateOf(15) }
     LaunchedEffect(Unit) {
         while (countdown > 0) {
             delay(1000L)
-            countdown--
+            // Only count down when no dialog is open — prevents redirect mid-action
+            if (!state.showReceiptPreview && !state.showPrinterDialog && !state.showShareOptions) {
+                countdown--
+            }
         }
         viewModel.clearCartAndNavigate(onGoHome)
     }
@@ -127,7 +133,7 @@ fun PosStep5Screen(
     val orderCode = state.orderDetail?.order?.orderCode ?: "#---"
     val totalAmount = state.orderDetail?.order?.totalAmount ?: 0.0
     val createdAt = state.orderDetail?.order?.createdAt ?: System.currentTimeMillis()
-    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy — HH:mm", Locale("vi", "VN")) }
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy — HH:mm", Locale.getDefault()) }
     val dateStr = remember(createdAt) { dateFormat.format(Date(createdAt)) }
     val amountStr = remember(totalAmount) { CurrencyFormatter.format(totalAmount) }
 
@@ -236,13 +242,18 @@ fun PosStep5Screen(
                             isLoading = state.isSharing,
                         )
 
-                        // View order detail
+                        // View order detail — navigates to full OrderDetailScreen
+                        // Falls back to receipt preview if caller hasn't wired the navigation yet
                         OrderCompleteActionButton(
                             icon = Icons.AutoMirrored.Filled.ReceiptLong,
                             text = stringResource(R.string.step5_view_order_detail),
                             onClick = {
-                                // Show receipt preview for detail view
-                                viewModel.showReceiptPreview()
+                                val orderId = state.orderDetail?.order?.id
+                                if (onViewOrderDetail != null && orderId != null) {
+                                    onViewOrderDetail(orderId)
+                                } else {
+                                    viewModel.showReceiptPreview()
+                                }
                             },
                         )
 
@@ -715,51 +726,22 @@ private fun PosStep5ShareDialog(
     onShareText: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.Share, contentDescription = null, tint = AppColors.Primary) },
-        title = { Text(stringResource(R.string.share_receipt_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.select_share_format),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clickable { onSharePdf() },
-                    shape = RoundedCornerShape(8.dp),
-                    color = AppColors.SurfaceVariant,
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = AppColors.Error, modifier = Modifier.size(28.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(stringResource(R.string.share_pdf), fontWeight = FontWeight.Medium)
-                            Text(stringResource(R.string.share_pdf_desc), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                        }
-                    }
-                }
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clickable { onShareText() },
-                    shape = RoundedCornerShape(8.dp),
-                    color = AppColors.SurfaceVariant,
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.TextSnippet, contentDescription = null, tint = AppColors.Secondary, modifier = Modifier.size(28.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(stringResource(R.string.share_text), fontWeight = FontWeight.Medium)
-                            Text(stringResource(R.string.share_text_desc), style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
-        },
+    MiniPosActionSheet(
+        visible = true,
+        title = stringResource(R.string.share_receipt_title),
+        description = stringResource(R.string.select_share_format),
+        items = listOf(
+            ActionSheetItem(
+                label = stringResource(R.string.share_pdf),
+                icon = Icons.Filled.PictureAsPdf,
+                onClick = onSharePdf,
+            ),
+            ActionSheetItem(
+                label = stringResource(R.string.share_text),
+                icon = Icons.AutoMirrored.Filled.TextSnippet,
+                onClick = onShareText,
+            ),
+        ),
+        onDismiss = onDismiss,
     )
 }

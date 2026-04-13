@@ -2,12 +2,13 @@ package com.minipos.core.receipt
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.content.FileProvider
 import com.minipos.R
 import com.minipos.domain.model.OrderDetail
 import com.minipos.domain.model.Store
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Helper to share receipts via Android share sheet.
@@ -62,9 +63,10 @@ object ReceiptShareHelper {
         asPdf: Boolean = true,
     ) {
         if (asPdf) {
-            val html = ReceiptGenerator.generateHtmlReceipt(context, store, detail)
             val fileName = "receipt_${detail.order.orderCode.replace("-", "_")}"
-            val pdfFile = ReceiptPdfGenerator.generatePdfSimple(context, html, fileName)
+            val pdfFile = withContext(Dispatchers.IO) {
+                ReceiptPdfGenerator.generatePdf(context, store, detail, fileName)
+            }
             sharePdf(context, pdfFile, detail.order.orderCode)
         } else {
             shareText(context, store, detail)

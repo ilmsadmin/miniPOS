@@ -394,6 +394,15 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteAllVariants(productId: String): Result<Unit> {
+        return try {
+            productVariantDao.softDeleteByProductId(productId, DateUtils.now())
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Error deleting all variants")
+        }
+    }
+
     override fun observeVariants(productId: String): Flow<List<ProductVariant>> =
         productVariantDao.observeByProductId(productId).map { list -> list.map { it.toDomain() } }
 
@@ -402,6 +411,14 @@ class ProductRepositoryImpl @Inject constructor(
 
     override suspend fun getVariantByBarcode(storeId: String, barcode: String): ProductVariant? =
         productVariantDao.getByBarcode(storeId, barcode)?.toDomain()
+
+    override suspend fun getVariantCount(productId: String): Int =
+        productVariantDao.getCountByProductId(productId)
+
+    override suspend fun getNextVariantSku(productId: String, baseSku: String): String {
+        val maxSuffix = productVariantDao.getMaxSkuSuffix(productId, baseSku) ?: 0
+        return "$baseSku-${maxSuffix + 1}"
+    }
 }
 
 // ============ Supplier Repository ============
@@ -570,7 +587,12 @@ class OrderRepositoryImpl @Inject constructor(
             // Validate stock availability before creating order
             for (item in cart.items) {
                 if (item.product.trackInventory) {
-                    val inv = inventoryDao.getByProduct(storeId, item.product.id)
+                    val inv = if (item.variant != null) {
+                        inventoryDao.getByVariant(storeId, item.product.id, item.variant.id)
+                            ?: inventoryDao.getByProduct(storeId, item.product.id)
+                    } else {
+                        inventoryDao.getByProduct(storeId, item.product.id)
+                    }
                     val available = inv?.quantity ?: 0.0
                     if (item.quantity > available) {
                         return Result.Error(
@@ -655,7 +677,13 @@ class OrderRepositoryImpl @Inject constructor(
             // Update inventory for each item
             for (item in cart.items) {
                 if (item.product.trackInventory) {
-                    val inv = inventoryDao.getByProduct(storeId, item.product.id)
+                    // Try variant-level first, fallback to product-level
+                    val inv = if (item.variant != null) {
+                        inventoryDao.getByVariant(storeId, item.product.id, item.variant.id)
+                            ?: inventoryDao.getByProduct(storeId, item.product.id)
+                    } else {
+                        inventoryDao.getByProduct(storeId, item.product.id)
+                    }
                     if (inv != null) {
                         val quantityBefore = inv.quantity
                         inventoryDao.adjustQuantity(inv.id, -item.quantity, now)
@@ -759,6 +787,7 @@ class InventoryRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val inventoryDao: InventoryDao,
     private val orderDao: OrderDao,
+    private val purchaseOrderDao: PurchaseOrderDao,
     private val prefs: AppPreferences,
 ) : InventoryRepository {
 
@@ -768,14 +797,51 @@ class InventoryRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getTotalStock(storeId: String, productId: String, hasVariants: Boolean): Double {
+        return if (hasVariants) {
+            inventoryDao.getTotalStockForProduct(storeId, productId)
+        } else {
+            inventoryDao.getProductLevelStock(storeId, productId)
+        }
+    }
+
+    override suspend fun getVariantStock(storeId: String, productId: String, variantId: String): InventoryItem? {
+        return inventoryDao.getByVariant(storeId, productId, variantId)?.let {
+            InventoryItem(it.id, it.storeId, it.productId, it.variantId, it.quantity, it.reservedQty)
+        }
+    }
+
+    override fun observeInventoryChanges(storeId: String): Flow<Long> {
+        return inventoryDao.observeAllInventory(storeId).map { list ->
+            // Emit the max updatedAt as a change signal; any inventory row change triggers re-emission
+            list.maxOfOrNull { it.updatedAt } ?: 0L
+        }
+    }
+
     override suspend fun adjustStock(
         storeId: String, productId: String, amount: Double,
-        type: StockMovementType, userId: String, referenceId: String?, supplierId: String?
+        type: StockMovementType, userId: String, referenceId: String?, supplierId: String?,
+        notes: String?
     ): Result<Unit> {
         return try {
             val now = DateUtils.now()
+            val deviceId = prefs.getDeviceIdSync()
+            // Find or create product-level inventory record
             val inv = inventoryDao.getByProduct(storeId, productId)
-                ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_inventory_not_found))
+                ?: run {
+                    val newInv = InventoryEntity(
+                        id = UuidGenerator.generate(),
+                        storeId = storeId,
+                        productId = productId,
+                        variantId = null,
+                        quantity = 0.0,
+                        createdAt = now,
+                        updatedAt = now,
+                        deviceId = deviceId,
+                    )
+                    inventoryDao.insert(newInv)
+                    newInv
+                }
             val before = inv.quantity
             inventoryDao.adjustQuantity(inv.id, amount, now)
             orderDao.insertStockMovement(
@@ -789,10 +855,60 @@ class InventoryRepositoryImpl @Inject constructor(
                     quantityBefore = before,
                     quantityAfter = before + amount,
                     referenceId = referenceId,
+                    notes = notes,
                     createdBy = userId,
                     createdAt = now,
                     updatedAt = now,
-                    deviceId = prefs.getDeviceIdSync(),
+                    deviceId = deviceId,
+                )
+            )
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_adjust_inventory))
+        }
+    }
+
+    override suspend fun adjustVariantStock(
+        storeId: String, productId: String, variantId: String, amount: Double,
+        type: StockMovementType, userId: String, referenceId: String?, supplierId: String?
+    ): Result<Unit> {
+        return try {
+            val now = DateUtils.now()
+            val deviceId = prefs.getDeviceIdSync()
+            // Find or create variant-level inventory record
+            val inv = inventoryDao.getByVariant(storeId, productId, variantId)
+                ?: run {
+                    val newInv = InventoryEntity(
+                        id = UuidGenerator.generate(),
+                        storeId = storeId,
+                        productId = productId,
+                        variantId = variantId,
+                        quantity = 0.0,
+                        createdAt = now,
+                        updatedAt = now,
+                        deviceId = deviceId,
+                    )
+                    inventoryDao.insert(newInv)
+                    newInv
+                }
+            val before = inv.quantity
+            inventoryDao.adjustQuantity(inv.id, amount, now)
+            orderDao.insertStockMovement(
+                StockMovementEntity(
+                    id = UuidGenerator.generate(),
+                    storeId = storeId,
+                    productId = productId,
+                    variantId = variantId,
+                    supplierId = supplierId,
+                    type = type.name.lowercase(),
+                    quantity = amount,
+                    quantityBefore = before,
+                    quantityAfter = before + amount,
+                    referenceId = referenceId,
+                    createdBy = userId,
+                    createdAt = now,
+                    updatedAt = now,
+                    deviceId = deviceId,
                 )
             )
             Result.Success(Unit)
@@ -843,6 +959,151 @@ class InventoryRepositoryImpl @Inject constructor(
             totalStockIn = totalStockIn,
             totalStockOut = totalStockOut,
         )
+    }
+
+    override suspend fun mergeVariantStockToProduct(storeId: String, productId: String): Result<Unit> {
+        return try {
+            val now = DateUtils.now()
+            val deviceId = prefs.getDeviceIdSync()
+            // Sum all variant-level stock
+            val variantStockTotal = inventoryDao.getVariantStockSum(storeId, productId)
+            // Get or create product-level record
+            val productInv = inventoryDao.getByProduct(storeId, productId)
+            if (productInv != null) {
+                // Add variant stock to product-level
+                inventoryDao.adjustQuantity(productInv.id, variantStockTotal, now)
+            } else if (variantStockTotal > 0) {
+                inventoryDao.insert(
+                    InventoryEntity(
+                        id = UuidGenerator.generate(),
+                        storeId = storeId,
+                        productId = productId,
+                        variantId = null,
+                        quantity = variantStockTotal,
+                        createdAt = now,
+                        updatedAt = now,
+                        deviceId = deviceId,
+                    )
+                )
+            }
+            // Delete all variant inventory records
+            inventoryDao.deleteVariantInventory(storeId, productId)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Error merging variant stock")
+        }
+    }
+
+    override suspend fun savePurchaseOrder(
+        storeId: String, code: String, supplierId: String?, supplierName: String?,
+        totalAmount: Double, totalItems: Int, notes: String?, userId: String,
+        items: List<PurchaseOrderItem>,
+    ): Result<String> {
+        return try {
+            val now = DateUtils.now()
+            val deviceId = prefs.getDeviceIdSync()
+            val poId = UuidGenerator.generate()
+
+            val entity = PurchaseOrderEntity(
+                id = poId,
+                storeId = storeId,
+                code = code,
+                supplierId = supplierId,
+                supplierName = supplierName,
+                totalAmount = totalAmount,
+                totalItems = totalItems,
+                notes = notes,
+                status = "confirmed",
+                createdBy = userId,
+                confirmedAt = now,
+                createdAt = now,
+                updatedAt = now,
+                deviceId = deviceId,
+            )
+            purchaseOrderDao.insert(entity)
+
+            val itemEntities = items.map { item ->
+                PurchaseOrderItemEntity(
+                    id = item.id,
+                    purchaseOrderId = poId,
+                    productId = item.productId,
+                    variantId = item.variantId,
+                    productName = item.productName,
+                    variantName = item.variantName,
+                    quantity = item.quantity,
+                    unitCost = item.unitCost,
+                    totalCost = item.totalCost,
+                    createdAt = now,
+                    updatedAt = now,
+                    deviceId = deviceId,
+                )
+            }
+            purchaseOrderDao.insertItems(itemEntities)
+
+            Result.Success(poId)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: "Error saving purchase order")
+        }
+    }
+
+    override suspend fun getRecentPurchaseOrders(storeId: String, limit: Int): List<PurchaseOrder> {
+        return purchaseOrderDao.getRecent(storeId, limit).map { entity ->
+            PurchaseOrder(
+                id = entity.id,
+                storeId = entity.storeId,
+                code = entity.code,
+                supplierId = entity.supplierId,
+                supplierName = entity.supplierName,
+                totalAmount = entity.totalAmount,
+                totalItems = entity.totalItems,
+                notes = entity.notes,
+                status = entity.status,
+                createdBy = entity.createdBy,
+                confirmedAt = entity.confirmedAt,
+                createdAt = entity.createdAt,
+            )
+        }
+    }
+
+    override suspend fun getPurchaseOrderById(id: String): PurchaseOrder? {
+        return purchaseOrderDao.getById(id)?.let { entity ->
+            PurchaseOrder(
+                id = entity.id,
+                storeId = entity.storeId,
+                code = entity.code,
+                supplierId = entity.supplierId,
+                supplierName = entity.supplierName,
+                totalAmount = entity.totalAmount,
+                totalItems = entity.totalItems,
+                notes = entity.notes,
+                status = entity.status,
+                createdBy = entity.createdBy,
+                confirmedAt = entity.confirmedAt,
+                createdAt = entity.createdAt,
+            )
+        }
+    }
+
+    override suspend fun getPurchaseOrderItems(orderId: String): List<PurchaseOrderItem> {
+        return purchaseOrderDao.getItemsByOrderId(orderId).map { entity ->
+            PurchaseOrderItem(
+                id = entity.id,
+                purchaseOrderId = entity.purchaseOrderId,
+                productId = entity.productId,
+                variantId = entity.variantId,
+                productName = entity.productName,
+                variantName = entity.variantName,
+                quantity = entity.quantity,
+                unitCost = entity.unitCost,
+                totalCost = entity.totalCost,
+            )
+        }
+    }
+
+    override suspend fun generatePurchaseOrderCode(storeId: String): String {
+        val prefix = "PO-"
+        val maxSeq = purchaseOrderDao.getMaxSequence(storeId, prefix)
+        return "$prefix${String.format("%04d", maxSeq + 1)}"
     }
 
     private fun com.minipos.data.database.dao.StockMovementWithProduct.toHistoryItem() = StockHistoryItem(

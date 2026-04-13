@@ -20,6 +20,7 @@ import com.minipos.ui.order.OrderDetailScreen
 import com.minipos.ui.inventory.InventoryScreen
 import com.minipos.ui.inventory.InventoryHubScreen
 import com.minipos.ui.purchase.PurchaseScreen
+import com.minipos.ui.purchase.PurchaseOrderDetailScreen
 import com.minipos.ui.report.ReportScreen
 import com.minipos.ui.settings.SettingsScreen
 import com.minipos.ui.barcode.BarcodeScreen
@@ -27,11 +28,14 @@ import com.minipos.ui.scan.ScanToPosScreen
 import com.minipos.ui.home.StoreManagementScreen
 import com.minipos.ui.stockmanagement.StockManagementScreen
 import com.minipos.ui.stockaudit.StockAuditScreen
+import com.minipos.ui.sync.WifiSyncScreen
 
 @Composable
 fun MiniPosNavGraph(
     navController: NavHostController,
     startDestination: String,
+    onLogout: () -> Unit = {},
+    onSwitchUser: () -> Unit = {},
 ) {
     NavHost(
         navController = navController,
@@ -40,6 +44,8 @@ fun MiniPosNavGraph(
         composable(Screen.Home.route) {
             HomeScreen(
                 onNavigate = { route -> navController.navigate(route) },
+                onLogout = onLogout,
+                onSwitchUser = onSwitchUser,
             )
         }
 
@@ -62,6 +68,9 @@ fun MiniPosNavGraph(
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 },
+                onViewOrderDetail = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                },
             )
         }
 
@@ -71,6 +80,9 @@ fun MiniPosNavGraph(
                 onBack = { navController.popBackStack() },
                 onNavigateToForm = { productId ->
                     navController.navigate(Screen.ProductForm.createRoute(productId))
+                },
+                onNavigateToStockManagement = {
+                    navController.navigate(Screen.StockManagement.route)
                 },
             )
         }
@@ -206,6 +218,11 @@ fun MiniPosNavGraph(
                 onEdit = { id ->
                     navController.navigate(Screen.CustomerForm.createRoute(id))
                 },
+                onNavigateToPos = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
             )
         }
 
@@ -231,6 +248,9 @@ fun MiniPosNavGraph(
             InventoryHubScreen(
                 onBack = { navController.popBackStack() },
                 onNavigate = { route -> navController.navigate(route) },
+                onOpenPurchaseDetail = { id ->
+                    navController.navigate(Screen.PurchaseOrderDetail.createRoute(id))
+                },
             )
         }
 
@@ -247,6 +267,15 @@ fun MiniPosNavGraph(
             )
         }
 
+        composable(
+            route = Screen.PurchaseOrderDetail.route,
+            arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.StringType }),
+        ) {
+            PurchaseOrderDetailScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         // Reports
         composable(Screen.Reports.route) {
             ReportScreen(
@@ -259,6 +288,7 @@ fun MiniPosNavGraph(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToStoreSettings = { navController.navigate(Screen.StoreSettings.route) },
+                onNavigateToWifiSync = { navController.navigate(Screen.WifiSync.route) },
             )
         }
 
@@ -310,6 +340,13 @@ fun MiniPosNavGraph(
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 },
+            )
+        }
+
+        // Wi-Fi Sync
+        composable(Screen.WifiSync.route) {
+            WifiSyncScreen(
+                onBack = { navController.popBackStack() },
             )
         }
     }

@@ -120,7 +120,7 @@ class ScanToPosViewModel @Inject constructor(
             }
         } else {
             val stock = if (product.trackInventory) {
-                inventoryRepository.getStock(storeId, product.id)?.quantity ?: 0.0
+                inventoryRepository.getTotalStock(storeId, product.id, product.hasVariants)
             } else {
                 Double.MAX_VALUE
             }

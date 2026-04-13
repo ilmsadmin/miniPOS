@@ -116,6 +116,7 @@
     }
     .st.low { background:var(--warning-soft); color:var(--warning); }
     .st.out { background:var(--error-soft); color:var(--error); }
+    .st.stock { background:rgba(0,0,0,0.55); color:#fff; }
 
     .pbody { padding:var(--sp-8) var(--sp-8) var(--sp-12); }
     .pname {
@@ -128,6 +129,9 @@
       font-size:14px; font-weight:800; margin-top:var(--sp-4);
       background:var(--grad-price);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .pstock {
+      font-size:10px; font-weight:600; color:var(--text-3); margin-top:2px;
     }
 
     /* ═══ CART BAR ═══ */
@@ -436,8 +440,9 @@
             ${qty?`<div class="qb">${qty}</div>`:''}
             ${out?'<span class="st out">Hết hàng</span>':''}
             ${low?`<span class="st low">Còn ${p.s}</span>`:''}
+            ${!out&&!low?`<span class="st stock">Tồn: ${p.s}</span>`:''}
           </div>
-          <div class="pbody"><div class="pname">${p.n}</div><div class="pprice">${fmt(p.p)}</div></div>
+          <div class="pbody"><div class="pname">${p.n}</div><div class="pprice">${fmt(p.p)}</div><div class="pstock">${out?'Hết hàng':`Tồn: ${p.s}`}</div></div>
         </div>`;
       }).join('');
     }

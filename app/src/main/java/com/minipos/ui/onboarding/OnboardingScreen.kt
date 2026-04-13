@@ -1,10 +1,7 @@
 package com.minipos.ui.onboarding
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -212,11 +210,19 @@ fun OnboardingScreen(
             }
 
             // ═══ Swipe hint (only on first page) ═══
-            AnimatedVisibility(
-                visible = pagerState.currentPage == 0,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+            // Use a fixed-height Box with alpha animation instead of AnimatedVisibility
+            // to avoid layout shift that causes the illustration to jump when hint disappears
+            val swipeHintAlpha by animateFloatAsState(
+                targetValue = if (pagerState.currentPage == 0) 1f else 0f,
+                animationSpec = tween(300),
+                label = "swipeHintAlpha",
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .graphicsLayer { alpha = swipeHintAlpha },
+                contentAlignment = Alignment.Center,
             ) {
                 SwipeHint()
             }

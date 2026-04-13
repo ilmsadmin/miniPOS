@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class AppState {
-    Splash, Onboarding, Locked, Home
+    Splash, Onboarding, Locked, Login, Home
 }
 
 @HiltViewModel
@@ -54,11 +54,15 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun determineHomeOrLock(): AppState {
-        val userId = appPreferences.getCurrentUserIdSync()
-        return if (userId != null && userRepository.hasPin(userId)) {
-            AppState.Locked
-        } else {
-            AppState.Home
+        val isLoggedIn = appPreferences.isLoggedInSync()
+        if (!isLoggedIn) {
+            // User chưa đăng nhập trong session trước → luôn show màn hình chọn user
+            return AppState.Login
+        }
+        val userId = appPreferences.getCurrentUserIdSync() ?: return AppState.Login
+        return when {
+            userRepository.hasPin(userId) -> AppState.Locked
+            else -> AppState.Home
         }
     }
 
@@ -77,12 +81,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             appPreferences.setOnboarded(true)
             authRepository.ensureDefaultStore()
-            val userId = appPreferences.getCurrentUserIdSync()
-            _appState.value = if (userId != null && userRepository.hasPin(userId)) {
-                AppState.Locked
-            } else {
-                AppState.Home
-            }
+            // createStore() đã set isLoggedIn = true → dùng determineHomeOrLock
+            _appState.value = determineHomeOrLock()
         }
     }
 
@@ -92,5 +92,20 @@ class MainViewModel @Inject constructor(
 
     fun lock() {
         _appState.value = AppState.Locked
+    }
+
+    /** Called after user explicitly logs out — show user-selection Login screen */
+    fun logout() {
+        viewModelScope.launch {
+            authRepository.logout()
+            _appState.value = AppState.Login
+        }
+    }
+
+    /** Called by LoginScreen when a user has successfully authenticated */
+    fun onLoginSuccess() {
+        // Login thành công → đi thẳng vào Home (không qua Locked)
+        // Locked chỉ xuất hiện khi app đang chạy bị đưa background rồi quay lại
+        _appState.value = AppState.Home
     }
 }

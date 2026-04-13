@@ -4,13 +4,9 @@ sealed class Screen(val route: String) {
     object Onboarding : Screen("onboarding")
     object CreateStore : Screen("create_store")
     object JoinStore : Screen("join_store")
-    object Login : Screen("login")
     object Home : Screen("home")
 
-    // POS Flow
-    object PosStep1 : Screen("pos/step1")
-    object PosStep2 : Screen("pos/step2")
-    object PosStep3 : Screen("pos/step3")
+    // POS Flow — Step 1-3 merged into HomeScreen; only Payment & Complete remain
     object PosStep4 : Screen("pos/step4")
     object PosStep5 : Screen("pos/step5")
 
@@ -44,6 +40,9 @@ sealed class Screen(val route: String) {
     object InventoryHub : Screen("inventory_hub")
     object InventoryOverview : Screen("inventory")
     object PurchaseOrder : Screen("inventory/purchase")
+    object PurchaseOrderDetail : Screen("inventory/purchase/{id}") {
+        fun createRoute(id: String) = "inventory/purchase/$id"
+    }
 
     // Orders
     object OrderList : Screen("orders")
@@ -57,7 +56,6 @@ sealed class Screen(val route: String) {
     // Settings
     object Settings : Screen("settings")
     object StoreSettings : Screen("settings/store")
-    object UserManagement : Screen("settings/users")
 
     // Barcode
     object BarcodeManagement : Screen("barcode")
@@ -73,4 +71,10 @@ sealed class Screen(val route: String) {
 
     // Scan to POS
     object ScanToPos : Screen("scan_to_pos")
+
+    // Login / Switch User
+    object Login : Screen("login")
+
+    // Wi-Fi Sync
+    object WifiSync : Screen("wifi_sync")
 }

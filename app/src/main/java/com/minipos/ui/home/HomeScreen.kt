@@ -3,6 +3,7 @@ package com.minipos.ui.home
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,8 +30,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,29 +50,36 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.minipos.R
 import com.minipos.core.theme.AppColors
+import com.minipos.core.theme.AppLanguage
+import com.minipos.core.theme.ThemeMode
 import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.CartItem
 import com.minipos.domain.model.Customer
 import com.minipos.domain.model.Discount
 import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
+import com.minipos.domain.model.UserRole
 import com.minipos.ui.components.*
 import com.minipos.ui.navigation.Screen
 import com.minipos.ui.pos.PosStep1ViewModel
 import com.minipos.ui.scanner.BarcodeScannerScreen
 import com.minipos.ui.scanner.ImageViewerScreen
+import com.minipos.ui.settings.ChangePinBottomSheet
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigate: (String) -> Unit,
+    onLogout: () -> Unit = {},
+    onSwitchUser: () -> Unit = {},
     homeViewModel: HomeViewModel = hiltViewModel(),
     posViewModel: PosStep1ViewModel = hiltViewModel(),
 ) {
     val homeState by homeViewModel.state.collectAsState()
     val posState by posViewModel.state.collectAsState()
     val cart by posViewModel.cartHolder.cart.collectAsState()
+    val stockVersion by posViewModel.cartHolder.stockVersion.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
@@ -79,8 +89,95 @@ fun HomeScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showCartSheet by remember { mutableStateOf(false) }
 
+    // Profile sheet state
+    var showProfileSheet by remember { mutableStateOf(false) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
+
+    // Logout confirm dialog
+    if (showLogoutConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            icon = { Icon(Icons.Rounded.Logout, contentDescription = null, tint = AppColors.Error) },
+            title = { Text(stringResource(R.string.logout_title)) },
+            text = { Text(stringResource(R.string.logout_confirm_msg)) },
+            confirmButton = {
+                TextButton(onClick = { showLogoutConfirm = false; onLogout() }) {
+                    Text(stringResource(R.string.logout_btn), color = AppColors.Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            containerColor = AppColors.Surface,
+        )
+    }
+
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        homeViewModel.refreshCurrentUser()
         homeViewModel.refreshDashboard()
+        posViewModel.refreshStock()
+    }
+
+    // Profile sheet
+    if (showProfileSheet) {
+        HomeProfileSheet(
+            userName = homeState.userName,
+            userRole = homeState.userRole,
+            store = homeState.store,
+            currentUserHasPin = homeState.currentUserHasPin,
+            isDark = run {
+                val mode by homeViewModel.themeManager.themeMode.collectAsState()
+                val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                when (mode) {
+                    ThemeMode.SYSTEM -> isSystemDark
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                }
+            },
+            onToggleDarkMode = {
+                val current = homeViewModel.themeManager.themeMode.value
+                val isSystemDark = false // resolved above — flip current effective state
+                val effectiveDark = when (current) {
+                    ThemeMode.SYSTEM -> false // toggling from system = go to explicit
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                }
+                homeViewModel.themeManager.setThemeMode(
+                    if (effectiveDark) ThemeMode.LIGHT else ThemeMode.DARK
+                )
+            },
+            onChangePinClick = {
+                showProfileSheet = false
+                homeViewModel.showChangePinSheet()
+            },
+            onNavigateToSettings = {
+                showProfileSheet = false
+                onNavigate(Screen.Settings.route)
+            },
+            onSwitchUser = {
+                showProfileSheet = false
+                onSwitchUser()
+            },
+            onLogout = {
+                showProfileSheet = false
+                showLogoutConfirm = true
+            },
+            onDismiss = { showProfileSheet = false },
+        )
+    }
+
+    // Change PIN sheet (triggered from Profile Sheet)
+    if (homeState.showChangePinSheet) {
+        ChangePinBottomSheet(
+            hasExistingPin = homeState.currentUserHasPin,
+            pinVerified = homeState.pinVerified,
+            pinVerifyError = homeState.pinVerifyError,
+            onVerifyPin = { homeViewModel.verifyCurrentPin(it) },
+            onSaveNewPin = { homeViewModel.saveNewPin(it) },
+            onDismiss = { homeViewModel.dismissChangePinSheet() },
+        )
     }
 
     // Barcode scanner overlay
@@ -96,9 +193,13 @@ fun HomeScreen(
     // Variant picker dialog
     if (posState.showVariantPicker && posState.variantPickerProduct != null) {
         val pickerProduct = posState.variantPickerProduct!!
+        val pickerStock = posViewModel.cartHolder.getAvailableStock(pickerProduct.id)
         HomeVariantPickerDialog(
             product = pickerProduct,
             variants = posState.variantPickerVariants,
+            availableStock = pickerStock,
+            variantStockMap = posState.variantStockMap,
+            isSharedStock = posState.isSharedStock,
             onSelectVariant = { variant -> posViewModel.addVariantToCart(pickerProduct, variant) },
             onDismiss = { posViewModel.dismissVariantPicker() },
         )
@@ -158,12 +259,16 @@ fun HomeScreen(
         containerColor = AppColors.Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
+            val cartEmptyHint = stringResource(R.string.toast_cart_empty_hint)
             HomeBottomNav(
                 onNavigate = onNavigate,
                 onPosClick = {
-                    // Home IS the POS screen — open the cart sheet if there are items
                     if (!cart.isEmpty()) {
                         showCartSheet = true
+                    } else {
+                        // Provide feedback so the user knows what to do
+                        toastMessage = cartEmptyHint
+                        showToast = true
                     }
                 },
             )
@@ -176,14 +281,29 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // ── Header ──
+                val currentThemeMode by homeViewModel.themeManager.themeMode.collectAsState()
+                val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val isDark = when (currentThemeMode) {
+                    com.minipos.core.theme.ThemeMode.SYSTEM -> isSystemDark
+                    com.minipos.core.theme.ThemeMode.LIGHT -> false
+                    com.minipos.core.theme.ThemeMode.DARK -> true
+                }
                 HomeHeader(
                     storeName = homeState.storeName.ifEmpty { "Mini POS" },
                     userName = homeState.userName,
+                    todayOrders = homeState.todayOrders,
+                    isDarkMode = isDark,
                     searchQuery = posState.searchQuery,
                     onSearch = { posViewModel.search(it) },
                     onScanBarcode = { posViewModel.showBarcodeScanner() },
-                    onSettingsClick = { onNavigate(Screen.Settings.route) },
+                    onAvatarClick = { showProfileSheet = true },
                     onOrdersClick = { onNavigate(Screen.OrderList.route) },
+                    onDarkModeClick = {
+                        homeViewModel.themeManager.setThemeMode(
+                            if (isDark) com.minipos.core.theme.ThemeMode.LIGHT
+                            else com.minipos.core.theme.ThemeMode.DARK,
+                        )
+                    },
                 )
 
                 // ── Category Chips ──
@@ -201,15 +321,35 @@ fun HomeScreen(
                     }
                     items(posState.categories) { category ->
                         HomeChip(
-                            label = "${category.icon ?: ""} ${category.name}",
+                            label = category.name,
                             selected = posState.selectedCategory?.id == category.id,
                             onClick = { posViewModel.selectCategory(category) },
+                            icon = categoryIconFromName(category.icon),
                         )
                     }
                 }
 
                 // ── Product Grid ──
-                if (posState.products.isEmpty()) {
+                if (posState.allProducts.isEmpty() && homeState.setupGuideVisible) {
+                    // ── Setup Guide (first-time empty state) ──
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        SetupGuideCard(
+                            categoryCount = homeState.setupCategoryCount,
+                            productCount = homeState.setupProductCount,
+                            supplierCount = homeState.setupSupplierCount,
+                            orderCount = homeState.setupOrderCount,
+                            onNavigateCategory = { onNavigate(Screen.CategoryForm.createRoute()) },
+                            onNavigateProduct = { onNavigate(Screen.ProductForm.createRoute()) },
+                            onNavigateSupplier = { onNavigate(Screen.SupplierForm.createRoute()) },
+                            onDismiss = { homeViewModel.dismissSetupGuide() },
+                        )
+                    }
+                } else if (posState.products.isEmpty()) {
                     Box(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         contentAlignment = Alignment.Center,
@@ -251,7 +391,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(posState.products) { product ->
+                        items(posState.products, key = { "${it.id}_$stockVersion" }) { product ->
                             val qty = cart.items
                                 .filter { it.product.id == product.id }
                                 .sumOf { it.quantity }
@@ -280,7 +420,7 @@ fun HomeScreen(
                     .padding(top = 8.dp),
             ) {
                 MiniPosToast(
-                    message = toastMessage ?: "Đã thêm",
+                    message = toastMessage ?: stringResource(R.string.toast_added),
                     visible = showToast,
                     onDismiss = { showToast = false },
                 )
@@ -316,11 +456,14 @@ fun HomeScreen(
 private fun HomeHeader(
     storeName: String,
     userName: String,
+    todayOrders: Int = 0,
+    isDarkMode: Boolean = false,
     searchQuery: String,
     onSearch: (String) -> Unit,
     onScanBarcode: () -> Unit,
-    onSettingsClick: () -> Unit,
+    onAvatarClick: () -> Unit,
     onOrdersClick: () -> Unit,
+    onDarkModeClick: () -> Unit = {},
 ) {
     // Gradient brush for brand text
     val brandTextGradient = Brush.linearGradient(
@@ -342,8 +485,12 @@ private fun HomeHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             // Brand icon + name
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Brand icon — gradient circle with shadow
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                // Brand icon — logo with shadow
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -353,26 +500,20 @@ private fun HomeHeader(
                             ambientColor = AppColors.BrandNavy.copy(alpha = 0.4f),
                             spotColor = AppColors.BrandNavy.copy(alpha = 0.4f),
                         )
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(AppColors.BrandNavy, AppColors.BrandBlue, AppColors.BrandBlueLight),
-                            ),
-                        ),
+                        .clip(CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        Icons.Rounded.ShoppingCart,
+                    Image(
+                        painter = painterResource(R.drawable.app_logo_circle),
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(36.dp),
                     )
                 }
                 // Brand text — gradient fill matching .brand-text CSS
                 Text(
                     text = storeName,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     style = androidx.compose.ui.text.TextStyle(
                         brush = brandTextGradient,
                         fontSize = 20.sp,
@@ -388,12 +529,12 @@ private fun HomeHeader(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .clickable(onClick = {}),
+                        .clickable(onClick = onDarkModeClick),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        Icons.Rounded.DarkMode,
-                        contentDescription = "Toggle theme",
+                        if (isDarkMode) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                        contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
                         tint = AppColors.TextSecondary,
                         modifier = Modifier.size(18.dp),
                     )
@@ -412,30 +553,32 @@ private fun HomeHeader(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            Icons.Rounded.Notifications,
-                            contentDescription = null,
+                            Icons.Rounded.Receipt,
+                            contentDescription = "Today's orders",
                             tint = AppColors.TextSecondary,
                             modifier = Modifier.size(20.dp),
                         )
                     }
-                    // Red badge — top-right, fixed circle
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 4.dp, y = (-2).dp)
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.Error)
-                            .border(1.5.dp, AppColors.Background, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "3",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            lineHeight = 9.sp,
-                        )
+                    // Red badge — top-right, fixed circle (show today's order count)
+                    if (todayOrders > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 4.dp, y = (-2).dp)
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.Error)
+                                .border(1.5.dp, AppColors.Background, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                if (todayOrders > 99) "99+" else todayOrders.toString(),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White,
+                                lineHeight = 9.sp,
+                            )
+                        }
                     }
                 }
 
@@ -449,7 +592,7 @@ private fun HomeHeader(
                         .background(
                             Brush.linearGradient(listOf(AppColors.Accent, AppColors.Primary)),
                         )
-                        .clickable(onClick = onSettingsClick),
+                        .clickable(onClick = onAvatarClick),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -536,7 +679,7 @@ private fun HomeHeader(
 // Category Chip
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun HomeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun HomeChip(label: String, selected: Boolean, onClick: () -> Unit, icon: ImageVector? = null) {
     val bgColor by animateColorAsState(if (selected) AppColors.Primary else Color.Transparent, tween(150), label = "bg")
     val textColor by animateColorAsState(if (selected) Color.White else AppColors.TextSecondary, tween(150), label = "text")
     val borderColor by animateColorAsState(if (selected) AppColors.Primary else AppColors.BorderLight, tween(150), label = "border")
@@ -554,6 +697,9 @@ private fun HomeChip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         if (selected) {
             Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+        } else if (icon != null) {
+            Icon(icon, null, tint = textColor, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
         }
         Text(label, color = textColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -655,26 +801,34 @@ private fun HomeProductCard(
                     }
                 }
 
-                // Stock badge — top right
+                // Stock badge — top right (always show for tracked products)
                 if (product.trackInventory) {
-                    when {
-                        isOutOfStock -> Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(5.dp)
-                                .background(AppColors.Error.copy(alpha = 0.88f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 2.dp),
-                        ) { Text("Hết hàng", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
-
-                        isLowStock -> Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(5.dp)
-                                .background(AppColors.WarningSoft, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 2.dp),
-                        ) { Text("Còn ${availableStock?.toInt()}", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = AppColors.Warning) }
-
-                        else -> {}
+                    val stockInt = availableStock?.toInt() ?: 0
+                    val (badgeBg, badgeTextColor, badgeText) = when {
+                        isOutOfStock -> Triple(
+                            AppColors.Error.copy(alpha = 0.88f),
+                            Color.White,
+                            stringResource(R.string.badge_out_of_stock),
+                        )
+                        isLowStock -> Triple(
+                            AppColors.WarningSoft,
+                            AppColors.Warning,
+                            stringResource(R.string.badge_remaining_stock, stockInt),
+                        )
+                        else -> Triple(
+                            Color.Black.copy(alpha = 0.55f),
+                            Color.White,
+                            stringResource(R.string.badge_stock_count, stockInt),
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(5.dp)
+                            .background(badgeBg, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp),
+                    ) {
+                        Text(badgeText, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = badgeTextColor)
                     }
                 }
 
@@ -695,7 +849,7 @@ private fun HomeProductCard(
             }
 
             // Product info
-            Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)) {
+            Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 10.dp)) {
                 Text(
                     text = product.name,
                     fontSize = 11.5.sp,
@@ -707,24 +861,59 @@ private fun HomeProductCard(
                     minLines = 2,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = CurrencyFormatter.format(product.sellingPrice),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    style = if (isOutOfStock) {
-                        androidx.compose.ui.text.TextStyle(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = AppColors.TextTertiary,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = CurrencyFormatter.format(product.sellingPrice),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = if (isOutOfStock) {
+                            androidx.compose.ui.text.TextStyle(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = AppColors.TextTertiary,
+                            )
+                        } else {
+                            androidx.compose.ui.text.TextStyle(
+                                brush = Brush.linearGradient(listOf(AppColors.Accent, AppColors.PrimaryLight)),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        },
+                    )
+                }
+                // Stock quantity row
+                if (product.trackInventory) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Inventory2, null,
+                            modifier = Modifier.size(11.dp),
+                            tint = when {
+                                isOutOfStock -> AppColors.Error
+                                isLowStock -> AppColors.Warning
+                                else -> AppColors.TextTertiary
+                            },
                         )
-                    } else {
-                        androidx.compose.ui.text.TextStyle(
-                            brush = Brush.linearGradient(listOf(AppColors.Accent, AppColors.PrimaryLight)),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = when {
+                                isOutOfStock -> stringResource(R.string.badge_out_of_stock)
+                                else -> stringResource(R.string.badge_stock_count, availableStock?.toInt() ?: 0)
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = when {
+                                isOutOfStock -> AppColors.Error
+                                isLowStock -> AppColors.Warning
+                                else -> AppColors.TextTertiary
+                            },
                         )
-                    },
-                )
+                    }
+                }
             }
         }
     }
@@ -759,7 +948,7 @@ private fun HomeCartBar(itemCount: Int, total: Double, onClick: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Rounded.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                Text("$itemCount sản phẩm", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text(stringResource(R.string.cart_items_count, itemCount), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -790,27 +979,25 @@ private fun HomeCartBar(itemCount: Int, total: Double, onClick: () -> Unit) {
 private fun HomeBottomNav(
     onNavigate: (String) -> Unit,
     onPosClick: () -> Unit,
+    currentRoute: String? = null,
 ) {
-    // Pulse animation for FAB ring
-    val infiniteTransition = rememberInfiniteTransition(label = "fabPulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "pulseScale",
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "pulseAlpha",
-    )
+    // Pulse animation for FAB ring — plays 3 times then stops to save battery
+    var pulseScale by remember { mutableFloatStateOf(1f) }
+    var pulseAlpha by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        repeat(3) {
+            animate(0.92f, 1.3f, animationSpec = tween(2500, easing = FastOutSlowInEasing)) { value, _ ->
+                pulseScale = value
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        repeat(3) {
+            animate(1f, 0f, animationSpec = tween(2500, easing = FastOutSlowInEasing)) { value, _ ->
+                pulseAlpha = value
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -832,15 +1019,15 @@ private fun HomeBottomNav(
             verticalAlignment = Alignment.Bottom,
         ) {
             // Kho hàng
-            NavItem(icon = Icons.Rounded.Warehouse, label = "Kho hàng", onClick = { onNavigate(Screen.InventoryHub.route) })
+            NavItem(icon = Icons.Rounded.Warehouse, label = stringResource(R.string.nav_inventory), isActive = currentRoute == Screen.InventoryHub.route, onClick = { onNavigate(Screen.InventoryHub.route) })
             // Quản lý
-            NavItem(icon = Icons.Rounded.ListAlt, label = "Quản lý", onClick = { onNavigate(Screen.StoreManagement.route) })
+            NavItem(icon = Icons.Rounded.ListAlt, label = stringResource(R.string.nav_management), isActive = currentRoute == Screen.StoreManagement.route, onClick = { onNavigate(Screen.StoreManagement.route) })
             // Spacer for FAB
             Spacer(modifier = Modifier.width(72.dp))
             // Báo cáo
-            NavItem(icon = Icons.Rounded.BarChart, label = "Báo cáo", onClick = { onNavigate(Screen.Reports.route) })
+            NavItem(icon = Icons.Rounded.BarChart, label = stringResource(R.string.nav_reports), isActive = currentRoute == Screen.Reports.route, onClick = { onNavigate(Screen.Reports.route) })
             // Thêm
-            NavItem(icon = Icons.Rounded.MoreHoriz, label = "Thêm", onClick = { onNavigate(Screen.Settings.route) })
+            NavItem(icon = Icons.Rounded.MoreHoriz, label = stringResource(R.string.nav_more), isActive = currentRoute == Screen.Settings.route, onClick = { onNavigate(Screen.Settings.route) })
         }
 
         // FAB — center, floating above nav
@@ -907,7 +1094,15 @@ private fun HomeBottomNav(
 }
 
 @Composable
-private fun NavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+private fun NavItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    isActive: Boolean = false,
+) {
+    val iconTint by animateColorAsState(
+        if (isActive) AppColors.Primary else AppColors.TextTertiary, tween(150), label = "navTint"
+    )
     Column(
         modifier = Modifier
             .clickable(onClick = onClick)
@@ -919,12 +1114,16 @@ private fun NavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label
             modifier = Modifier
                 .width(52.dp)
                 .height(28.dp)
-                .clip(RoundedCornerShape(MiniPosTokens.RadiusFull)),
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusFull))
+                .then(
+                    if (isActive) Modifier.background(AppColors.Primary.copy(alpha = 0.12f))
+                    else Modifier
+                ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = label, tint = AppColors.TextTertiary, modifier = Modifier.size(22.dp))
+            Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(22.dp))
         }
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextTertiary)
+        Text(label, fontSize = 11.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold, color = iconTint)
     }
 }
 
@@ -935,57 +1134,233 @@ private fun NavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 private fun HomeVariantPickerDialog(
     product: Product,
     variants: List<ProductVariant>,
+    availableStock: Double?,
+    variantStockMap: Map<String, Double>,
+    isSharedStock: Boolean = false,
     onSelectVariant: (ProductVariant) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    val isOutOfStock = product.trackInventory && (availableStock ?: 0.0) <= 0.0
+    val isLowStock = product.trackInventory && !isOutOfStock && (availableStock ?: 0.0) <= 5.0
+
+    Dialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(MiniPosTokens.RadiusLg),
-        containerColor = AppColors.Surface,
-        title = {
-            Column {
-                Text(product.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                Text(stringResource(R.string.select_variant_hint), fontSize = 12.sp, color = AppColors.TextSecondary)
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .fillMaxWidth()
+                .shadow(16.dp, RoundedCornerShape(MiniPosTokens.Radius2xl))
+                .background(AppColors.Surface, RoundedCornerShape(MiniPosTokens.Radius2xl))
+                .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.Radius2xl)),
+        ) {
+            // ── Gradient Header ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(listOf(AppColors.Primary, AppColors.Accent)),
+                        RoundedCornerShape(topStart = MiniPosTokens.Radius2xl, topEnd = MiniPosTokens.Radius2xl),
+                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            ) {
+                Column(modifier = Modifier.padding(end = 32.dp)) {
+                    Text(
+                        text = product.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.select_variant_hint),
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                    )
+                    // Stock badge in header
+                    if (product.trackInventory) {
+                        Spacer(Modifier.height(8.dp))
+                        val stockInt = availableStock?.toInt() ?: 0
+                        val (badgeBg, badgeText) = when {
+                            isOutOfStock -> Color.White.copy(alpha = 0.2f) to Color.White
+                            isLowStock -> AppColors.WarningSoft to AppColors.Warning
+                            else -> Color.White.copy(alpha = 0.2f) to Color.White
+                        }
+                        Row(
+                            modifier = Modifier
+                                .background(badgeBg, RoundedCornerShape(MiniPosTokens.RadiusSm))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Inventory2,
+                                contentDescription = null,
+                                tint = badgeText,
+                                modifier = Modifier.size(12.dp),
+                            )
+                            Text(
+                                text = when {
+                                    isOutOfStock -> stringResource(R.string.badge_out_of_stock)
+                                    isLowStock -> stringResource(R.string.badge_remaining_stock, stockInt)
+                                    else -> stringResource(R.string.badge_stock_count, stockInt)
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = badgeText,
+                            )
+                        }
+                    }
+                }
+                // Close button
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(28.dp)
+                        .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                }
             }
-        },
-        text = {
-            androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+            // ── Variant list ──
+            LazyColumn(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Shared stock notice — when inventory is at product-level only
+                if (isSharedStock && product.trackInventory) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(AppColors.InfoSoft, RoundedCornerShape(MiniPosTokens.RadiusSm))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Icon(Icons.Rounded.Info, null, modifier = Modifier.size(14.dp), tint = AppColors.Info)
+                            Text(
+                                text = stringResource(R.string.shared_stock_notice),
+                                fontSize = 11.sp,
+                                color = AppColors.Info,
+                            )
+                        }
+                    }
+                }
                 items(variants) { variant ->
+                    // When stock is shared (product-level), we can't determine per-variant out-of-stock
+                    val variantStock = variantStockMap[variant.id]
+                    val hasPerVariantStock = !isSharedStock && variantStockMap.isNotEmpty()
+                    val variantOutOfStock = hasPerVariantStock && product.trackInventory && (variantStock ?: 0.0) <= 0.0
+                    val variantLowStock = hasPerVariantStock && product.trackInventory && !variantOutOfStock && (variantStock ?: 0.0) <= 5.0
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(MiniPosTokens.RadiusSm))
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
                             .background(AppColors.SurfaceElevated)
-                            .clickable { onSelectVariant(variant) }
+                            .border(1.dp, AppColors.BorderLight, RoundedCornerShape(MiniPosTokens.RadiusMd))
+                            .then(if (variantOutOfStock) Modifier.graphicsLayer { alpha = 0.5f } else Modifier)
+                            .clickable(enabled = !variantOutOfStock) { onSelectVariant(variant) }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(Icons.Rounded.Style, null, modifier = Modifier.size(24.dp), tint = AppColors.Accent)
+                        // Variant icon
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(AppColors.Accent.copy(alpha = 0.1f), RoundedCornerShape(MiniPosTokens.RadiusSm)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.Style, null, modifier = Modifier.size(20.dp), tint = AppColors.Accent)
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
+                        // Variant info
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(variant.variantName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(
+                                variant.variantName,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary,
+                            )
                             if (variant.attributes != "{}" && variant.attributes.isNotBlank()) {
-                                Text(variant.attributes, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                                Text(
+                                    variant.attributes,
+                                    fontSize = 11.sp,
+                                    color = AppColors.TextTertiary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            // Per-variant stock (only when per-variant inventory exists)
+                            if (product.trackInventory && hasPerVariantStock) {
+                                val stockInt = variantStock?.toInt() ?: 0
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Inventory2, null,
+                                        modifier = Modifier.size(10.dp),
+                                        tint = when {
+                                            variantOutOfStock -> AppColors.Error
+                                            variantLowStock -> AppColors.Warning
+                                            else -> AppColors.TextTertiary
+                                        },
+                                    )
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(
+                                        text = when {
+                                            variantOutOfStock -> stringResource(R.string.badge_out_of_stock)
+                                            variantLowStock -> stringResource(R.string.badge_remaining_stock, stockInt)
+                                            else -> stringResource(R.string.badge_stock_count, stockInt)
+                                        },
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = when {
+                                            variantOutOfStock -> AppColors.Error
+                                            variantLowStock -> AppColors.Warning
+                                            else -> AppColors.TextTertiary
+                                        },
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.width(8.dp))
+                        // Price
                         Text(
                             CurrencyFormatter.format(variant.sellingPrice ?: product.sellingPrice),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
                             color = AppColors.Secondary,
                         )
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel_btn_label), color = AppColors.TextSecondary)
+
+            // ── Footer with Cancel button ──
+            HorizontalDivider(color = AppColors.Divider)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clickable(onClick = onDismiss),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.cancel_btn_label),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextSecondary,
+                )
             }
-        },
-    )
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1565,11 +1940,433 @@ private fun HomeQuickCreateCustomerCard(
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Profile Bottom Sheet
+// ─────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeProfileSheet(
+    userName: String,
+    userRole: UserRole,
+    store: com.minipos.domain.model.Store?,
+    currentUserHasPin: Boolean,
+    isDark: Boolean,
+    onToggleDarkMode: () -> Unit,
+    onChangePinClick: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onSwitchUser: () -> Unit,
+    onLogout: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AppColors.Surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 4.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(AppColors.BorderLight),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+        ) {
+            // ── Avatar + Identity ──
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Large avatar with gradient + glow
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .shadow(
+                            elevation = 12.dp,
+                            shape = CircleShape,
+                            ambientColor = AppColors.AccentGlow,
+                            spotColor = AppColors.AccentGlow,
+                        )
+                        .border(2.dp, AppColors.AccentGlow, CircleShape)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(listOf(AppColors.Accent, AppColors.Primary)),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (userName.isNotEmpty()) userName.first().uppercase() else "A",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = userName,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AppColors.TextPrimary,
+                )
+                Spacer(Modifier.height(4.dp))
+                // Role badge
+                val (roleLabel, roleBg, roleColor) = when (userRole) {
+                    UserRole.OWNER -> Triple(
+                        stringResource(R.string.role_owner),
+                        AppColors.Primary.copy(alpha = 0.12f),
+                        AppColors.Primary,
+                    )
+                    UserRole.MANAGER -> Triple(
+                        stringResource(R.string.role_manager),
+                        AppColors.Accent.copy(alpha = 0.12f),
+                        AppColors.Accent,
+                    )
+                    UserRole.CASHIER -> Triple(
+                        stringResource(R.string.role_cashier),
+                        AppColors.Success.copy(alpha = 0.12f),
+                        AppColors.Success,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .background(roleBg, RoundedCornerShape(MiniPosTokens.RadiusFull))
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = roleLabel,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = roleColor,
+                        letterSpacing = 0.3.sp,
+                    )
+                }
+            }
+
+            // ── Store Info Card ──
+            if (store != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                        .background(AppColors.SurfaceVariant)
+                        .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(AppColors.BrandNavy, AppColors.BrandBlue),
+                                ),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Storefront,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = store.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AppColors.TextPrimary,
+                        )
+                        if (!store.address.isNullOrBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = store.address,
+                                fontSize = 12.sp,
+                                color = AppColors.TextTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (!store.phone.isNullOrBlank()) {
+                            Text(
+                                text = store.phone,
+                                fontSize = 12.sp,
+                                color = AppColors.TextTertiary,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            HorizontalDivider(
+                color = AppColors.Divider,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+
+            // ── Quick actions ──
+            // Dark mode toggle row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleDarkMode)
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF0A0E1A), Color(0xFF334155))),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.dark_mode_label),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        text = if (isDark) stringResource(R.string.toggle_on) else stringResource(R.string.toggle_off),
+                        fontSize = 11.sp,
+                        color = AppColors.TextTertiary,
+                    )
+                }
+                Switch(
+                    checked = isDark,
+                    onCheckedChange = { onToggleDarkMode() },
+                    colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
+                )
+            }
+
+            HorizontalDivider(
+                color = AppColors.Divider,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+
+            // Change PIN row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onChangePinClick)
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF00B894), Color(0xFF00CEC9))),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Lock,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (currentUserHasPin) stringResource(R.string.change_pin_title) else stringResource(R.string.set_pin_title),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        text = if (currentUserHasPin) stringResource(R.string.change_pin_desc) else stringResource(R.string.set_pin_desc),
+                        fontSize = 11.sp,
+                        color = AppColors.TextTertiary,
+                    )
+                }
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = AppColors.TextTertiary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+
+            HorizontalDivider(
+                color = AppColors.Divider,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+
+            // Settings row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateToSettings)
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF0E9AA0), Color(0xFF2EC4B6))),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Settings,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_label),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_desc_short),
+                        fontSize = 11.sp,
+                        color = AppColors.TextTertiary,
+                    )
+                }
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = AppColors.TextTertiary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+
+            HorizontalDivider(
+                color = AppColors.Divider,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+
+            // ── Switch User row ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onSwitchUser)
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF6C5CE7), Color(0xFF74B9FF))),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.SwitchAccount,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.switch_user),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        text = stringResource(R.string.switch_user_desc),
+                        fontSize = 11.sp,
+                        color = AppColors.TextTertiary,
+                    )
+                }
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = AppColors.TextTertiary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+
+            HorizontalDivider(
+                color = AppColors.Divider,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+
+            // ── Logout row ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onLogout)
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFFFF5252), Color(0xFFFF7675))),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Logout,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text = stringResource(R.string.logout),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.Error,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
 // ─── Order Discount Dialog ───
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeOrderDiscountDialog(
-    current: Discount?,
+private fun HomeOrderDiscountDialog(    current: Discount?,
     onDismiss: () -> Unit,
     onApply: (Discount?) -> Unit,
 ) {
@@ -1592,7 +2389,7 @@ private fun HomeOrderDiscountDialog(
                     label = { Text(if (type == "percent") stringResource(R.string.percent_field) else stringResource(R.string.amount_field)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    suffix = { Text(if (type == "percent") "%" else "đ") },
+                    suffix = { Text(if (type == "percent") "%" else stringResource(R.string.currency_symbol)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

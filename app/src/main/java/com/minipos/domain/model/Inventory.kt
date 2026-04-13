@@ -98,3 +98,30 @@ data class StockSummary(
     val totalStockIn: Double = 0.0,
     val totalStockOut: Double = 0.0,
 )
+
+data class PurchaseOrder(
+    val id: String,
+    val storeId: String,
+    val code: String,
+    val supplierId: String? = null,
+    val supplierName: String? = null,
+    val totalAmount: Double = 0.0,
+    val totalItems: Int = 0,
+    val notes: String? = null,
+    val status: String = "confirmed",
+    val createdBy: String,
+    val confirmedAt: Long? = null,
+    val createdAt: Long,
+)
+
+data class PurchaseOrderItem(
+    val id: String,
+    val purchaseOrderId: String,
+    val productId: String,
+    val variantId: String? = null,
+    val productName: String,
+    val variantName: String? = null,
+    val quantity: Double,
+    val unitCost: Double,
+    val totalCost: Double,
+)

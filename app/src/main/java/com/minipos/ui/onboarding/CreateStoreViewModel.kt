@@ -20,14 +20,19 @@ data class CreateStoreState(
     val storeAddress: String = "",
     val storePhone: String = "",
     val ownerName: String = "",
+    val ownerPin: String = "",
+    val ownerPinConfirm: String = "",
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
     val error: String? = null,
 ) {
+    val pinValid: Boolean
+        get() = ownerPin.length in 4..6 && ownerPin == ownerPinConfirm
     val canCreate: Boolean
         get() = storeName.isNotBlank() &&
                 storeCode.length >= 4 &&
-                ownerName.isNotBlank()
+                ownerName.isNotBlank() &&
+                pinValid
 }
 
 @HiltViewModel
@@ -44,6 +49,8 @@ class CreateStoreViewModel @Inject constructor(
     fun updateStoreAddress(value: String) = _state.update { it.copy(storeAddress = value) }
     fun updateStorePhone(value: String) = _state.update { it.copy(storePhone = value) }
     fun updateOwnerName(value: String) = _state.update { it.copy(ownerName = value, error = null) }
+    fun updateOwnerPin(value: String) = _state.update { it.copy(ownerPin = value.take(6), error = null) }
+    fun updateOwnerPinConfirm(value: String) = _state.update { it.copy(ownerPinConfirm = value.take(6), error = null) }
 
     fun createStore() {
         val s = _state.value
@@ -51,6 +58,16 @@ class CreateStoreViewModel @Inject constructor(
 
         if (!Validators.isValidStoreCode(s.storeCode)) {
             _state.update { it.copy(error = app.getString(R.string.error_store_code_format)) }
+            return
+        }
+
+        if (s.ownerPin.length < 4) {
+            _state.update { it.copy(error = app.getString(R.string.error_pin_length)) }
+            return
+        }
+
+        if (s.ownerPin != s.ownerPinConfirm) {
+            _state.update { it.copy(error = app.getString(R.string.pin_mismatch_error)) }
             return
         }
 
@@ -62,8 +79,8 @@ class CreateStoreViewModel @Inject constructor(
                 address = s.storeAddress.ifBlank { null },
                 phone = s.storePhone.ifBlank { null },
                 ownerName = s.ownerName,
-                ownerPin = "",      // No PIN required — can be set later in Settings
-                ownerPassword = "", // No password required
+                ownerPin = s.ownerPin,
+                ownerPassword = "",
             )
             when (result) {
                 is Result.Success -> _state.update { it.copy(isLoading = false, isSuccess = true) }

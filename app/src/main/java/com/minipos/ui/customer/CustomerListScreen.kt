@@ -18,12 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.minipos.ui.components.ConfirmButtonStyle
+import com.minipos.ui.components.MiniPosConfirmDialog
+import com.minipos.ui.components.PopupType
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.core.utils.CurrencyFormatter
@@ -35,8 +41,8 @@ import com.minipos.ui.components.*
 // ═══════════════════════════════════════
 
 private val AvatarGradients = listOf(
-    listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA)), // c1 — purple
-    listOf(Color(0xFF00D2FF), Color(0xFF4BB8F0)), // c2 — cyan
+    listOf(Color(0xFF0E9AA0), Color(0xFF5AEDC5)), // c1 — teal
+    listOf(Color(0xFF14B8B0), Color(0xFF4BB8F0)), // c2 — cyan
     listOf(Color(0xFFFF8A65), Color(0xFFF44336)), // c3 — orange-red
     listOf(Color(0xFF81C784), Color(0xFF388E3C)), // c4 — green
     listOf(Color(0xFFFFD54F), Color(0xFFFFB300)), // c5 — amber
@@ -60,6 +66,20 @@ fun CustomerListScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // Refresh data when screen becomes visible (e.g. after navigating back from form)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     Scaffold(
         containerColor = AppColors.Background,
     ) { paddingValues ->
@@ -73,12 +93,13 @@ fun CustomerListScreen(
                 title = stringResource(R.string.customer_title),
                 onBack = onBack,
                 actions = {
-                    IconButton(
-                        onClick = { onNavigateToForm(null) },
+                    Box(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MiniPosGradients.primary()),
+                            .background(MiniPosGradients.primary())
+                            .clickable { onNavigateToForm(null) },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             Icons.Rounded.PersonAdd,
@@ -230,23 +251,18 @@ private fun CustomerItem(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.delete_customer_title)) },
-            text = { Text(stringResource(R.string.delete_confirm_msg, customer.name)) },
-            confirmButton = {
-                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
-                    Text(stringResource(R.string.delete), color = AppColors.Error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
+    MiniPosConfirmDialog(
+        visible = showDeleteConfirm,
+        type = PopupType.DELETE,
+        icon = Icons.Rounded.Delete,
+        title = stringResource(R.string.delete_customer_title),
+        message = stringResource(R.string.delete_confirm_msg, customer.name),
+        cancelText = stringResource(R.string.cancel),
+        confirmText = stringResource(R.string.delete),
+        confirmStyle = ConfirmButtonStyle.DANGER,
+        onCancel = { showDeleteConfirm = false },
+        onConfirm = { showDeleteConfirm = false; onDelete() },
+    )
 
     Row(
         modifier = Modifier

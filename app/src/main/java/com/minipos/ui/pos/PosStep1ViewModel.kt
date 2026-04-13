@@ -12,6 +12,7 @@ import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.repository.CategoryRepository
 import com.minipos.domain.repository.CustomerRepository
+import com.minipos.domain.repository.InventoryRepository
 import com.minipos.domain.repository.ProductRepository
 import com.minipos.domain.repository.StoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,8 @@ data class PosStep1State(
     val showVariantPicker: Boolean = false,
     val variantPickerProduct: Product? = null,
     val variantPickerVariants: List<ProductVariant> = emptyList(),
+    val variantStockMap: Map<String, Double> = emptyMap(), // variantId -> stock qty (only filled when per-variant inventory exists)
+    val isSharedStock: Boolean = false, // true when stock is tracked at product-level, not per-variant
     // Customer picker (merged from Step 3)
     val recentCustomers: List<Customer> = emptyList(),
     val customerSearchResults: List<Customer> = emptyList(),
@@ -47,6 +50,7 @@ class PosStep1ViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
     private val productRepository: ProductRepository,
     private val customerRepository: CustomerRepository,
+    private val inventoryRepository: InventoryRepository,
     val cartHolder: PosCartHolder,
 ) : ViewModel() {
 
@@ -64,6 +68,15 @@ class PosStep1ViewModel @Inject constructor(
         }
     }
 
+    /** Refresh stock cache from DB — call when returning from purchase/inventory screens */
+    fun refreshStock() {
+        viewModelScope.launch {
+            try {
+                cartHolder.refreshStock()
+            } catch (_: Exception) { /* stock refresh failed, non-fatal */ }
+        }
+    }
+
     private fun loadData() {
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
@@ -73,34 +86,51 @@ class PosStep1ViewModel @Inject constructor(
 
             // Observe categories reactively
             launch {
-                categoryRepository.observeCategories(store.id).collect { categories ->
-                    _state.update { it.copy(categories = categories) }
-                }
+                try {
+                    categoryRepository.observeCategories(store.id).collect { categories ->
+                        _state.update { it.copy(categories = categories) }
+                    }
+                } catch (_: Exception) { /* prevent crash from reactive observer */ }
             }
 
             // Observe products reactively
             launch {
-                productRepository.observeProducts(store.id).collect { products ->
-                    // Refresh stock cache whenever products change
-                    cartHolder.loadStock(store.id, products)
-                    _state.update { current ->
-                        val filteredProducts = when {
-                            current.searchQuery.isNotBlank() -> products.filter { p ->
-                                p.name.contains(current.searchQuery, ignoreCase = true) ||
-                                        p.sku.contains(current.searchQuery, ignoreCase = true) ||
-                                        (p.barcode?.contains(current.searchQuery, ignoreCase = true) == true)
+                try {
+                    productRepository.observeProducts(store.id).collect { products ->
+                        // Refresh stock cache whenever products change
+                        try {
+                            cartHolder.loadStock(store.id, products)
+                        } catch (_: Exception) { /* stock cache refresh failed, non-fatal */ }
+                        _state.update { current ->
+                            val filteredProducts = when {
+                                current.searchQuery.isNotBlank() -> products.filter { p ->
+                                    p.name.contains(current.searchQuery, ignoreCase = true) ||
+                                            p.sku.contains(current.searchQuery, ignoreCase = true) ||
+                                            (p.barcode?.contains(current.searchQuery, ignoreCase = true) == true)
+                                }
+                                current.selectedCategory != null -> products.filter { p ->
+                                    p.categoryId == current.selectedCategory.id
+                                }
+                                else -> products
                             }
-                            current.selectedCategory != null -> products.filter { p ->
-                                p.categoryId == current.selectedCategory.id
-                            }
-                            else -> products
+                            current.copy(
+                                allProducts = products,
+                                products = filteredProducts,
+                            )
                         }
-                        current.copy(
-                            allProducts = products,
-                            products = filteredProducts,
-                        )
                     }
-                }
+                } catch (_: Exception) { /* prevent crash from reactive observer */ }
+            }
+
+            // Observe inventory changes reactively — auto-refresh stock when any inventory record is updated
+            launch {
+                try {
+                    inventoryRepository.observeInventoryChanges(store.id).collect {
+                        try {
+                            cartHolder.refreshStock()
+                        } catch (_: Exception) { /* stock cache refresh failed, non-fatal */ }
+                    }
+                } catch (_: Exception) { /* prevent crash from reactive observer */ }
             }
         }
     }
@@ -136,11 +166,33 @@ class PosStep1ViewModel @Inject constructor(
                     // No variants defined yet, add product directly
                     cartHolder.addItem(product)
                 } else {
+                    // Load per-variant stock (fallback to product-level if no variant inventory exists)
+                    val store = storeRepository.getStore()
+                    var isShared = false
+                    val stockMap = if (product.trackInventory && store != null) {
+                        val variantStocks = variants.associate { v ->
+                            val stock = inventoryRepository.getVariantStock(store.id, product.id, v.id)
+                            v.id to stock?.quantity
+                        }
+                        // If no variant has its own inventory record, stock is shared at product-level
+                        val hasAnyVariantStock = variantStocks.values.any { it != null }
+                        if (hasAnyVariantStock) {
+                            val map = variantStocks.mapValues { it.value ?: 0.0 }
+                            // Also populate cart holder's variant stock cache for stock checking
+                            cartHolder.loadVariantStock(store.id, product.id, variants.map { it.id })
+                            map
+                        } else {
+                            isShared = true
+                            emptyMap()
+                        }
+                    } else emptyMap()
                     _state.update {
                         it.copy(
                             showVariantPicker = true,
                             variantPickerProduct = product,
                             variantPickerVariants = variants,
+                            variantStockMap = stockMap,
+                            isSharedStock = isShared,
                         )
                     }
                 }
@@ -156,7 +208,7 @@ class PosStep1ViewModel @Inject constructor(
     }
 
     fun dismissVariantPicker() {
-        _state.update { it.copy(showVariantPicker = false, variantPickerProduct = null, variantPickerVariants = emptyList()) }
+        _state.update { it.copy(showVariantPicker = false, variantPickerProduct = null, variantPickerVariants = emptyList(), variantStockMap = emptyMap(), isSharedStock = false) }
     }
 
     fun clearStockError() {

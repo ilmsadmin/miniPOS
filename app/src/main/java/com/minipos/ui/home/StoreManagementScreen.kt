@@ -71,14 +71,14 @@ fun StoreManagementScreen(
             titleRes = R.string.mgmt_products,
             countFormat = R.string.mgmt_products_count,
             route = Screen.ProductList.route,
-            gradientColors = listOf(Color(0xFF6C5CE7), Color(0xFFA29BFE)), // mi-prod
+            gradientColors = listOf(Color(0xFF0E9AA0), Color(0xFF2EC4B6)), // mi-prod
         ),
         ManagementMenuItem(
             icon = Icons.Rounded.Group,
             titleRes = R.string.mgmt_customers,
             countFormat = R.string.mgmt_customers_count,
             route = Screen.CustomerList.route,
-            gradientColors = listOf(Color(0xFF00D2FF), Color(0xFF3B9FDB)), // mi-cust
+            gradientColors = listOf(Color(0xFF14B8B0), Color(0xFF5AEDC5)), // mi-cust
         ),
         ManagementMenuItem(
             icon = Icons.Rounded.LocalShipping,

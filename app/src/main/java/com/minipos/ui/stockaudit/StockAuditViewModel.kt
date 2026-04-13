@@ -1,7 +1,13 @@
 package com.minipos.ui.stockaudit
 
+import android.app.Application
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.minipos.R
+import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.core.utils.DateUtils
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.domain.model.StockMovementType
@@ -14,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileWriter
 import javax.inject.Inject
 
 // ═══════════════════════════════════════════════════════
@@ -78,16 +86,21 @@ data class StockAuditState(
     val searchQuery: String = "",
     val allProducts: List<StockOverviewItem> = emptyList(),
     val showProductSearch: Boolean = false,
+    val filteredSearchResults: List<StockOverviewItem> = emptyList(),
     val toastMessage: String? = null,
     val saved: Boolean = false,
 )
 
 @HiltViewModel
 class StockAuditViewModel @Inject constructor(
+    private val app: Application,
     private val storeRepository: StoreRepository,
     private val inventoryRepository: InventoryRepository,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
+
+    private fun str(resId: Int) = app.getString(resId)
+    private fun str(resId: Int, vararg args: Any) = app.getString(resId, *args)
 
     private val _state = MutableStateFlow(StockAuditState())
     val state: StateFlow<StockAuditState> = _state
@@ -139,31 +152,52 @@ class StockAuditViewModel @Inject constructor(
 
     fun updateSearchQuery(value: String) {
         _state.update { it.copy(searchQuery = value) }
+        recomputeSearchResults()
     }
 
-    // ── Product search results (filtered) ──
+    fun showProductSearch() {
+        _state.update { it.copy(showProductSearch = true, searchQuery = "") }
+        recomputeSearchResults()
+    }
 
-    val searchResults: List<StockOverviewItem>
-        get() {
-            val s = _state.value
-            if (s.searchQuery.length < 1) return emptyList()
-            val q = s.searchQuery.trim().lowercase()
-            val addedIds = s.auditItems.map { it.productId }.toSet()
-            return s.allProducts
-                .filter { it.productId !in addedIds }
-                .filter {
-                    it.productName.lowercase().contains(q) ||
-                        it.productSku.lowercase().contains(q)
-                }
-                .take(10)
-        }
+    fun dismissProductSearch() {
+        _state.update { it.copy(showProductSearch = false, searchQuery = "") }
+    }
+
+    // ── Product search results (filtered, reactive) ──
+
+    private fun recomputeSearchResults() {
+        val s = _state.value
+        val q = s.searchQuery.trim().lowercase()
+        val addedIds = s.auditItems.map { it.productId }.toSet()
+        val results = s.allProducts
+            .filter { it.productId !in addedIds }
+            .filter {
+                if (q.isBlank()) true
+                else it.productName.lowercase().contains(q) ||
+                    it.productSku.lowercase().contains(q)
+            }
+            .take(20)
+        _state.update { it.copy(filteredSearchResults = results) }
+    }
 
     // ── Add / remove product ──
+
+    fun addProductByBarcode(barcode: String) {
+        val product = _state.value.allProducts.find {
+            it.productSku.equals(barcode, ignoreCase = true)
+        }
+        if (product != null) {
+            addProduct(product)
+        } else {
+            showToast(str(R.string.sa_product_not_found, barcode))
+        }
+    }
 
     fun addProduct(product: StockOverviewItem) {
         val current = _state.value
         if (current.auditItems.any { it.productId == product.productId }) {
-            showToast(_state.value.toastMessage ?: "Product already in list")
+            showToast(str(R.string.sa_product_already_added))
             return
         }
         val item = AuditItem(
@@ -182,12 +216,15 @@ class StockAuditViewModel @Inject constructor(
                 searchQuery = "",
             )
         }
+        showToast(str(R.string.sa_product_added))
+        recomputeSearchResults()
     }
 
     fun removeProduct(productId: String) {
         _state.update {
             it.copy(auditItems = it.auditItems.filter { item -> item.productId != productId })
         }
+        recomputeSearchResults()
     }
 
     // ── Update audit item fields ──
@@ -279,11 +316,131 @@ class StockAuditViewModel @Inject constructor(
                     }
                 }
 
+                showToast(str(R.string.sa_saved))
                 _state.update {
                     it.copy(isSaving = false, saved = true)
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(isSaving = false) }
+            }
+        }
+    }
+
+    // ── Export Audit Report as CSV ──
+
+    fun exportAuditReport(context: Context) {
+        val s = _state.value
+        if (s.auditItems.isEmpty()) return
+
+        viewModelScope.launch {
+            try {
+                val store = storeRepository.getStore()
+                val dateStr = DateUtils.formatOrderDate(System.currentTimeMillis())
+                val tabLabel = when (s.activeTab) {
+                    AuditTabType.STOCK_AUDIT -> "stock_audit"
+                    AuditTabType.ADD_STOCK -> "stock_add"
+                    AuditTabType.REMOVE_STOCK -> "stock_remove"
+                }
+                val fileName = "minipos_${tabLabel}_${s.sessionCode}_${dateStr}.csv"
+                val reportsDir = File(context.cacheDir, "reports").apply { mkdirs() }
+                val file = File(reportsDir, fileName)
+
+                FileWriter(file).use { writer ->
+                    // BOM for Excel UTF-8
+                    writer.write("\uFEFF")
+
+                    // Session info
+                    writer.write("Session Code,${s.sessionCode}\n")
+                    writer.write("Date,${s.auditDate}\n")
+                    writer.write("Reason,${s.reason.replace(",", " ")}\n")
+                    if (s.notes.isNotBlank()) {
+                        writer.write("Notes,${s.notes.replace(",", " ").replace("\n", " ")}\n")
+                    }
+                    if (store != null) {
+                        writer.write("Store,${store.name}\n")
+                    }
+                    writer.write("\n")
+
+                    // Header
+                    when (s.activeTab) {
+                        AuditTabType.STOCK_AUDIT -> {
+                            writer.write("Product,SKU,System Stock,Actual Count,Difference,Status,Reason,Shelf\n")
+                            for (item in s.auditItems) {
+                                val status = when {
+                                    item.isMatch -> "MATCH"
+                                    item.difference < 0 -> "SHORTAGE"
+                                    else -> "SURPLUS"
+                                }
+                                writer.write(
+                                    "${item.productName.replace(",", " ")}," +
+                                    "${item.productSku}," +
+                                    "${item.systemStock}," +
+                                    "${item.actualQtyDouble}," +
+                                    "${item.difference}," +
+                                    "$status," +
+                                    "${item.diffReason.name}," +
+                                    "${item.shelfLocation.replace(",", " ")}\n"
+                                )
+                            }
+                        }
+                        AuditTabType.ADD_STOCK -> {
+                            writer.write("Product,SKU,Current Stock,Add Quantity,New Stock,Reason\n")
+                            for (item in s.auditItems) {
+                                writer.write(
+                                    "${item.productName.replace(",", " ")}," +
+                                    "${item.productSku}," +
+                                    "${item.systemStock}," +
+                                    "${item.actualQtyDouble}," +
+                                    "${item.systemStock + item.actualQtyDouble}," +
+                                    "${item.diffReason.name}\n"
+                                )
+                            }
+                        }
+                        AuditTabType.REMOVE_STOCK -> {
+                            writer.write("Product,SKU,Current Stock,Remove Quantity,New Stock,Reason\n")
+                            for (item in s.auditItems) {
+                                writer.write(
+                                    "${item.productName.replace(",", " ")}," +
+                                    "${item.productSku}," +
+                                    "${item.systemStock}," +
+                                    "${item.actualQtyDouble}," +
+                                    "${item.systemStock - item.actualQtyDouble}," +
+                                    "${item.diffReason.name}\n"
+                                )
+                            }
+                        }
+                    }
+
+                    // Summary
+                    writer.write("\n")
+                    writer.write("Total Products,${s.auditItems.size}\n")
+                    if (s.activeTab == AuditTabType.STOCK_AUDIT) {
+                        writer.write("Matches,$matchCount\n")
+                        writer.write("Shortage,$shortageCount (${totalShortage.toInt()})\n")
+                        writer.write("Surplus,$surplusCount (+${totalSurplus.toInt()})\n")
+                        writer.write("Net Difference,${netDifference.toInt()}\n")
+                    }
+                }
+
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file,
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "Mini POS - Audit Report (${s.sessionCode})")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, null).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+
+                showToast(str(R.string.sa_audit_export_success))
+            } catch (e: Exception) {
+                showToast(str(R.string.sa_audit_export_error))
             }
         }
     }

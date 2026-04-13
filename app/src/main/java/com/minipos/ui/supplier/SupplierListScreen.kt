@@ -20,12 +20,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.minipos.R
 import com.minipos.core.theme.AppColors
 import com.minipos.domain.model.Supplier
@@ -41,7 +44,7 @@ private val SupplierIconGradients = listOf(
     listOf(Color(0xFF81C784), Color(0xFF388E3C)), // s3 — green
     listOf(Color(0xFFFFD54F), Color(0xFFFFB300)), // s4 — amber
     listOf(Color(0xFFCE93D8), Color(0xFF8E24AA)), // s5 — purple
-    listOf(Color(0xFF6C5CE7), Color(0xFFA78BFA)), // s6 — indigo
+    listOf(Color(0xFF0E9AA0), Color(0xFF5AEDC5)), // s6 — teal
 )
 
 private fun supplierIconGradient(index: Int): Brush {
@@ -62,6 +65,20 @@ fun SupplierListScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // Refresh data when screen becomes visible (e.g. after navigating back from form)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     Scaffold(
         containerColor = AppColors.Background,
     ) { paddingValues ->
@@ -75,12 +92,13 @@ fun SupplierListScreen(
                 title = stringResource(R.string.supplier_title),
                 onBack = onBack,
                 actions = {
-                    IconButton(
-                        onClick = { onNavigateToForm(null) },
+                    Box(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MiniPosGradients.primary()),
+                            .background(MiniPosGradients.primary())
+                            .clickable { onNavigateToForm(null) },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             Icons.Rounded.Add,

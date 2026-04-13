@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base theme using Material3 with splash support -->
-    <style name="Theme.MiniPOS" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Base theme using AppCompat for per-app language support -->
+    <style name="Theme.MiniPOS" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:statusBarColor">#0A0E1A</item>
         <item name="android:navigationBarColor">#0A0E1A</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
-    <!-- Splash screen theme — no icon, just dark background to transition smoothly to Compose splash -->
+    <!--
+        System splash screen (Android 12+).
+        Dark background only, NO icon — transitions seamlessly to Compose splash.
+    -->
     <style name="Theme.MiniPOS.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#0A0E1A</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="windowSplashScreenAnimationDuration">0</item>
         <item name="postSplashScreenTheme">@style/Theme.MiniPOS</item>
     </style>
 </resources>

@@ -3,8 +3,7 @@ package com.minipos.ui.inventory
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.core.utils.DateUtils
-import com.minipos.domain.model.StockHistoryItem
-import com.minipos.domain.model.StockMovementType
+import com.minipos.domain.model.PurchaseOrder
 import com.minipos.domain.model.StockSummary
 import com.minipos.domain.repository.InventoryRepository
 import com.minipos.domain.repository.StoreRepository
@@ -19,7 +18,7 @@ import javax.inject.Inject
 data class InventoryHubState(
     val isLoading: Boolean = true,
     val summary: StockSummary = StockSummary(),
-    val recentPurchases: List<StockHistoryItem> = emptyList(),
+    val recentPurchaseOrders: List<PurchaseOrder> = emptyList(),
     val hasLoadedOnce: Boolean = false,
 )
 
@@ -62,17 +61,13 @@ class InventoryHubViewModel @Inject constructor(
 
                 val summary = inventoryRepository.getStockSummary(storeId, startTime, endTime)
 
-                // Recent purchase-in movements (last 30 days, limited to 10)
-                val allHistory = inventoryRepository.getStockHistory(storeId, startTime, endTime)
-                val recentPurchases = allHistory
-                    .filter { it.type == StockMovementType.PURCHASE_IN }
-                    .sortedByDescending { it.createdAt }
-                    .take(10)
+                // Recent purchase orders (top 10)
+                val recentPOs = inventoryRepository.getRecentPurchaseOrders(storeId, 10)
 
                 _state.update {
                     it.copy(
                         summary = summary,
-                        recentPurchases = recentPurchases,
+                        recentPurchaseOrders = recentPOs,
                         isLoading = false,
                         hasLoadedOnce = true,
                     )

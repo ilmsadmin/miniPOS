@@ -2,12 +2,11 @@ package com.minipos.ui.splash
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,25 +21,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.minipos.BuildConfig
 import com.minipos.R
 import com.minipos.core.theme.AppColors
 import kotlinx.coroutines.delay
-import kotlin.random.Random
-
-// ═══════════════════════════════════════
-// Brand Colors (matching shared.css)
-// ═══════════════════════════════════════
-private val BrandNavy = Color(0xFF0D2137)
-private val BrandBlue = Color(0xFF3B9FDB)
-private val BrandBlueLight = Color(0xFF4BB8F0)
 
 // ═══════════════════════════════════════
 // SPLASH SCREEN
@@ -57,6 +47,9 @@ fun SplashScreen(
     val textPrimary = AppColors.TextPrimary
     val textTertiary = AppColors.TextTertiary
     val inputBg = AppColors.InputBackground
+    val BrandNavy = AppColors.BrandNavy
+    val BrandBlue = AppColors.BrandBlue
+    val BrandBlueLight = AppColors.BrandBlueLight
 
     // ─── Master timeline ───
     var splashStarted by remember { mutableStateOf(false) }
@@ -190,7 +183,7 @@ fun SplashScreen(
             .background(background),
     ) {
         // ═══ Ambient orbs ═══
-        // Orb 1 — top-left, primary purple
+        // Orb 1 — top-left, primary teal
         Box(
             modifier = Modifier
                 .size(300.dp)
@@ -294,33 +287,16 @@ fun SplashScreen(
                         },
                 )
 
-                // Logo circle
-                Box(
+                // Logo image — circle-only version (no rounded-square border)
+                Image(
+                    painter = painterResource(R.drawable.app_logo_circle),
+                    contentDescription = stringResource(R.string.splash_brand),
                     modifier = Modifier
                         .size(120.dp)
                         .scale(logoScale)
                         .alpha(logoAlpha)
-                        .rotate(logoRotation)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(BrandNavy, BrandNavy, BrandBlue, BrandBlueLight),
-                                start = Offset(0f, Float.POSITIVE_INFINITY),
-                                end = Offset(Float.POSITIVE_INFINITY, 0f),
-                            ),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // Cart icon
-                    Icon(
-                        Icons.Rounded.ShoppingCart,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .alpha(iconAlpha),
-                    )
-                }
+                        .rotate(logoRotation),
+                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -373,20 +349,22 @@ fun SplashScreen(
                         size = size,
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
                     )
-                    // Animated progress
+                    // Animated progress — clip to track bounds
                     val barWidth = size.width * 0.4f
-                    val startX = (loaderProgress * size.width * 1.4f) - barWidth * 0.5f
-                    drawRoundRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(primary, accent, primaryLight),
-                        ),
-                        topLeft = Offset(startX.coerceAtLeast(0f), 0f),
-                        size = Size(
-                            (barWidth).coerceAtMost(size.width - startX.coerceAtLeast(0f)),
-                            size.height,
-                        ),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
-                    )
+                    val rawStartX = (loaderProgress * size.width * 1.4f) - barWidth * 0.5f
+                    val clippedStartX = rawStartX.coerceAtLeast(0f)
+                    val clippedEndX = (rawStartX + barWidth).coerceAtMost(size.width)
+                    val clippedWidth = (clippedEndX - clippedStartX).coerceAtLeast(0f)
+                    if (clippedWidth > 0f) {
+                        drawRoundRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(primary, accent, primaryLight),
+                            ),
+                            topLeft = Offset(clippedStartX, 0f),
+                            size = Size(clippedWidth, size.height),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
+                        )
+                    }
                 }
 
                 Text(
@@ -437,7 +415,7 @@ fun SplashScreen(
 
             // Version
             Text(
-                text = "v1.1.0",
+                text = "v${BuildConfig.VERSION_NAME}",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = textTertiary.copy(alpha = 0.6f),

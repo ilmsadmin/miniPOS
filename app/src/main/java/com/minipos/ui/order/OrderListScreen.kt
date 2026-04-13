@@ -260,7 +260,7 @@ private fun OrderCard(order: Order, onClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Mid row: customer + payment method
+        // Mid row: customer
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),

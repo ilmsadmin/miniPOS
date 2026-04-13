@@ -20,8 +20,18 @@ class PosCartHolder @Inject constructor(
     private val _cart = MutableStateFlow(Cart())
     val cart: StateFlow<Cart> = _cart
 
-    // Cache for stock quantities: productId -> available quantity
+    // Cache for stock quantities: productId -> available quantity (product-level)
     private val stockCache = mutableMapOf<String, Double>()
+    // Cache for variant-level stock: "productId::variantId" -> available quantity
+    private val variantStockCache = mutableMapOf<String, Double>()
+
+    // Incremented every time stock cache is refreshed, so UI can reactively recompose
+    private val _stockVersion = MutableStateFlow(0L)
+    val stockVersion: StateFlow<Long> = _stockVersion
+
+    // Remember last load params so we can refresh stock without needing product list again
+    private var lastStoreId: String? = null
+    private var lastProducts: List<Product>? = null
 
     // Cached store settings for tax
     private var cachedStoreSettings: StoreSettings? = null
@@ -46,16 +56,52 @@ class PosCartHolder @Inject constructor(
     }
 
     suspend fun loadStock(storeId: String, products: List<Product>) {
-        stockCache.clear()
+        lastStoreId = storeId
+        lastProducts = products
+        val newCache = mutableMapOf<String, Double>()
         for (product in products) {
             if (product.trackInventory) {
-                val stock = inventoryRepository.getStock(storeId, product.id)
-                stockCache[product.id] = stock?.quantity ?: 0.0
+                try {
+                    val totalStock = inventoryRepository.getTotalStock(storeId, product.id, product.hasVariants)
+                    newCache[product.id] = totalStock
+                } catch (_: Exception) { /* skip this product's stock on error */ }
+            }
+        }
+        stockCache.clear()
+        stockCache.putAll(newCache)
+        variantStockCache.clear()
+        _stockVersion.value++
+    }
+
+    /** Re-fetch stock quantities from DB using the last known products list */
+    suspend fun refreshStock() {
+        val sid = lastStoreId ?: return
+        val prods = lastProducts ?: return
+        for (product in prods) {
+            if (product.trackInventory) {
+                try {
+                    val totalStock = inventoryRepository.getTotalStock(sid, product.id, product.hasVariants)
+                    stockCache[product.id] = totalStock
+                } catch (_: Exception) { /* skip this product's stock on error */ }
+            }
+        }
+        _stockVersion.value++
+    }
+
+    /** Load variant-level stock for a specific product's variants */
+    suspend fun loadVariantStock(storeId: String, productId: String, variantIds: List<String>) {
+        for (variantId in variantIds) {
+            val stock = inventoryRepository.getVariantStock(storeId, productId, variantId)
+            if (stock != null) {
+                variantStockCache["$productId::$variantId"] = stock.quantity
             }
         }
     }
 
     fun getAvailableStock(productId: String): Double? = stockCache[productId]
+
+    fun getAvailableVariantStock(productId: String, variantId: String): Double? =
+        variantStockCache["$productId::$variantId"]
 
     fun addItem(product: Product): Boolean {
         // If product has variants, this should not be called directly
@@ -68,10 +114,32 @@ class PosCartHolder @Inject constructor(
         val effectiveProduct = applyStoreTaxRate(product)
 
         if (effectiveProduct.trackInventory) {
-            val available = stockCache[effectiveProduct.id] ?: 0.0
-            val currentInCart = _cart.value.items
-                .filter { it.product.id == effectiveProduct.id }
-                .sumOf { it.quantity }
+            // Check variant-level stock first, fallback to product-level
+            val available = if (variant != null) {
+                getAvailableVariantStock(effectiveProduct.id, variant.id)
+                    ?: stockCache[effectiveProduct.id]
+                    ?: 0.0
+            } else {
+                stockCache[effectiveProduct.id] ?: 0.0
+            }
+            val currentInCart = if (variant != null) {
+                // For variant-level stock: count only this specific variant in cart
+                val hasVariantStock = getAvailableVariantStock(effectiveProduct.id, variant.id) != null
+                if (hasVariantStock) {
+                    _cart.value.items
+                        .filter { it.product.id == effectiveProduct.id && it.variant?.id == variant.id }
+                        .sumOf { it.quantity }
+                } else {
+                    // Fallback: product-level stock, count all variants of this product
+                    _cart.value.items
+                        .filter { it.product.id == effectiveProduct.id }
+                        .sumOf { it.quantity }
+                }
+            } else {
+                _cart.value.items
+                    .filter { it.product.id == effectiveProduct.id }
+                    .sumOf { it.quantity }
+            }
             if (currentInCart + 1 > available) {
                 _stockError.value = "\"${effectiveProduct.name}\" only has ${available.toLong()} ${effectiveProduct.unit} in stock"
                 return false
@@ -131,8 +199,21 @@ class PosCartHolder @Inject constructor(
         if (index !in cart.items.indices) return false
         val item = cart.items[index]
         if (item.product.trackInventory) {
-            val available = stockCache[item.product.id] ?: 0.0
-            val otherQty = cart.items.filterIndexed { i, it -> i != index && it.product.id == item.product.id }.sumOf { it.quantity }
+            val available = if (item.variant != null) {
+                getAvailableVariantStock(item.product.id, item.variant.id)
+                    ?: stockCache[item.product.id]
+                    ?: 0.0
+            } else {
+                stockCache[item.product.id] ?: 0.0
+            }
+            val hasVariantStock = item.variant != null && getAvailableVariantStock(item.product.id, item.variant.id) != null
+            val otherQty = if (hasVariantStock) {
+                // Variant-level: only count same variant
+                cart.items.filterIndexed { i, it -> i != index && it.product.id == item.product.id && it.variant?.id == item.variant?.id }.sumOf { it.quantity }
+            } else {
+                // Product-level: count all variants of this product
+                cart.items.filterIndexed { i, it -> i != index && it.product.id == item.product.id }.sumOf { it.quantity }
+            }
             if (otherQty + quantity > available) {
                 _stockError.value = "\"${item.product.name}\" only has ${available.toLong()} ${item.product.unit} in stock"
                 return false

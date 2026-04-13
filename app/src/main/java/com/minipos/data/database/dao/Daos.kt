@@ -83,6 +83,9 @@ interface UserDao {
     @Query("UPDATE users SET last_login_at = :timestamp, updated_at = :timestamp WHERE id = :userId")
     suspend fun updateLastLogin(userId: String, timestamp: Long)
 
+    @Query("UPDATE users SET pin_hash = :pinHash, updated_at = :timestamp WHERE id = :userId")
+    suspend fun updatePinHash(userId: String, pinHash: String, timestamp: Long)
+
     @Query("UPDATE users SET is_deleted = 1, deleted_at = :timestamp, updated_at = :timestamp WHERE id = :userId")
     suspend fun softDelete(userId: String, timestamp: Long)
 }
@@ -196,6 +199,12 @@ interface ProductVariantDao {
 
     @Query("UPDATE product_variants SET is_deleted = 1, deleted_at = :timestamp, updated_at = :timestamp WHERE product_id = :productId")
     suspend fun softDeleteByProductId(productId: String, timestamp: Long)
+
+    @Query("SELECT COUNT(*) FROM product_variants WHERE product_id = :productId AND is_deleted = 0 AND is_active = 1")
+    suspend fun getCountByProductId(productId: String): Int
+
+    @Query("SELECT MAX(CAST(SUBSTR(sku, INSTR(sku, '-') + 1) AS INTEGER)) FROM product_variants WHERE product_id = :productId AND is_deleted = 0 AND sku LIKE :skuPrefix || '-%'")
+    suspend fun getMaxSkuSuffix(productId: String, skuPrefix: String): Int?
 }
 
 @Dao
@@ -215,6 +224,9 @@ interface CustomerDao {
     @Query("SELECT * FROM customers WHERE store_id = :storeId AND is_deleted = 0 ORDER BY last_visit_at DESC LIMIT :limit")
     suspend fun getRecent(storeId: String, limit: Int = 10): List<CustomerEntity>
 
+    @Query("SELECT * FROM customers WHERE store_id = :storeId ORDER BY name")
+    suspend fun getAll(storeId: String): List<CustomerEntity>
+
     @Query("SELECT * FROM customers WHERE store_id = :storeId AND is_deleted = 0 AND (name LIKE '%' || :query || '%' OR phone LIKE '%' || :query || '%') ORDER BY name")
     suspend fun search(storeId: String, query: String): List<CustomerEntity>
 
@@ -230,11 +242,30 @@ interface InventoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(inventory: InventoryEntity)
 
+    /** Observe all inventory records for a store — emits whenever any inventory row changes */
+    @Query("SELECT * FROM inventory WHERE store_id = :storeId")
+    fun observeAllInventory(storeId: String): Flow<List<InventoryEntity>>
+
     @Query("SELECT * FROM inventory WHERE product_id = :productId AND store_id = :storeId AND variant_id IS NULL LIMIT 1")
     suspend fun getByProduct(storeId: String, productId: String): InventoryEntity?
 
     @Query("SELECT * FROM inventory WHERE product_id = :productId AND store_id = :storeId AND variant_id = :variantId LIMIT 1")
     suspend fun getByVariant(storeId: String, productId: String, variantId: String): InventoryEntity?
+
+    @Query("SELECT COALESCE(SUM(quantity), 0) FROM inventory WHERE product_id = :productId AND store_id = :storeId")
+    suspend fun getTotalStockForProduct(storeId: String, productId: String): Double
+
+    @Query("SELECT COALESCE(SUM(quantity), 0) FROM inventory WHERE product_id = :productId AND store_id = :storeId AND variant_id IS NULL")
+    suspend fun getProductLevelStock(storeId: String, productId: String): Double
+
+    @Query("SELECT COUNT(*) FROM inventory WHERE product_id = :productId AND store_id = :storeId AND variant_id IS NOT NULL")
+    suspend fun getVariantInventoryCount(storeId: String, productId: String): Int
+
+    @Query("SELECT COALESCE(SUM(quantity), 0) FROM inventory WHERE product_id = :productId AND store_id = :storeId AND variant_id IS NOT NULL")
+    suspend fun getVariantStockSum(storeId: String, productId: String): Double
+
+    @Query("DELETE FROM inventory WHERE product_id = :productId AND store_id = :storeId AND variant_id IS NOT NULL")
+    suspend fun deleteVariantInventory(storeId: String, productId: String)
 
     @Query("UPDATE inventory SET quantity = quantity + :amount, updated_at = :timestamp WHERE id = :inventoryId")
     suspend fun adjustQuantity(inventoryId: String, amount: Double, timestamp: Long)
@@ -338,4 +369,38 @@ interface OrderDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStockMovement(movement: StockMovementEntity)
+}
+
+@Dao
+interface PurchaseOrderDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(order: PurchaseOrderEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItems(items: List<PurchaseOrderItemEntity>)
+
+    @Query("SELECT * FROM purchase_orders WHERE id = :id AND is_deleted = 0")
+    suspend fun getById(id: String): PurchaseOrderEntity?
+
+    @Query("SELECT * FROM purchase_order_items WHERE purchase_order_id = :orderId")
+    suspend fun getItemsByOrderId(orderId: String): List<PurchaseOrderItemEntity>
+
+    @Query("""
+        SELECT * FROM purchase_orders 
+        WHERE store_id = :storeId AND is_deleted = 0 
+        ORDER BY created_at DESC 
+        LIMIT :limit
+    """)
+    suspend fun getRecent(storeId: String, limit: Int = 10): List<PurchaseOrderEntity>
+
+    @Query("""
+        SELECT * FROM purchase_orders 
+        WHERE store_id = :storeId AND is_deleted = 0 
+        AND created_at BETWEEN :startTime AND :endTime
+        ORDER BY created_at DESC
+    """)
+    suspend fun getByDateRange(storeId: String, startTime: Long, endTime: Long): List<PurchaseOrderEntity>
+
+    @Query("SELECT COALESCE(MAX(CAST(REPLACE(code, :prefix, '') AS INTEGER)), 0) FROM purchase_orders WHERE store_id = :storeId AND code LIKE :prefix || '%'")
+    suspend fun getMaxSequence(storeId: String, prefix: String): Int
 }

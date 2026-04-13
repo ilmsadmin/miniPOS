@@ -342,7 +342,7 @@ private fun ScannedProductListView(
                                     modifier = Modifier.weight(1f),
                                 )
                                 IconButton(onClick = onClearError, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, contentDescription = "Đóng", modifier = Modifier.size(16.dp), tint = AppColors.Error)
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(16.dp), tint = AppColors.Error)
                                 }
                             }
                         }

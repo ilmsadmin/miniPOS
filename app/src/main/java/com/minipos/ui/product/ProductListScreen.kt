@@ -50,6 +50,7 @@ import com.minipos.ui.components.*
 fun ProductListScreen(
     onBack: () -> Unit,
     onNavigateToForm: (String?) -> Unit = {},
+    onNavigateToStockManagement: () -> Unit = {},
     viewModel: ProductListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -202,6 +203,21 @@ fun ProductListScreen(
                     )
                 }
 
+                // ── Stock Management tip banner ──
+                if (!state.isLoading && state.products.isNotEmpty()) {
+                    val lowOrOutCount = state.products.count { product ->
+                        if (!product.trackInventory) return@count false
+                        val stock = (state.stockMap[product.id] ?: 0.0).toLong().toInt()
+                        stock <= product.minStock
+                    }
+                    item {
+                        StockManagementBanner(
+                            lowOrOutCount = lowOrOutCount,
+                            onClick = onNavigateToStockManagement,
+                        )
+                    }
+                }
+
                 // ── Loading / Empty / List ──
                 if (state.isLoading) {
                     item {
@@ -267,6 +283,87 @@ fun ProductListScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════
+// STOCK MANAGEMENT BANNER — guides new users
+// ═══════════════════════════════════════════════
+
+@Composable
+private fun StockManagementBanner(
+    lowOrOutCount: Int,
+    onClick: () -> Unit,
+) {
+    val hasIssue = lowOrOutCount > 0
+    val bannerBg = if (hasIssue) AppColors.WarningSoft else AppColors.InfoSoft
+    val accentColor = if (hasIssue) AppColors.Warning else AppColors.PrimaryLight
+    val icon = if (hasIssue) Icons.Rounded.Warning else Icons.Rounded.Inventory2
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .background(bannerBg)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Icon
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                .background(accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        Spacer(Modifier.width(10.dp))
+
+        // Text
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (hasIssue) stringResource(R.string.prod_stock_banner_warning, lowOrOutCount)
+                       else stringResource(R.string.prod_stock_banner_title),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(R.string.prod_stock_banner_desc),
+                fontSize = 11.sp,
+                color = AppColors.TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // Arrow CTA
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.ArrowForward,
+                contentDescription = stringResource(R.string.prod_stock_banner_title),
+                tint = accentColor,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }

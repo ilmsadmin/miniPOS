@@ -4,11 +4,18 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.R
+import com.minipos.core.backup.BackupFileInfo
+import com.minipos.core.backup.BackupManager
+import com.minipos.core.backup.BackupResult
+import com.minipos.core.backup.RestoreResult
 import com.minipos.domain.model.*
 import com.minipos.domain.repository.AuthRepository
 import com.minipos.domain.repository.StoreRepository
 import com.minipos.domain.repository.UserRepository
 import com.minipos.data.preferences.AppPreferences
+import com.minipos.core.theme.AppLanguage
+import com.minipos.core.theme.ThemeManager
+import com.minipos.core.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +42,17 @@ data class SettingsState(
     val showDeleteUserConfirm: User? = null,
     val showBackupDialog: Boolean = false,
     val showRestoreDialog: Boolean = false,
+    val showChangePinDialog: Boolean = false,
+    val pinVerified: Boolean = false,
+    val pinVerifyError: String? = null,
+
+    // Backup/Restore
+    val isBackingUp: Boolean = false,
+    val isRestoring: Boolean = false,
+    val backupFiles: List<BackupFileInfo> = emptyList(),
+    val showRestorePickerDialog: Boolean = false,
+    val restoreConfirmFile: BackupFileInfo? = null,
+    val lastBackupResult: String? = null,
 )
 
 @HiltViewModel
@@ -44,6 +62,8 @@ class SettingsViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val appPreferences: AppPreferences,
+    val themeManager: ThemeManager,
+    private val backupManager: BackupManager,
 ) : ViewModel() {
 
     private fun str(resId: Int) = app.getString(resId)
@@ -71,9 +91,29 @@ class SettingsViewModel @Inject constructor(
         _state.update { it.copy(message = null) }
     }
 
+    fun showMessage(msg: String) {
+        _state.update { it.copy(message = msg) }
+    }
+
+    // ============ Theme & Language ============
+
+    fun setThemeMode(mode: ThemeMode) {
+        themeManager.setThemeMode(mode)
+    }
+
+    fun setLanguage(lang: AppLanguage) {
+        themeManager.setLanguage(lang)
+    }
+
     // ============ Store Info ============
 
-    fun showStoreInfoDialog() { _state.update { it.copy(showStoreInfoDialog = true) } }
+    fun showStoreInfoDialog() {
+        if (_state.value.currentUser?.role != UserRole.OWNER) {
+            _state.update { it.copy(message = str(R.string.error_owner_only)) }
+            return
+        }
+        _state.update { it.copy(showStoreInfoDialog = true) }
+    }
     fun dismissStoreInfoDialog() { _state.update { it.copy(showStoreInfoDialog = false) } }
 
     fun updateStoreInfo(name: String, address: String?, phone: String?) {
@@ -128,9 +168,54 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // ============ Change PIN (dedicated flow) ============
+
+    fun showChangePinDialog() { _state.update { it.copy(showChangePinDialog = true, pinVerified = false, pinVerifyError = null) } }
+    fun dismissChangePinDialog() { _state.update { it.copy(showChangePinDialog = false, pinVerified = false, pinVerifyError = null) } }
+
+    fun verifyCurrentPin(pin: String) {
+        viewModelScope.launch {
+            val user = _state.value.currentUser ?: return@launch
+            val valid = userRepository.verifyPin(user.id, pin)
+            if (valid) {
+                _state.update { it.copy(pinVerified = true, pinVerifyError = null) }
+            } else {
+                _state.update { it.copy(pinVerifyError = str(R.string.msg_pin_incorrect)) }
+            }
+        }
+    }
+
+    fun saveNewPin(newPin: String) {
+        viewModelScope.launch {
+            val user = _state.value.currentUser ?: return@launch
+            when (val result = userRepository.resetPin(user.id, newPin)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            showChangePinDialog = false,
+                            pinVerified = false,
+                            pinVerifyError = null,
+                            currentUserHasPin = true,
+                            message = str(R.string.msg_pin_updated),
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(message = result.message) }
+                }
+            }
+        }
+    }
+
     // ============ Sales Settings ============
 
-    fun showSalesSettingsDialog() { _state.update { it.copy(showSalesSettingsDialog = true) } }
+    fun showSalesSettingsDialog() {
+        if (_state.value.currentUser?.role != UserRole.OWNER) {
+            _state.update { it.copy(message = str(R.string.error_owner_only)) }
+            return
+        }
+        _state.update { it.copy(showSalesSettingsDialog = true) }
+    }
     fun dismissSalesSettingsDialog() { _state.update { it.copy(showSalesSettingsDialog = false) } }
 
     fun updateSalesSettings(settings: StoreSettings) {
@@ -148,9 +233,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ============ User Management ============
+    // ============ User Management (OWNER only) ============
 
-    fun showUserManagement() { _state.update { it.copy(showUserManagementSheet = true) } }
+    private fun isOwner() = _state.value.currentUser?.role == UserRole.OWNER
+
+    fun showUserManagement() {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        _state.update { it.copy(showUserManagementSheet = true) }
+    }
     fun dismissUserManagement() { _state.update { it.copy(showUserManagementSheet = false) } }
 
     fun showAddUserDialog() { _state.update { it.copy(showAddUserDialog = true) } }
@@ -166,6 +256,7 @@ class SettingsViewModel @Inject constructor(
     fun dismissDeleteUserConfirm() { _state.update { it.copy(showDeleteUserConfirm = null) } }
 
     fun addUser(name: String, pin: String, role: UserRole) {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         viewModelScope.launch {
             val storeId = _state.value.store?.id ?: return@launch
             when (val result = userRepository.createUser(storeId, name, pin, role)) {
@@ -181,6 +272,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateUser(user: User) {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         viewModelScope.launch {
             val storeId = _state.value.store?.id ?: return@launch
             when (val result = userRepository.updateUser(user)) {
@@ -196,6 +288,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun resetUserPin(userId: String, newPin: String) {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         viewModelScope.launch {
             when (val result = userRepository.resetPin(userId, newPin)) {
                 is Result.Success -> {
@@ -209,6 +302,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun deleteUser(userId: String) {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
         viewModelScope.launch {
             val storeId = _state.value.store?.id ?: return@launch
             when (val result = userRepository.deleteUser(userId)) {
@@ -225,10 +319,72 @@ class SettingsViewModel @Inject constructor(
 
     // ============ Backup/Restore ============
 
-    fun showBackupDialog() { _state.update { it.copy(showBackupDialog = true) } }
+    fun showBackupDialog() {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        val files = backupManager.listBackups()
+        _state.update { it.copy(showBackupDialog = true, backupFiles = files) }
+    }
     fun dismissBackupDialog() { _state.update { it.copy(showBackupDialog = false) } }
 
-    fun showRestoreDialog() { _state.update { it.copy(showRestoreDialog = true) } }
-    fun dismissRestoreDialog() { _state.update { it.copy(showRestoreDialog = false) } }
+    fun createBackup() {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        viewModelScope.launch {
+            _state.update { it.copy(isBackingUp = true) }
+            when (val result = backupManager.createBackup()) {
+                is BackupResult.Success -> {
+                    val files = backupManager.listBackups()
+                    val sizeMb = String.format("%.2f", result.sizeBytes / 1024.0 / 1024.0)
+                    _state.update {
+                        it.copy(
+                            isBackingUp = false,
+                            backupFiles = files,
+                            lastBackupResult = str(R.string.backup_success, result.fileName, sizeMb),
+                            message = str(R.string.backup_success, result.fileName, sizeMb),
+                        )
+                    }
+                }
+                is BackupResult.Error -> {
+                    _state.update { it.copy(isBackingUp = false, message = str(R.string.backup_failed, result.message)) }
+                }
+            }
+        }
+    }
+
+    fun deleteBackupFile(filePath: String) {
+        backupManager.deleteBackup(filePath)
+        val files = backupManager.listBackups()
+        _state.update { it.copy(backupFiles = files) }
+    }
+
+    fun showRestoreDialog() {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        val files = backupManager.listBackups()
+        _state.update { it.copy(showRestoreDialog = true, backupFiles = files) }
+    }
+    fun dismissRestoreDialog() { _state.update { it.copy(showRestoreDialog = false, restoreConfirmFile = null) } }
+
+    fun confirmRestoreFile(file: BackupFileInfo) {
+        _state.update { it.copy(restoreConfirmFile = file) }
+    }
+    fun cancelRestoreConfirm() { _state.update { it.copy(restoreConfirmFile = null) } }
+
+    fun executeRestore(filePath: String) {
+        if (!isOwner()) { _state.update { it.copy(message = str(R.string.error_owner_only)) }; return }
+        viewModelScope.launch {
+            _state.update { it.copy(isRestoring = true, restoreConfirmFile = null) }
+            when (val result = backupManager.restoreBackup(filePath)) {
+                is RestoreResult.Success -> {
+                    // Reload all data after restore
+                    loadData()
+                    _state.update {
+                        it.copy(isRestoring = false, showRestoreDialog = false, message = str(R.string.restore_success))
+                    }
+                }
+                is RestoreResult.Error -> {
+                    _state.update { it.copy(isRestoring = false, message = str(R.string.restore_failed, result.message)) }
+                }
+            }
+        }
+    }
 
 }

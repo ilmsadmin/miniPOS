@@ -132,7 +132,7 @@ class PosStep4ViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isProcessing = false, error = e.message ?: "Lỗi không xác định") }
+                _state.update { it.copy(isProcessing = false, error = e.message ?: "Unknown error") }
             }
         }
     }

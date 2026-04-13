@@ -1,17 +1,31 @@
 package com.minipos.ui.pinlock
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.R
 import com.minipos.core.theme.AppColors
+import com.minipos.ui.components.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun PinLockScreen(
@@ -37,139 +53,392 @@ fun PinLockScreen(
 
     var showPin by remember { mutableStateOf(false) }
     var showResetConfirm by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
-    if (showResetConfirm) {
-        AlertDialog(
-            onDismissRequest = { showResetConfirm = false },
-            icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = AppColors.Error) },
-            title = { Text(stringResource(R.string.pin_forgot_title)) },
-            text = { Text(stringResource(R.string.pin_forgot_msg)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showResetConfirm = false
-                        viewModel.clearPin { onUnlocked() }
-                    },
-                ) {
-                    Text(stringResource(R.string.pin_remove_and_enter), color = AppColors.Error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
+    // ── Entrance animation ──
+    val enterAnim = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        enterAnim.animateTo(1f, animationSpec = tween(800, easing = FastOutSlowInEasing))
     }
 
+    // ── Shake animation on error ──
+    val shakeOffset = remember { Animatable(0f) }
+    LaunchedEffect(state.error) {
+        if (state.error != null) {
+            repeat(3) {
+                shakeOffset.animateTo(12f, tween(50))
+                shakeOffset.animateTo(-12f, tween(50))
+            }
+            shakeOffset.animateTo(0f, tween(50))
+        }
+    }
+
+    // Auto-focus PIN field — small delay lets the composition settle before requesting focus
+    LaunchedEffect(Unit) {
+        delay(100)
+        try { focusRequester.requestFocus() } catch (_: Exception) {}
+    }
+
+    // ═══ Forgot PIN dialog ═══
+    MiniPosConfirmDialog(
+        visible = showResetConfirm,
+        type = PopupType.WARNING,
+        icon = Icons.Rounded.LockOpen,
+        title = stringResource(R.string.pin_forgot_title),
+        message = stringResource(R.string.pin_forgot_msg),
+        cancelText = stringResource(R.string.cancel),
+        confirmText = stringResource(R.string.pin_remove_and_enter),
+        confirmStyle = ConfirmButtonStyle.DANGER,
+        onCancel = { showResetConfirm = false },
+        onConfirm = {
+            showResetConfirm = false
+            viewModel.clearPin { onUnlocked() }
+        },
+    )
+
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
     ) {
+        // ═══ Ambient background orbs (matching splash design) ═══
+        Box(
+            modifier = Modifier
+                .size(280.dp)
+                .offset(x = (-60).dp, y = (-40).dp)
+                .blur(80.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(AppColors.Primary.copy(alpha = 0.15f), Color.Transparent),
+                    ),
+                    CircleShape,
+                )
+                .graphicsLayer { alpha = enterAnim.value },
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(220.dp)
+                .offset(x = 50.dp, y = 30.dp)
+                .blur(80.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(AppColors.Accent.copy(alpha = 0.1f), Color.Transparent),
+                    ),
+                    CircleShape,
+                )
+                .graphicsLayer { alpha = enterAnim.value },
+        )
+
+        // ═══ Main content ═══
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 48.dp),
+                .fillMaxSize()
+                .padding(horizontal = 40.dp)
+                .graphicsLayer {
+                    alpha = enterAnim.value
+                    translationY = (1f - enterAnim.value) * 40f
+                },
+            verticalArrangement = Arrangement.Center,
         ) {
-            // App icon / lock icon
-            Surface(
-                shape = CircleShape,
-                color = AppColors.PrimaryContainer,
-                modifier = Modifier.size(80.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
+            // ── Lock icon with gradient circle + pulse ring ──
+            Box(contentAlignment = Alignment.Center) {
+                // Pulse ring
+                val pulseScale by rememberInfiniteTransition(label = "pulse").animateFloat(
+                    initialValue = 0.9f,
+                    targetValue = 1.15f,
+                    animationSpec = infiniteRepeatable(
+                        tween(2500, easing = FastOutSlowInEasing),
+                        RepeatMode.Reverse,
+                    ),
+                    label = "pulseScale",
+                )
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale; alpha = 0.15f }
+                        .border(2.dp, AppColors.Primary, CircleShape),
+                )
+
+                // Main circle
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .shadow(16.dp, CircleShape)
+                        .background(
+                            Brush.linearGradient(listOf(AppColors.Primary, AppColors.PrimaryLight)),
+                            CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
-                        Icons.Default.Lock,
+                        Icons.Rounded.Lock,
                         contentDescription = null,
-                        tint = AppColors.Primary,
-                        modifier = Modifier.size(36.dp),
+                        tint = Color.White,
+                        modifier = Modifier.size(44.dp),
                     )
                 }
             }
 
+            Spacer(Modifier.height(28.dp))
+
+            // ── Brand name ──
             Text(
                 stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Black,
                 color = AppColors.Primary,
+                letterSpacing = (-0.5).sp,
             )
+
+            Spacer(Modifier.height(6.dp))
 
             Text(
                 stringResource(R.string.pin_enter_to_continue),
-                style = MaterialTheme.typography.bodyMedium,
-                color = AppColors.TextSecondary,
-                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = AppColors.TextTertiary,
             )
 
-            // PIN input
-            OutlinedTextField(
-                value = state.pin,
-                onValueChange = { value ->
-                    if (value.length <= 6 && value.all { it.isDigit() }) {
-                        viewModel.onPinChanged(value)
-                    }
-                },
-                label = { Text(stringResource(R.string.pin_label)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                visualTransformation = if (showPin) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(onClick = { showPin = !showPin }) {
+            Spacer(Modifier.height(32.dp))
+
+            // ── PIN Input field (custom styled) ──
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { translationX = shakeOffset.value },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .shadow(
+                            if (state.error != null) 0.dp else 4.dp,
+                            RoundedCornerShape(MiniPosTokens.RadiusXl),
+                        )
+                        .background(
+                            AppColors.Surface,
+                            RoundedCornerShape(MiniPosTokens.RadiusXl),
+                        )
+                        .border(
+                            width = if (state.error != null) 2.dp else 1.5.dp,
+                            color = if (state.error != null) AppColors.Error
+                            else if (state.pin.isNotEmpty()) AppColors.Primary
+                            else AppColors.BorderLight,
+                            shape = RoundedCornerShape(MiniPosTokens.RadiusXl),
+                        )
+                        .padding(horizontal = 20.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Icon(
-                            if (showPin) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            Icons.Rounded.Pin,
                             contentDescription = null,
+                            tint = if (state.error != null) AppColors.Error
+                            else if (state.pin.isNotEmpty()) AppColors.Primary
+                            else AppColors.TextTertiary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.width(12.dp))
+
+                        BasicTextField(
+                            value = state.pin,
+                            onValueChange = { value ->
+                                if (value.length <= 6 && value.all { it.isDigit() }) {
+                                    viewModel.onPinChanged(value)
+                                }
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (state.pin.length >= 4) viewModel.submitPin()
+                                    focusManager.clearFocus()
+                                },
+                            ),
+                            visualTransformation = if (showPin) VisualTransformation.None
+                            else PasswordVisualTransformation(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester),
+                            decorationBox = { inner ->
+                                Box(
+                                    modifier = Modifier.fillMaxHeight(),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    if (state.pin.isEmpty()) {
+                                        Text(
+                                            stringResource(R.string.pin_label),
+                                            fontSize = 14.sp,
+                                            color = AppColors.TextTertiary,
+                                        )
+                                    }
+                                    inner()
+                                }
+                            },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary,
+                                letterSpacing = if (!showPin) 4.sp else 0.sp,
+                            ),
+                        )
+
+                        // Toggle visibility
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.InputBackground)
+                                .clickable { showPin = !showPin },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                if (showPin) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                                contentDescription = null,
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
+
+                // PIN dot indicators
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    repeat(6) { index ->
+                        val filled = index < state.pin.length
+                        Box(
+                            modifier = Modifier
+                                .size(if (filled) 10.dp else 8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        state.error != null && filled -> AppColors.Error
+                                        filled -> AppColors.Primary
+                                        else -> AppColors.BorderLight
+                                    },
+                                ),
                         )
                     }
-                },
-                isError = state.error != null,
-                supportingText = state.error?.let { { Text(it) } },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            )
+                }
 
-            // Locked warning
-            if (state.lockedUntilMessage != null) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = AppColors.ErrorContainer),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
+                // Error message
+                AnimatedVisibility(visible = state.error != null) {
                     Text(
-                        state.lockedUntilMessage!!,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = state.error ?: "",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = AppColors.Error,
-                        modifier = Modifier.padding(12.dp),
                         textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp),
                     )
                 }
             }
 
-            Button(
-                onClick = { viewModel.submitPin() },
-                enabled = state.pin.length >= 4 && state.lockedUntilMessage == null,
+            // ── Locked warning ──
+            AnimatedVisibility(
+                visible = state.lockedUntilMessage != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .background(AppColors.ErrorSoft, RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .border(1.dp, AppColors.Error.copy(alpha = 0.3f), RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Timer,
+                        contentDescription = null,
+                        tint = AppColors.Error,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        state.lockedUntilMessage ?: "",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.Error,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // ── Unlock button (gradient) ──
+            val buttonEnabled = state.pin.length >= 4 && state.lockedUntilMessage == null && !state.isLoading
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .height(56.dp)
+                    .shadow(
+                        if (buttonEnabled) 8.dp else 0.dp,
+                        RoundedCornerShape(MiniPosTokens.Radius2xl),
+                    )
+                    .clip(RoundedCornerShape(MiniPosTokens.Radius2xl))
+                    .background(
+                        if (buttonEnabled)
+                            Brush.linearGradient(listOf(AppColors.Primary, AppColors.Accent, AppColors.PrimaryLight))
+                        else
+                            Brush.linearGradient(listOf(AppColors.BorderLight, AppColors.BorderLight)),
+                    )
+                    .then(
+                        if (buttonEnabled) Modifier.clickable { viewModel.submitPin() }
+                        else Modifier,
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.5.dp,
+                        color = Color.White,
                     )
                 } else {
-                    Text(stringResource(R.string.pin_unlock_btn), fontSize = 16.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.LockOpen,
+                            contentDescription = null,
+                            tint = if (buttonEnabled) Color.White else AppColors.TextTertiary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            stringResource(R.string.pin_unlock_btn),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (buttonEnabled) Color.White else AppColors.TextTertiary,
+                        )
+                    }
                 }
             }
 
-            TextButton(onClick = { showResetConfirm = true }) {
-                Text(
-                    stringResource(R.string.pin_forgot_btn),
-                    color = AppColors.TextSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            Spacer(Modifier.height(16.dp))
+
+            // ── Forgot PIN ──
+            Text(
+                text = stringResource(R.string.pin_forgot_btn),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.TextTertiary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                    .clickable { showResetConfirm = true }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
         }
     }
 }

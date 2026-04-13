@@ -1,5 +1,6 @@
 package com.minipos.ui.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -41,12 +43,65 @@ fun StoreSettingsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showTaxRateDialog by remember { mutableStateOf(false) }
+    var showComingSoonDialog by remember { mutableStateOf(false) }
+    var comingSoonTitle by remember { mutableStateOf("") }
 
     LaunchedEffect(state.message) {
         state.message?.let { msg ->
             snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short)
             viewModel.clearMessage()
         }
+    }
+
+    // Tax Rate Picker → Bottom Sheet
+    if (showTaxRateDialog) {
+        var taxRateInput by remember { mutableStateOf(state.defaultTaxRate.toInt().toString()) }
+        MiniPosBottomSheet(
+            visible = true,
+            title = stringResource(R.string.tax_rate_title),
+            onDismiss = { showTaxRateDialog = false },
+            footer = {
+                BottomSheetPrimaryButton(
+                    text = stringResource(R.string.save),
+                    icon = Icons.Rounded.Check,
+                    onClick = {
+                        val rate = taxRateInput.toDoubleOrNull() ?: 0.0
+                        viewModel.updateTaxRate(rate)
+                        showTaxRateDialog = false
+                    },
+                )
+            },
+        ) {
+            Text(
+                stringResource(R.string.tax_rate_hint),
+                fontSize = 13.sp,
+                color = AppColors.TextSecondary,
+            )
+            Spacer(Modifier.height(16.dp))
+            BottomSheetField(
+                label = stringResource(R.string.tax_rate_title),
+                value = taxRateInput,
+                onValueChange = { taxRateInput = it.filter { c -> c.isDigit() || c == '.' } },
+                placeholder = "0",
+                keyboardType = KeyboardType.Number,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+
+    // Coming Soon → Alert Dialog (Info)
+    if (showComingSoonDialog) {
+        MiniPosAlertDialog(
+            visible = true,
+            type = PopupType.INFO,
+            icon = Icons.Rounded.Construction,
+            title = comingSoonTitle,
+            message = stringResource(R.string.feature_coming_soon_msg),
+            confirmText = stringResource(R.string.ok),
+            onConfirm = { showComingSoonDialog = false },
+            onDismiss = { showComingSoonDialog = false },
+        )
     }
 
     Scaffold(
@@ -84,9 +139,10 @@ fun StoreSettingsScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     // ── Store logo ──
+                    val logoTitle = stringResource(R.string.feature_coming_soon_title)
                     StoreLogoSection(
                         storeName = state.storeName,
-                        onChangeLogo = { /* TODO: image picker */ },
+                        onChangeLogo = { comingSoonTitle = logoTitle; showComingSoonDialog = true },
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -155,20 +211,21 @@ fun StoreSettingsScreen(
                     SsSelectorList {
                         SsSelectorItem(
                             icon = Icons.Rounded.Receipt,
-                            iconGradient = listOf(Color(0xFF00D2FF), Color(0xFF3B9FDB)),
+                            iconGradient = listOf(Color(0xFF14B8B0), Color(0xFF5AEDC5)),
                             name = stringResource(R.string.ss_default_vat),
                             desc = stringResource(R.string.ss_vat_desc),
                             value = if (state.taxEnabled) "${state.defaultTaxRate.toInt()}%" else "0%",
-                            onClick = { /* TODO: tax rate picker */ },
+                            onClick = { showTaxRateDialog = true },
                         )
                         SsSelectorDivider()
+                        val currTitle = stringResource(R.string.ss_currency_unit)
                         SsSelectorItem(
                             icon = Icons.Rounded.CurrencyExchange,
                             iconGradient = listOf(Color(0xFFFFD54F), Color(0xFFF9A825)),
                             name = stringResource(R.string.ss_currency_unit),
                             desc = stringResource(R.string.ss_currency_vnd),
                             value = "VNĐ",
-                            onClick = { /* TODO: currency picker */ },
+                            onClick = { comingSoonTitle = currTitle; showComingSoonDialog = true },
                         )
                     }
 
@@ -202,7 +259,7 @@ fun StoreSettingsScreen(
                         SsTextInput(
                             value = state.receiptThankYou,
                             onValueChange = { viewModel.updateReceiptThankYou(it) },
-                            placeholder = "Cảm ơn quý khách! Hẹn gặp lại! 🙏",
+                            placeholder = stringResource(R.string.receipt_thank_you_placeholder),
                         )
                         Text(
                             stringResource(R.string.ss_receipt_thank_you_hint),
@@ -393,26 +450,17 @@ private fun StoreLogoSection(
                     shape = RoundedCornerShape(MiniPosTokens.RadiusXl),
                     ambientColor = AppColors.BrandNavy.copy(alpha = 0.4f),
                 )
-                .background(MiniPosGradients.brand())
                 .clickable(onClick = onChangeLogo),
             contentAlignment = Alignment.Center,
         ) {
-            // Store icon or first letter
-            if (storeName.isNotBlank()) {
-                Text(
-                    storeName.first().uppercase(),
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                )
-            } else {
-                Icon(
-                    Icons.Rounded.Storefront,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp),
-                )
-            }
+            // Store logo
+            Image(
+                painter = painterResource(R.drawable.app_logo),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusXl)),
+            )
 
             // Camera edit badge
             Box(
@@ -791,7 +839,7 @@ private fun ReceiptPreview(
         if (storePhone.isNotBlank()) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                "ĐT: $storePhone",
+                stringResource(R.string.store_phone_format, storePhone),
                 fontSize = 11.sp,
                 color = AppColors.TextTertiary,
             )
@@ -816,8 +864,8 @@ private fun ReceiptPreview(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Sample items
-        ReceiptSampleRow("Coca Cola 330ml x2", "20,000đ")
-        ReceiptSampleRow("Mì Hảo Hảo x1", "5,000đ")
+        ReceiptSampleRow(stringResource(R.string.receipt_sample_item1), stringResource(R.string.receipt_sample_price1))
+        ReceiptSampleRow(stringResource(R.string.receipt_sample_item2), stringResource(R.string.receipt_sample_price2))
 
         Spacer(modifier = Modifier.height(4.dp))
 

@@ -55,10 +55,12 @@ class OrderListViewModel @Inject constructor(
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
             storeId = store.id
-            orderRepository.observeOrders(storeId).collect { orders ->
-                allOrders = orders.sortedByDescending { it.createdAt }
-                applyFilters()
-            }
+            try {
+                orderRepository.observeOrders(storeId).collect { orders ->
+                    allOrders = orders.sortedByDescending { it.createdAt }
+                    applyFilters()
+                }
+            } catch (_: Exception) { /* prevent crash from reactive observer */ }
         }
     }
 

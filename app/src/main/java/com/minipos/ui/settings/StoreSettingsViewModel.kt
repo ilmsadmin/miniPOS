@@ -115,6 +115,15 @@ class StoreSettingsViewModel @Inject constructor(
         _state.update { it.copy(storeEmail = value) }
     }
 
+    fun updateTaxRate(rate: Double) {
+        _state.update {
+            it.copy(
+                defaultTaxRate = rate,
+                taxEnabled = rate > 0,
+            )
+        }
+    }
+
     fun toggleAutoPrintReceipt() {
         _state.update { it.copy(autoPrintReceipt = !it.autoPrintReceipt) }
     }

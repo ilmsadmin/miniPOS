@@ -37,22 +37,24 @@ class StoreManagementViewModel @Inject constructor(
             val store = storeRepository.getStore() ?: return@launch
 
             // Observe all counts reactively
-            combine(
-                productRepository.observeProducts(store.id),
-                categoryRepository.observeCategories(store.id),
-                customerRepository.observeCustomers(store.id),
-                supplierRepository.observeSuppliers(store.id),
-            ) { products, categories, customers, suppliers ->
-                ManagementStatsState(
-                    productCount = products.size,
-                    categoryCount = categories.size,
-                    customerCount = customers.size,
-                    supplierCount = suppliers.size,
-                    isLoading = false,
-                )
-            }.collect { stats ->
-                _state.value = stats
-            }
+            try {
+                combine(
+                    productRepository.observeProducts(store.id),
+                    categoryRepository.observeCategories(store.id),
+                    customerRepository.observeCustomers(store.id),
+                    supplierRepository.observeSuppliers(store.id),
+                ) { products, categories, customers, suppliers ->
+                    ManagementStatsState(
+                        productCount = products.size,
+                        categoryCount = categories.size,
+                        customerCount = customers.size,
+                        supplierCount = suppliers.size,
+                        isLoading = false,
+                    )
+                }.collect { stats ->
+                    _state.value = stats
+                }
+            } catch (_: Exception) { /* prevent crash from reactive observer */ }
         }
     }
 }

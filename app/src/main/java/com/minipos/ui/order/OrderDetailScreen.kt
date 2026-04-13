@@ -51,6 +51,20 @@ fun OrderDetailScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    var infoDialogTitle by remember { mutableStateOf("") }
+    var showInfoDialog by remember { mutableStateOf(false) }
+
+    // Coming-soon info dialog
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text(infoDialogTitle) },
+            text = { Text(stringResource(R.string.feature_coming_soon_msg)) },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) { Text(stringResource(R.string.ok)) }
+            },
+        )
+    }
 
     // Show messages
     LaunchedEffect(state.message, state.showReceiptPreview) {
@@ -216,13 +230,16 @@ fun OrderDetailScreen(
                                 style = ActionButtonStyle.SECONDARY,
                                 onClick = { viewModel.showReceiptPreview() },
                             )
-                            // Duplicate order
+                            // Duplicate order — coming soon, use SECONDARY style
                             ActionButton(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.ContentCopy,
                                 label = stringResource(R.string.btn_duplicate_order),
-                                style = ActionButtonStyle.PRIMARY,
-                                onClick = { snackbarHostState.currentSnackbarData?.dismiss() },
+                                style = ActionButtonStyle.SECONDARY,
+                                onClick = {
+                                    infoDialogTitle = context.getString(R.string.btn_duplicate_order)
+                                    showInfoDialog = true
+                                },
                             )
                         }
                     }
@@ -232,7 +249,10 @@ fun OrderDetailScreen(
                             icon = Icons.Default.Undo,
                             label = stringResource(R.string.btn_return_refund),
                             style = ActionButtonStyle.DANGER,
-                            onClick = { /* TODO: implement return */ },
+                            onClick = {
+                                infoDialogTitle = context.getString(R.string.btn_return_refund)
+                                showInfoDialog = true
+                            },
                         )
                     }
 
@@ -726,85 +746,22 @@ private fun ShareOptionsDialog(
     onShareText: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.Share, contentDescription = null, tint = AppColors.Primary) },
-        title = { Text(stringResource(R.string.share_receipt_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.select_share_format),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // PDF option
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSharePdf() },
-                    shape = RoundedCornerShape(8.dp),
-                    color = AppColors.SurfaceVariant,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Default.PictureAsPdf,
-                            contentDescription = null,
-                            tint = AppColors.Error,
-                            modifier = Modifier.size(28.dp),
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(stringResource(R.string.share_pdf), fontWeight = FontWeight.Medium)
-                            Text(
-                                stringResource(R.string.share_pdf_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextSecondary,
-                            )
-                        }
-                    }
-                }
-
-                // Text option
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onShareText() },
-                    shape = RoundedCornerShape(8.dp),
-                    color = AppColors.SurfaceVariant,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.TextSnippet,
-                            contentDescription = null,
-                            tint = AppColors.Secondary,
-                            modifier = Modifier.size(28.dp),
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(stringResource(R.string.share_text), fontWeight = FontWeight.Medium)
-                            Text(
-                                stringResource(R.string.share_text_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColors.TextSecondary,
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.close))
-            }
-        },
+    MiniPosActionSheet(
+        visible = true,
+        title = stringResource(R.string.share_receipt_title),
+        description = stringResource(R.string.select_share_format),
+        items = listOf(
+            ActionSheetItem(
+                label = stringResource(R.string.share_pdf),
+                icon = Icons.Rounded.PictureAsPdf,
+                onClick = onSharePdf,
+            ),
+            ActionSheetItem(
+                label = stringResource(R.string.share_text),
+                icon = Icons.Rounded.TextSnippet,
+                onClick = onShareText,
+            ),
+        ),
+        onDismiss = onDismiss,
     )
 }

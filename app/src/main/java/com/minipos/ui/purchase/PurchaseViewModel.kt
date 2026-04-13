@@ -4,9 +4,11 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.R
+import com.minipos.core.utils.UuidGenerator
 import com.minipos.data.preferences.AppPreferences
 import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
+import com.minipos.domain.model.PurchaseOrderItem
 import com.minipos.domain.model.Result
 import com.minipos.domain.model.StockMovementType
 import com.minipos.domain.model.Supplier
@@ -85,18 +87,19 @@ class PurchaseViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
-            val store = storeRepository.getStore() ?: return@launch
-            storeId = store.id
-            val suppliers = supplierRepository.getAll(storeId)
-            val products = productRepository.getAll(storeId).filter { it.trackInventory && it.isActive }
-            val poCode = generatePOCode()
-            _state.update { it.copy(isLoading = false, suppliers = suppliers, products = products, purchaseCode = poCode) }
+            try {
+                val store = storeRepository.getStore() ?: return@launch
+                storeId = store.id
+                val suppliers = supplierRepository.getAll(storeId)
+                val products = productRepository.getAll(storeId).filter { it.trackInventory && it.isActive }
+                val poCode = inventoryRepository.generatePurchaseOrderCode(storeId)
+                _state.update { it.copy(isLoading = false, suppliers = suppliers, products = products, purchaseCode = poCode) }
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false) }
+            }
         }
-    }
-
-    private fun generatePOCode(): String {
-        val seq = (1..9999).random()
-        return "PO-${String.format("%04d", seq)}"
     }
 
     fun selectSupplier(supplierId: String?) {
@@ -190,13 +193,13 @@ class PurchaseViewModel @Inject constructor(
                     })
                 }
             } else {
-                val stock = inventoryRepository.getStock(storeId, product.id)
+                val stock = inventoryRepository.getTotalStock(storeId, product.id, product.hasVariants)
                 val cost = variant?.costPrice ?: product.costPrice
                 _state.update { s ->
                     s.copy(lineItems = s.lineItems + PurchaseLineItem(
                         product = product,
                         variant = variant,
-                        currentStock = stock?.quantity ?: 0.0,
+                        currentStock = stock,
                         quantity = 1.0,
                         costPrice = cost,
                     ))
@@ -250,6 +253,9 @@ class PurchaseViewModel @Inject constructor(
         }
 
     fun confirmPurchase() {
+        // Guard against double-submission
+        if (_state.value.isSaving) return
+
         val items = _state.value.lineItems.filter { it.quantity > 0 }
         if (items.isEmpty()) {
             _state.update { it.copy(errorMessage = str(R.string.msg_purchase_no_items)) }
@@ -257,53 +263,125 @@ class PurchaseViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isSaving = true, errorMessage = null) }
-            val userId = appPreferences.currentUserId.first() ?: run {
-                _state.update { it.copy(isSaving = false, errorMessage = str(R.string.msg_user_not_found)) }
-                return@launch
-            }
-            val supplierId = _state.value.selectedSupplierId
-
-            var hasError = false
-            for (item in items) {
-                val result = inventoryRepository.adjustStock(
-                    storeId = storeId,
-                    productId = item.product.id,
-                    amount = item.quantity,
-                    type = StockMovementType.PURCHASE_IN,
-                    userId = userId,
-                    referenceId = null,
-                    supplierId = supplierId,
-                )
-                if (result is Result.Error) {
-                    hasError = true
-                    _state.update { it.copy(isSaving = false, errorMessage = str(R.string.msg_purchase_item_error, item.product.name, result.message)) }
+            try {
+                _state.update { it.copy(isSaving = true, errorMessage = null) }
+                val userId = appPreferences.currentUserId.first() ?: run {
+                    _state.update { it.copy(isSaving = false, errorMessage = str(R.string.msg_user_not_found)) }
                     return@launch
                 }
-                // Update cost price if changed
-                if (item.costPrice > 0) {
-                    if (item.variant != null) {
-                        // Update variant cost price
-                        if (item.costPrice != (item.variant.costPrice ?: 0.0)) {
-                            productRepository.updateVariant(item.variant.copy(costPrice = item.costPrice))
+                val supplierId = _state.value.selectedSupplierId
+                val poCode = _state.value.purchaseCode
+
+                // Find supplier name
+                val supplierName = supplierId?.let { sid ->
+                    _state.value.suppliers.find { it.id == sid }?.name
+                }
+
+                // Calculate totals
+                val totalAmount = items.sumOf { it.quantity * it.costPrice }
+                val totalItems = items.size
+
+                // Build PO items
+                val poItems = items.map { item ->
+                    PurchaseOrderItem(
+                        id = UuidGenerator.generate(),
+                        purchaseOrderId = "", // will be set by repository
+                        productId = item.product.id,
+                        variantId = item.variant?.id,
+                        productName = item.displayName,
+                        variantName = item.variant?.variantName,
+                        quantity = item.quantity,
+                        unitCost = item.costPrice,
+                        totalCost = item.quantity * item.costPrice,
+                    )
+                }
+
+                // Save purchase order record
+                val poResult = inventoryRepository.savePurchaseOrder(
+                    storeId = storeId,
+                    code = poCode,
+                    supplierId = supplierId,
+                    supplierName = supplierName,
+                    totalAmount = totalAmount,
+                    totalItems = totalItems,
+                    notes = _state.value.notes.ifBlank { null },
+                    userId = userId,
+                    items = poItems,
+                )
+
+                // Abort if PO record could not be saved
+                if (poResult is Result.Error) {
+                    _state.update { it.copy(isSaving = false, errorMessage = poResult.message) }
+                    return@launch
+                }
+
+                val poId = (poResult as Result.Success).data
+
+                // Adjust stock for each item
+                for (item in items) {
+                    val result = if (item.variant != null) {
+                        inventoryRepository.adjustVariantStock(
+                            storeId = storeId,
+                            productId = item.product.id,
+                            variantId = item.variant.id,
+                            amount = item.quantity,
+                            type = StockMovementType.PURCHASE_IN,
+                            userId = userId,
+                            referenceId = poId,
+                            supplierId = supplierId,
+                        )
+                    } else {
+                        inventoryRepository.adjustStock(
+                            storeId = storeId,
+                            productId = item.product.id,
+                            amount = item.quantity,
+                            type = StockMovementType.PURCHASE_IN,
+                            userId = userId,
+                            referenceId = poId,
+                            supplierId = supplierId,
+                        )
+                    }
+                    if (result is Result.Error) {
+                        _state.update { it.copy(isSaving = false, errorMessage = str(R.string.msg_purchase_item_error, item.product.name, result.message)) }
+                        return@launch
+                    }
+                    // Update cost price if changed (non-fatal)
+                    if (item.costPrice > 0) {
+                        try {
+                            if (item.variant != null) {
+                                if (item.costPrice != (item.variant.costPrice ?: 0.0)) {
+                                    productRepository.updateVariant(item.variant.copy(costPrice = item.costPrice))
+                                }
+                            } else if (item.costPrice != item.product.costPrice) {
+                                productRepository.update(item.product.copy(costPrice = item.costPrice))
+                            }
+                        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                            throw e // Re-throw cancellation so coroutine can be properly cleaned up
+                        } catch (_: Exception) {
+                            // Cost price update failed — non-fatal, continue with purchase
                         }
-                    } else if (item.costPrice != item.product.costPrice) {
-                        productRepository.update(item.product.copy(costPrice = item.costPrice))
                     }
                 }
-            }
 
-            if (!hasError) {
+                // All items processed — show success and refresh form for next purchase
                 val totalQty = items.sumOf { it.quantity }.toLong()
                 val totalProducts = items.size
+                val successMsg = str(R.string.msg_purchase_success, totalQty.toDouble(), totalProducts)
                 _state.update {
                     it.copy(
                         isSaving = false,
                         lineItems = emptyList(),
                         notes = "",
-                        successMessage = str(R.string.msg_purchase_success, totalQty.toDouble(), totalProducts),
+                        selectedSupplierId = null,
+                        successMessage = successMsg,
                     )
                 }
+                // Refresh PO code and product list for the next purchase in this session
+                loadData()
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e // Do not swallow coroutine cancellation
+            } catch (e: Exception) {
+                _state.update { it.copy(isSaving = false, errorMessage = e.message ?: str(R.string.msg_purchase_no_items)) }
             }
         }
     }

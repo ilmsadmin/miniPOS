@@ -29,7 +29,6 @@ class AuthRepositoryImpl @Inject constructor(
         ownerName: String, ownerPin: String, ownerPassword: String
     ): Result<Store> {
         return try {
-            // Check if store code already exists
             val existing = storeDao.getStoreByCode(storeCode.uppercase())
             if (existing != null) {
                 return Result.Error(ErrorCode.DUPLICATE_ENTRY, context.getString(R.string.error_store_code_exists))
@@ -40,48 +39,31 @@ class AuthRepositoryImpl @Inject constructor(
             val storeId = UuidGenerator.generate()
             val userId = UuidGenerator.generate()
 
-            // Create store
             val storeEntity = StoreEntity(
-                id = storeId,
-                name = storeName,
-                code = storeCode.uppercase(),
-                address = address,
-                phone = phone,
-                currency = "VND",
-                createdAt = now,
-                updatedAt = now,
-                deviceId = deviceId,
+                id = storeId, name = storeName, code = storeCode.uppercase(),
+                address = address, phone = phone, currency = "VND",
+                createdAt = now, updatedAt = now, deviceId = deviceId,
             )
             storeDao.insert(storeEntity)
 
-            // Create owner user (no PIN/password required at setup)
             val userEntity = UserEntity(
-                id = userId,
-                storeId = storeId,
-                displayName = ownerName,
+                id = userId, storeId = storeId, displayName = ownerName,
                 role = "owner",
                 pinHash = if (ownerPin.isNotBlank()) HashUtils.hashPin(ownerPin) else "",
                 passwordHash = if (ownerPassword.isNotBlank()) HashUtils.hashPassword(ownerPassword) else "",
-                isActive = true,
-                createdAt = now,
-                updatedAt = now,
-                deviceId = deviceId,
+                isActive = true, createdAt = now, updatedAt = now, deviceId = deviceId,
             )
             userDao.insert(userEntity)
 
-            // Save session
+            // Owner tự động đăng nhập sau khi tạo store
             prefs.setCurrentStore(storeId)
             prefs.setCurrentUser(userId)
             prefs.setOnboarded(true)
+            prefs.setLoggedIn(true)
 
             val store = Store(
-                id = storeId,
-                name = storeName,
-                code = storeCode.uppercase(),
-                address = address,
-                phone = phone,
-                createdAt = now,
-                updatedAt = now,
+                id = storeId, name = storeName, code = storeCode.uppercase(),
+                address = address, phone = phone, createdAt = now, updatedAt = now,
             )
             Result.Success(store)
         } catch (e: Exception) {
@@ -91,7 +73,6 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(userId: String, pin: String): Result<AuthSession> {
         return try {
-            // Check lock
             val lockUntil = prefs.getLockUntil()
             if (lockUntil > DateUtils.now()) {
                 val remainingMinutes = ((lockUntil - DateUtils.now()) / 60000).toInt() + 1
@@ -103,6 +84,10 @@ class AuthRepositoryImpl @Inject constructor(
 
             if (!user.isActive) {
                 return Result.Error(ErrorCode.ACCOUNT_DISABLED, context.getString(R.string.error_account_disabled))
+            }
+
+            if (user.pinHash.isBlank()) {
+                return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_account_no_pin))
             }
 
             if (!HashUtils.verifyPin(pin, user.pinHash)) {
@@ -122,13 +107,12 @@ class AuthRepositoryImpl @Inject constructor(
             val now = DateUtils.now()
             userDao.updateLastLogin(userId, now)
             prefs.setCurrentUser(userId)
+            prefs.setLoggedIn(true)
 
             val session = AuthSession(
-                userId = userId,
-                storeId = user.storeId,
+                userId = userId, storeId = user.storeId,
                 role = UserRole.fromString(user.role),
-                displayName = user.displayName,
-                loginAt = now,
+                displayName = user.displayName, loginAt = now,
             )
             Result.Success(session)
         } catch (e: Exception) {
@@ -137,25 +121,91 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
-        prefs.logout()
+        prefs.clearCurrentUser()
+    }
+
+    override suspend fun loginWithPassword(userId: String, password: String): Result<AuthSession> {
+        return try {
+            val user = userDao.getById(userId)
+                ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_account_not_found))
+
+            if (!user.isActive) {
+                return Result.Error(ErrorCode.ACCOUNT_DISABLED, context.getString(R.string.error_account_disabled))
+            }
+
+            if (user.role.lowercase() != "owner") {
+                return Result.Error(ErrorCode.PERMISSION_DENIED, context.getString(R.string.error_owner_only))
+            }
+
+            val hash = user.passwordHash
+            if (hash.isNullOrBlank()) {
+                return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_no_password_set))
+            }
+
+            if (!HashUtils.verifyPassword(password, hash)) {
+                return Result.Error(ErrorCode.INVALID_PIN, context.getString(R.string.error_wrong_password))
+            }
+
+            // Success
+            prefs.setLoginAttempts(0)
+            prefs.setLockUntil(0)
+            val now = DateUtils.now()
+            userDao.updateLastLogin(userId, now)
+            prefs.setCurrentUser(userId)
+            prefs.setLoggedIn(true)
+
+            val session = AuthSession(
+                userId = userId, storeId = user.storeId,
+                role = UserRole.fromString(user.role),
+                displayName = user.displayName, loginAt = now,
+            )
+            Result.Success(session)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_login))
+        }
+    }
+
+    override suspend fun resetPinWithPassword(userId: String, password: String, newPin: String): Result<Unit> {
+        return try {
+            val user = userDao.getById(userId)
+                ?: return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_account_not_found))
+
+            if (user.role.lowercase() != "owner") {
+                return Result.Error(ErrorCode.PERMISSION_DENIED, context.getString(R.string.error_owner_only))
+            }
+
+            val hash = user.passwordHash
+            if (hash.isNullOrBlank()) {
+                return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_no_password_set))
+            }
+
+            if (!HashUtils.verifyPassword(password, hash)) {
+                return Result.Error(ErrorCode.INVALID_PIN, context.getString(R.string.error_wrong_password))
+            }
+
+            if (newPin.length < 4 || newPin.length > 6 || !newPin.all { it.isDigit() }) {
+                return Result.Error(ErrorCode.INVALID_INPUT, context.getString(R.string.error_pin_length))
+            }
+
+            val newHash = HashUtils.hashPin(newPin)
+            userDao.updatePinHash(userId, newHash, DateUtils.now())
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(ErrorCode.DATABASE_ERROR, e.message ?: context.getString(R.string.error_reset_pin))
+        }
     }
 
     override suspend fun autoLogin() {
-        // Find the first active user for the current store and set them as current user
-        val storeId = prefs.getCurrentStoreIdSync() ?: return
-        val users = userDao.getActiveUsers(storeId)
-        val user = users.firstOrNull() ?: return
-        prefs.setCurrentUser(user.id)
-        userDao.updateLastLogin(user.id, DateUtils.now())
+        // Không tự set currentUserId — tránh bypass màn hình chọn user khi có nhiều user.
+        // currentUserId chỉ được set khi user chủ động đăng nhập qua LoginScreen.
     }
 
     override suspend fun ensureDefaultStore() {
-        // If a store already exists, do nothing
         if (storeDao.getStore() != null) {
             autoLogin()
             return
         }
-        // Create a default store silently
+        // Legacy fallback: tạo store mặc định nếu chưa có
         val now = DateUtils.now()
         val deviceId = prefs.getDeviceIdSync()
         val storeId = UuidGenerator.generate()
@@ -183,8 +233,7 @@ class AuthRepositoryImpl @Inject constructor(
         val userId = prefs.getCurrentUserIdSync() ?: return null
         val user = userDao.getById(userId) ?: return null
         return AuthSession(
-            userId = user.id,
-            storeId = user.storeId,
+            userId = user.id, storeId = user.storeId,
             role = UserRole.fromString(user.role),
             displayName = user.displayName,
             loginAt = user.lastLoginAt ?: 0,

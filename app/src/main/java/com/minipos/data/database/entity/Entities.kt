@@ -332,3 +332,61 @@ data class StockMovementEntity(
     @ColumnInfo(name = "sync_version") val syncVersion: Int = 0,
     @ColumnInfo(name = "device_id") val deviceId: String,
 )
+
+@Entity(
+    tableName = "purchase_orders",
+    foreignKeys = [
+        ForeignKey(entity = StoreEntity::class, parentColumns = ["id"], childColumns = ["store_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [
+        Index(value = ["store_id"]),
+        Index(value = ["supplier_id"]),
+        Index(value = ["created_at"]),
+        Index(value = ["code"]),
+    ]
+)
+data class PurchaseOrderEntity(
+    @PrimaryKey val id: String,
+    @ColumnInfo(name = "store_id") val storeId: String,
+    @ColumnInfo(name = "code") val code: String,
+    @ColumnInfo(name = "supplier_id") val supplierId: String? = null,
+    @ColumnInfo(name = "supplier_name") val supplierName: String? = null,
+    @ColumnInfo(name = "total_amount") val totalAmount: Double = 0.0,
+    @ColumnInfo(name = "total_items") val totalItems: Int = 0,
+    @ColumnInfo(name = "notes") val notes: String? = null,
+    @ColumnInfo(name = "status") val status: String = "confirmed", // draft, confirmed, cancelled
+    @ColumnInfo(name = "created_by") val createdBy: String,
+    @ColumnInfo(name = "confirmed_at") val confirmedAt: Long? = null,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "is_deleted") val isDeleted: Boolean = false,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @ColumnInfo(name = "sync_version") val syncVersion: Int = 0,
+    @ColumnInfo(name = "device_id") val deviceId: String,
+)
+
+@Entity(
+    tableName = "purchase_order_items",
+    foreignKeys = [
+        ForeignKey(entity = PurchaseOrderEntity::class, parentColumns = ["id"], childColumns = ["purchase_order_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [
+        Index(value = ["purchase_order_id"]),
+        Index(value = ["product_id"]),
+    ]
+)
+data class PurchaseOrderItemEntity(
+    @PrimaryKey val id: String,
+    @ColumnInfo(name = "purchase_order_id") val purchaseOrderId: String,
+    @ColumnInfo(name = "product_id") val productId: String,
+    @ColumnInfo(name = "variant_id") val variantId: String? = null,
+    @ColumnInfo(name = "product_name") val productName: String,
+    @ColumnInfo(name = "variant_name") val variantName: String? = null,
+    @ColumnInfo(name = "quantity") val quantity: Double,
+    @ColumnInfo(name = "unit_cost") val unitCost: Double,
+    @ColumnInfo(name = "total_cost") val totalCost: Double,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "sync_version") val syncVersion: Int = 0,
+    @ColumnInfo(name = "device_id") val deviceId: String,
+)

@@ -4,12 +4,14 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.R
 import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.barcode.BarcodePrintHelper
 import com.minipos.core.receipt.ReceiptPrintHelper
+import com.minipos.core.utils.CurrencyFormatter
 import com.minipos.domain.model.Product
 import com.minipos.domain.model.ProductVariant
 import com.minipos.domain.model.Result
@@ -45,11 +47,9 @@ data class BarcodeProductItem(
     val displayPrice: Double get() = variant?.sellingPrice ?: product.sellingPrice
 }
 
-enum class BarcodeType(val label: String, val description: String) {
-    EAN_13("EAN-13", "Tiêu chuẩn quốc tế"),
-    QR_CODE("QR Code", "Mã QR đa dụng"),
-    CODE_128("Code-128", "Mật độ cao"),
-    CODE_39("Code-39", "Alphanumeric"),
+enum class BarcodeType(val label: String, @StringRes val descriptionRes: Int) {
+    EAN_13("EAN-13", R.string.barcode_ean13_desc),
+    QR_CODE("QR Code", R.string.barcode_qr_desc),
 }
 
 data class BarcodeScreenState(
@@ -107,10 +107,10 @@ data class BarcodeScreenState(
     val previewProduct: BarcodeProductItem? get() = selectedProducts.firstOrNull()
 }
 
-enum class BarcodeFilterMode(val label: String) {
-    ALL("All"),
-    NO_BARCODE("No Barcode"),
-    HAS_BARCODE("Has Barcode"),
+enum class BarcodeFilterMode(@StringRes val labelRes: Int) {
+    ALL(R.string.barcode_filter_all),
+    NO_BARCODE(R.string.barcode_filter_no_barcode),
+    HAS_BARCODE(R.string.barcode_filter_has_barcode),
 }
 
 @HiltViewModel
@@ -261,14 +261,17 @@ class BarcodeViewModel @Inject constructor(
             _state.update { it.copy(isGenerating = true, error = null) }
 
             try {
-                val selected = _state.value.products.filter { it.isSelected && !it.hasBarcode && it.generatedBarcode == null }
+                val state = _state.value
+                val selected = state.products.filter { it.isSelected && !it.hasBarcode && it.generatedBarcode == null }
                 if (selected.isEmpty()) {
                     _state.update { it.copy(isGenerating = false, message = str(R.string.no_products_need_barcode)) }
                     return@launch
                 }
 
+                val isQr = state.barcodeType == BarcodeType.QR_CODE
+
                 // Get current max barcode sequence from all items (products + variants)
-                val existingBarcodes = _state.value.products
+                val existingBarcodes = state.products
                     .mapNotNull { it.currentBarcode }
                     .filter { it.startsWith("2") && it.length == 13 }
                 val maxSeq = existingBarcodes.maxOfOrNull { barcode ->
@@ -280,7 +283,12 @@ class BarcodeViewModel @Inject constructor(
 
                 for (item in selected) {
                     seq++
-                    val barcode = BarcodeGenerator.generateEan13(storeCode, seq)
+                    val barcode = if (isQr) {
+                        // For QR: use EAN-13 as content so it's still scannable as product identifier
+                        BarcodeGenerator.generateEan13(storeCode, seq)
+                    } else {
+                        BarcodeGenerator.generateEan13(storeCode, seq)
+                    }
                     generatedMap[item.itemId] = barcode
 
                     if (item.variant != null) {
@@ -334,7 +342,8 @@ class BarcodeViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isGenerating = true) }
 
-            val selectedWithBarcode = _state.value.products.filter {
+            val currentState = _state.value
+            val selectedWithBarcode = currentState.products.filter {
                 it.isSelected && (it.hasBarcode || it.generatedBarcode != null)
             }
 
@@ -343,13 +352,19 @@ class BarcodeViewModel @Inject constructor(
                 return@launch
             }
 
-            val labels = selectedWithBarcode.map { item ->
+            val isQr = currentState.barcodeType == BarcodeType.QR_CODE
+
+            val labels = selectedWithBarcode.flatMap { item ->
                 val barcode = item.currentBarcode!!
-                BarcodeGenerator.generateLabelBitmap(
-                    barcode = barcode,
-                    productName = item.displayName,
-                    sku = item.displaySku,
-                )
+                List(currentState.labelsPerProduct) {
+                    BarcodeGenerator.generateLabelBitmap(
+                        barcode = barcode,
+                        productName = if (currentState.showProductName) item.displayName else "",
+                        sku = item.displaySku,
+                        price = if (currentState.showPrice) CurrencyFormatter.format(item.displayPrice) else "",
+                        isQrCode = isQr,
+                    )
+                }
             }
 
             val combined = BarcodeGenerator.combineLabelBitmaps(labels)
@@ -492,21 +507,25 @@ class BarcodeViewModel @Inject constructor(
     }
 
     fun saveBarcodesAsImage(context: Context) {
-        val selected = _state.value.selectedProducts.filter { it.currentBarcode != null }
+        val currentState = _state.value
+        val selected = currentState.selectedProducts.filter { it.currentBarcode != null }
         if (selected.isEmpty()) {
             _state.update { it.copy(error = str(R.string.select_products_with_barcode)) }
             return
         }
+        val isQr = currentState.barcodeType == BarcodeType.QR_CODE
         viewModelScope.launch {
             try {
                 _state.update { it.copy(isGenerating = true) }
                 val labels = selected.flatMap { item ->
                     val barcode = item.currentBarcode!!
-                    List(_state.value.labelsPerProduct) {
+                    List(currentState.labelsPerProduct) {
                         BarcodeGenerator.generateLabelBitmap(
                             barcode = barcode,
-                            productName = if (_state.value.showProductName) item.displayName else "",
+                            productName = if (currentState.showProductName) item.displayName else "",
                             sku = item.displaySku,
+                            price = if (currentState.showPrice) CurrencyFormatter.format(item.displayPrice) else "",
+                            isQrCode = isQr,
                         )
                     }
                 }

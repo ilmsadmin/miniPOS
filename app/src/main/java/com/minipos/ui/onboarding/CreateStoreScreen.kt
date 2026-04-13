@@ -7,12 +7,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.R
@@ -64,6 +68,9 @@ fun CreateStoreScreen(
 
 @Composable
 private fun StoreInfoStep(state: CreateStoreState, viewModel: CreateStoreViewModel) {
+    var showPin by remember { mutableStateOf(false) }
+    var showPinConfirm by remember { mutableStateOf(false) }
+
     OutlinedTextField(
         value = state.storeName,
         onValueChange = { viewModel.updateStoreName(it) },
@@ -104,7 +111,17 @@ private fun StoreInfoStep(state: CreateStoreState, viewModel: CreateStoreViewMod
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         shape = RoundedCornerShape(12.dp),
     )
+    Spacer(modifier = Modifier.height(24.dp))
+
+    HorizontalDivider(color = AppColors.Divider)
     Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = stringResource(R.string.create_owner_account_section),
+        style = MaterialTheme.typography.titleSmall,
+        color = AppColors.TextSecondary,
+    )
+    Spacer(modifier = Modifier.height(12.dp))
 
     OutlinedTextField(
         value = state.ownerName,
@@ -113,6 +130,54 @@ private fun StoreInfoStep(state: CreateStoreState, viewModel: CreateStoreViewMod
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedTextField(
+        value = state.ownerPin,
+        onValueChange = { if (it.all(Char::isDigit) && it.length <= 6) viewModel.updateOwnerPin(it) },
+        label = { Text(stringResource(R.string.pin_label_required)) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        visualTransformation = if (showPin) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = { showPin = !showPin }) {
+                Icon(
+                    if (showPin) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = null,
+                )
+            }
+        },
+        isError = state.ownerPin.isNotEmpty() && state.ownerPin.length < 4,
+        supportingText = if (state.ownerPin.isNotEmpty() && state.ownerPin.length < 4) {
+            { Text(stringResource(R.string.error_pin_length), color = AppColors.Error) }
+        } else null,
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedTextField(
+        value = state.ownerPinConfirm,
+        onValueChange = { if (it.all(Char::isDigit) && it.length <= 6) viewModel.updateOwnerPinConfirm(it) },
+        label = { Text(stringResource(R.string.pin_confirm_label)) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        visualTransformation = if (showPinConfirm) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = { showPinConfirm = !showPinConfirm }) {
+                Icon(
+                    if (showPinConfirm) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = null,
+                )
+            }
+        },
+        isError = state.ownerPinConfirm.isNotEmpty() && state.ownerPin != state.ownerPinConfirm,
+        supportingText = if (state.ownerPinConfirm.isNotEmpty() && state.ownerPin != state.ownerPinConfirm) {
+            { Text(stringResource(R.string.pin_mismatch_error), color = AppColors.Error) }
+        } else null,
     )
     Spacer(modifier = Modifier.height(32.dp))
 

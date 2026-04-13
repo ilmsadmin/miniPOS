@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +49,8 @@ fun StockAuditScreen(
     viewModel: StockAuditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    var showBarcodeScanner by remember { mutableStateOf(false) }
 
     // Navigate back after save
     LaunchedEffect(state.saved) {
@@ -65,6 +68,34 @@ fun StockAuditScreen(
         )
     }
 
+    // Barcode scanner overlay
+    if (showBarcodeScanner) {
+        com.minipos.ui.scanner.BarcodeScannerScreen(
+            onBarcodeScanned = { value, _ ->
+                viewModel.addProductByBarcode(value)
+                showBarcodeScanner = false
+            },
+            onClose = { showBarcodeScanner = false },
+            title = stringResource(R.string.scan_barcode_to_add),
+        )
+        return
+    }
+
+    // Product picker dialog
+    if (state.showProductSearch) {
+        ProductPickerDialog(
+            searchQuery = state.searchQuery,
+            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+            products = state.filteredSearchResults,
+            onProductSelected = { viewModel.addProduct(it) },
+            onDismiss = { viewModel.dismissProductSearch() },
+            onScanClick = {
+                viewModel.dismissProductSearch()
+                showBarcodeScanner = true
+            },
+        )
+    }
+
     Scaffold(
         containerColor = AppColors.Background,
     ) { paddingValues ->
@@ -77,6 +108,17 @@ fun StockAuditScreen(
             MiniPosTopBar(
                 title = stringResource(R.string.sa_title),
                 onBack = onBack,
+                actions = {
+                    if (state.auditItems.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.exportAuditReport(context) }) {
+                            Icon(
+                                Icons.Default.Download,
+                                contentDescription = stringResource(R.string.sa_export_report),
+                                tint = AppColors.TextSecondary,
+                            )
+                        }
+                    }
+                },
             )
 
             // ── Scrollable body ──
@@ -124,10 +166,11 @@ fun StockAuditScreen(
                     ProductSearchRow(
                         query = state.searchQuery,
                         onQueryChange = { viewModel.updateSearchQuery(it) },
-                        searchResults = viewModel.searchResults,
+                        searchResults = state.filteredSearchResults,
                         onProductSelected = { product ->
                             viewModel.addProduct(product)
                         },
+                        onScanClick = { showBarcodeScanner = true },
                     )
                 }
 
@@ -155,7 +198,7 @@ fun StockAuditScreen(
                 // ── Add product button ──
                 item {
                     AddProductButton(
-                        onClick = { viewModel.updateSearchQuery("") },
+                        onClick = { viewModel.showProductSearch() },
                     )
                 }
 
@@ -191,7 +234,6 @@ fun StockAuditScreen(
                         isSaving = state.isSaving,
                         onClick = {
                             viewModel.confirmAudit()
-                            viewModel.showToast("Phiên kiểm kho đã được lưu!")
                         },
                     )
                 }
@@ -380,6 +422,7 @@ private fun ProductSearchRow(
     onQueryChange: (String) -> Unit,
     searchResults: List<StockOverviewItem>,
     onProductSelected: (StockOverviewItem) -> Unit,
+    onScanClick: () -> Unit,
 ) {
     Column {
         Row(
@@ -400,7 +443,7 @@ private fun ProductSearchRow(
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(MiniPosGradients.primary())
-                    .clickable { /* TODO: open scanner */ },
+                    .clickable { onScanClick() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -735,7 +778,7 @@ private fun DifferenceIndicator(diff: Double) {
 }
 
 // ═══════════════════════════════════════════════════════
-// DIFF REASON SELECTOR — dropdown
+// DIFF REASON SELECTOR — MiniPosSelectBoxCompact
 // ═══════════════════════════════════════════════════════
 
 @Composable
@@ -743,8 +786,6 @@ private fun DiffReasonSelector(
     selected: DiffReason,
     onSelected: (DiffReason) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     val reasons = listOf(
         DiffReason.LOSS to stringResource(R.string.sa_reason_loss),
         DiffReason.DAMAGED to stringResource(R.string.sa_reason_damaged),
@@ -754,45 +795,21 @@ private fun DiffReasonSelector(
         DiffReason.OTHER to stringResource(R.string.sa_reason_other),
     )
 
-    val selectedLabel = reasons.find { it.first == selected }?.second ?: ""
-
-    Box {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .clip(RoundedCornerShape(MiniPosTokens.RadiusSm))
-                .background(AppColors.InputBackground)
-                .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusSm))
-                .clickable { expanded = true }
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Text(
-                text = selectedLabel,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = AppColors.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            reasons.forEach { (reason, label) ->
-                DropdownMenuItem(
-                    text = { Text(label, fontSize = 13.sp) },
-                    onClick = {
-                        onSelected(reason)
-                        expanded = false
-                    },
-                )
-            }
-        }
+    val items = reasons.map { (reason, label) ->
+        SelectListItem(id = reason.name, name = label)
     }
+
+    val title = stringResource(R.string.sa_diff_reason_title)
+
+    MiniPosSelectBoxCompact(
+        title = title,
+        items = items,
+        selectedId = selected.name,
+        onSelect = { item ->
+            val reason = DiffReason.valueOf(item.id)
+            onSelected(reason)
+        },
+    )
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1205,4 +1222,131 @@ private fun SmallTextInput(
             modifier = Modifier.fillMaxWidth(),
         )
     }
+}
+
+// ═══════════════════════════════════════════════════════
+// PRODUCT PICKER DIALOG — full-screen dialog to select products
+// ═══════════════════════════════════════════════════════
+
+@Composable
+private fun ProductPickerDialog(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    products: List<StockOverviewItem>,
+    onProductSelected: (StockOverviewItem) -> Unit,
+    onDismiss: () -> Unit,
+    onScanClick: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AppColors.Surface,
+        title = {
+            Text(
+                text = stringResource(R.string.sa_add_product),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 200.dp, max = 400.dp),
+            ) {
+                // Search bar + scan button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MiniPosSearchBar(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        placeholder = stringResource(R.string.sa_search_hint),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MiniPosGradients.primary())
+                            .clickable { onScanClick() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Product list
+                if (products.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.stock_mgmt_no_products),
+                            fontSize = 14.sp,
+                            color = AppColors.TextTertiary,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(0.dp),
+                    ) {
+                        items(
+                            items = products,
+                            key = { it.productId },
+                        ) { product ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onProductSelected(product) }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = product.productName,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = "SKU: ${product.productSku} · Stock: ${product.currentStock.toLong()}",
+                                        fontSize = 11.sp,
+                                        color = AppColors.TextTertiary,
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.AddCircleOutline,
+                                    contentDescription = null,
+                                    tint = AppColors.Primary,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            HorizontalDivider(color = AppColors.Border)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close_btn))
+            }
+        },
+    )
 }

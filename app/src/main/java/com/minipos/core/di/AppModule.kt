@@ -2,6 +2,7 @@ package com.minipos.core.di
 
 import android.content.Context
 import androidx.room.Room
+import com.minipos.core.backup.BackupManager
 import com.minipos.core.constants.AppConstants
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.data.database.MiniPosDatabase
@@ -29,7 +30,7 @@ object AppModule {
             MiniPosDatabase::class.java,
             AppConstants.DB_NAME
         )
-            .addMigrations(MiniPosDatabase.MIGRATION_1_2, MiniPosDatabase.MIGRATION_2_3, MiniPosDatabase.MIGRATION_3_4, MiniPosDatabase.MIGRATION_4_5)
+            .addMigrations(MiniPosDatabase.MIGRATION_1_2, MiniPosDatabase.MIGRATION_2_3, MiniPosDatabase.MIGRATION_3_4, MiniPosDatabase.MIGRATION_4_5, MiniPosDatabase.MIGRATION_5_6)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -57,6 +58,7 @@ object AppModule {
     @Provides fun provideCustomerDao(db: MiniPosDatabase): CustomerDao = db.customerDao()
     @Provides fun provideInventoryDao(db: MiniPosDatabase): InventoryDao = db.inventoryDao()
     @Provides fun provideOrderDao(db: MiniPosDatabase): OrderDao = db.orderDao()
+    @Provides fun providePurchaseOrderDao(db: MiniPosDatabase): PurchaseOrderDao = db.purchaseOrderDao()
 
     // Repositories
     @Provides
@@ -126,7 +128,15 @@ object AppModule {
     @Singleton
     fun provideInventoryRepository(
         @ApplicationContext context: Context,
-        inventoryDao: InventoryDao, orderDao: OrderDao, prefs: AppPreferences
+        inventoryDao: InventoryDao, orderDao: OrderDao, purchaseOrderDao: PurchaseOrderDao, prefs: AppPreferences
     ): InventoryRepository =
-        InventoryRepositoryImpl(context, inventoryDao, orderDao, prefs)
+        InventoryRepositoryImpl(context, inventoryDao, orderDao, purchaseOrderDao, prefs)
+
+    @Provides
+    @Singleton
+    fun provideBackupManager(
+        @ApplicationContext context: Context,
+        database: MiniPosDatabase,
+        prefs: AppPreferences,
+    ): BackupManager = BackupManager(context, database, prefs)
 }

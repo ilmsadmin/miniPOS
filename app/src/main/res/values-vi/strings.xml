@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">miniPOS</string>
+    <string name="app_name">ViPOS</string>
 
     <!-- Splash -->
-    <string name="splash_brand">Mini POS</string>
+    <string name="splash_brand">ViPOS</string>
     <string name="splash_tagline">Quản lý bán hàng thông minh</string>
     <string name="splash_loading">Đang khởi tạo…</string>
     <string name="splash_designed_by">Designed by</string>
     <string name="splash_company">Zenix Labs</string>
 
     <!-- Onboarding -->
-    <string name="welcome_title">miniPOS</string>
+    <string name="welcome_title">ViPOS</string>
     <string name="welcome_subtitle">Hệ thống bán hàng đơn giản\ncho cửa hàng của bạn</string>
     <string name="create_store">Tạo cửa hàng mới</string>
     <string name="join_store">Tham gia cửa hàng</string>
@@ -171,6 +171,36 @@
     <string name="backup_restore">Sao lưu &amp; Khôi phục</string>
     <string name="about">Về ứng dụng</string>
     <string name="logout">Đăng xuất</string>
+    <string name="switch_user">Đổi tài khoản</string>
+    <string name="switch_user_desc">Đăng nhập bằng tài khoản nhân viên khác</string>
+
+    <!-- Login / Switch User Screen -->
+    <string name="login_screen_title">Chọn tài khoản</string>
+    <string name="login_screen_subtitle">Chọn tài khoản để tiếp tục</string>
+    <string name="login_enter_pin">Nhập PIN cho %1$s</string>
+    <string name="login_btn">Đăng nhập</string>
+    <string name="login_success">Xin chào, %1$s!</string>
+    <string name="login_no_pin">Chưa có PIN — đăng nhập trực tiếp</string>
+
+    <!-- Wi-Fi Sync -->
+    <string name="wifi_sync_label">Đồng bộ Wi-Fi</string>
+    <string name="wifi_sync_desc">Đồng bộ với thiết bị trong cùng mạng</string>
+    <string name="wifi_sync_title">Đồng bộ qua Wi-Fi</string>
+    <string name="wifi_sync_scanning">Đang tìm thiết bị…</string>
+    <string name="wifi_sync_no_devices">Không tìm thấy thiết bị nào trong mạng này</string>
+    <string name="wifi_sync_found">Tìm thấy %1$d thiết bị</string>
+    <string name="wifi_sync_connecting">Đang kết nối tới %1$s…</string>
+    <string name="wifi_sync_syncing">Đang đồng bộ với %1$s…</string>
+    <string name="wifi_sync_success">Đồng bộ thành công với %1$s</string>
+    <string name="wifi_sync_failed">Đồng bộ thất bại: %1$s</string>
+    <string name="wifi_sync_server_running">Thiết bị này đang phát sóng làm máy chủ</string>
+    <string name="wifi_sync_connect_btn">Kết nối &amp; Đồng bộ</string>
+    <string name="wifi_sync_refresh_btn">Quét lại</string>
+    <string name="wifi_sync_store_code">Mã cửa hàng: %1$s</string>
+    <string name="wifi_sync_last_sync">Đồng bộ lần cuối: %1$s</string>
+    <string name="wifi_sync_never">Chưa đồng bộ</string>
+    <string name="wifi_sync_confirm_title">Đồng bộ dữ liệu?</string>
+    <string name="wifi_sync_confirm_msg">Dữ liệu từ %1$s sẽ được gộp vào thiết bị này. Tiếp tục?</string>
 
     <!-- Common -->
     <string name="error_required">Trường này không được để trống</string>
@@ -178,6 +208,9 @@
     <string name="error_password_length">Mật khẩu tối thiểu 6 ký tự</string>
     <string name="error_password_mismatch">Mật khẩu không khớp</string>
     <string name="loading">Đang tải…</string>
+    <string name="processing">Đang xử lý…</string>
+    <string name="toggle_on">Đang bật</string>
+    <string name="toggle_off">Đang tắt</string>
     <string name="no_data">Không có dữ liệu</string>
     <string name="confirm_delete">Bạn có chắc chắn muốn xoá?</string>
     <string name="yes">Có</string>
@@ -226,9 +259,9 @@
 
     <!-- Share -->
     <string name="share_receipt_subject">Hóa đơn %1$s</string>
-    <string name="share_receipt_text">Hóa đơn %1$s từ miniPOS</string>
+    <string name="share_receipt_text">Hóa đơn %1$s từ ViPOS</string>
     <string name="share_receipt_chooser">Chia sẻ hóa đơn</string>
-    <string name="share_barcode_subject">Mã vạch sản phẩm - miniPOS</string>
+    <string name="share_barcode_subject">Mã vạch sản phẩm - ViPOS</string>
     <string name="share_barcode_chooser">Chia sẻ mã vạch</string>
     <string name="print_barcode_chooser">In mã vạch</string>
 
@@ -296,6 +329,8 @@
     <string name="error_account_locked_5min">Tài khoản bị khóa 5 phút sau 5 lần sai</string>
     <string name="error_wrong_pin_attempts">PIN không đúng. Còn %1$d lần thử</string>
     <string name="error_login">Lỗi đăng nhập</string>
+    <string name="error_account_no_pin">Tài khoản này chưa có mã PIN. Vui lòng liên hệ chủ cửa hàng.</string>
+    <string name="error_owner_only">Chỉ chủ cửa hàng mới có quyền thực hiện thao tác này.</string>
     <string name="error_store_not_found">Cửa hàng không tồn tại</string>
     <string name="error_update_store">Lỗi cập nhật cửa hàng</string>
     <string name="error_create_user">Lỗi tạo người dùng</string>
@@ -446,6 +481,9 @@
     <string name="confirm_password_required">Xác nhận mật khẩu *</string>
     <string name="create_store_btn">🏪  Tạo cửa hàng</string>
 
+    <!-- Create Store section header -->
+    <string name="create_owner_account_section">Tài khoản chủ cửa hàng</string>
+
     <!-- Join Store -->
     <string name="join_store_title">Tham gia cửa hàng</string>
     <string name="feature_in_development">Tính năng đang phát triển</string>
@@ -454,9 +492,9 @@
 
     <!-- Login -->
     <string name="select_account">Chọn tài khoản</string>
-    <string name="login_btn">Đăng nhập</string>
     <string name="select_other_account">← Chọn tài khoản khác</string>
     <string name="data_error">Lỗi dữ liệu</string>
+    <string name="logged_in_badge">Đang dùng</string>
 
     <!-- Barcode Scanner -->
     <string name="scan_barcode_qr">Quét mã vạch / QR</string>
@@ -603,13 +641,32 @@
     <string name="delete_user_confirm_msg">Bạn có chắc muốn xoá \"%1$s\"? Thao tác này không thể hoàn tác.</string>
     <string name="delete_btn">Xoá</string>
     <string name="backup_title">Sao lưu dữ liệu</string>
+    <string name="backup_subtitle">Sao lưu cục bộ có mã hóa (.mpos)</string>
     <string name="backup_msg">Tính năng sao lưu lên Google Drive sẽ được cập nhật trong phiên bản tới.</string>
     <string name="backup_msg_note">Dữ liệu của bạn hiện đang được lưu trữ an toàn trên thiết bị này.</string>
+    <string name="backup_create_btn">Tạo bản sao lưu</string>
+    <string name="backup_creating">Đang tạo bản sao lưu…</string>
+    <string name="backup_no_files">Không tìm thấy bản sao lưu nào</string>
+    <string name="backup_existing_files">Bản sao lưu đã có (%1$d)</string>
+    <string name="backup_delete_title">Xoá bản sao lưu?</string>
+    <string name="backup_delete_confirm">Tệp sao lưu này sẽ bị xoá vĩnh viễn. Thao tác này không thể hoàn tác.</string>
+    <string name="backup_success">Đã tạo bản sao lưu: %1$s (%2$s MB)</string>
+    <string name="backup_failed">Sao lưu thất bại: %1$s</string>
     <string name="understood">Đã hiểu</string>
     <string name="restore_title">Khôi phục dữ liệu</string>
+    <string name="restore_subtitle">Thay thế toàn bộ dữ liệu từ tệp sao lưu</string>
     <string name="restore_msg">Tính năng khôi phục từ Google Drive sẽ được cập nhật trong phiên bản tới.</string>
     <string name="restore_msg_note">Vui lòng đảm bảo đã sao lưu dữ liệu trước khi thực hiện khôi phục.</string>
+    <string name="restore_select_file">Chọn bản sao lưu để khôi phục</string>
+    <string name="restore_warning">Cảnh báo: Khôi phục sẽ thay thế TOÀN BỘ dữ liệu hiện tại. Thao tác này không thể hoàn tác.</string>
+    <string name="restore_confirm_title">Thay thế toàn bộ dữ liệu?</string>
+    <string name="restore_confirm_msg">Toàn bộ dữ liệu hiện tại sẽ bị thay thế bởi bản sao lưu:\n\n%1$s\n\nThao tác này không thể hoàn tác. Tiếp tục?</string>
+    <string name="restore_confirm_btn">Khôi phục ngay</string>
+    <string name="restore_in_progress">Đang khôi phục dữ liệu…</string>
+    <string name="restore_success">Khôi phục dữ liệu thành công.</string>
+    <string name="restore_failed">Khôi phục thất bại: %1$s</string>
     <string name="settings_label">Cài đặt</string>
+    <string name="settings_desc_short">Cửa hàng, giao diện &amp; thêm</string>
     <string name="store_code_format">Mã: %1$s</string>
     <string name="store_phone_format">SĐT: %1$s</string>
     <string name="role_label">Vai trò: %1$s</string>
@@ -639,13 +696,16 @@
     <string name="dark_mode_label">Chế độ tối</string>
     <string name="dark_mode_desc">Dễ nhìn trong môi trường thiếu sáng</string>
     <string name="language_label">Ngôn ngữ</string>
+    <string name="language_system">Mặc định hệ thống</string>
+    <string name="language_system_desc">Theo ngôn ngữ của thiết bị</string>
+    <string name="language_english">English</string>
     <string name="language_vietnamese">Tiếng Việt</string>
     <string name="bluetooth_printer_label">Máy in Bluetooth</string>
     <string name="bluetooth_not_connected">Chưa kết nối</string>
     <string name="help_feedback_label">Hỗ trợ &amp; Phản hồi</string>
     <string name="app_info_label">Thông tin ứng dụng</string>
     <string name="version_label">Phiên bản</string>
-    <string name="version_value">miniPOS v1.0.0</string>
+    <string name="version_value">ViPOS v1.0.0</string>
     <string name="store_info_title">Thông tin cửa hàng</string>
     <string name="store_name_label">Tên cửa hàng *</string>
     <string name="name_empty_error">Tên không được để trống</string>
@@ -685,6 +745,16 @@
     <string name="msg_staff_deleted">Đã xoá nhân viên</string>
     <string name="msg_pin_incorrect">Mã PIN hiện tại không đúng</string>
     <string name="msg_pin_updated">Đã cập nhật PIN</string>
+    <string name="change_pin_title">Đổi mã PIN</string>
+    <string name="change_pin_desc">Cập nhật mã PIN bảo vệ tài khoản</string>
+    <string name="set_pin_title">Đặt mã PIN</string>
+    <string name="set_pin_desc">Thiết lập mã PIN để bảo vệ tài khoản</string>
+    <string name="verify_pin_step">Bước 1: Xác minh PIN hiện tại</string>
+    <string name="new_pin_step">Bước 2: Đặt PIN mới</string>
+    <string name="set_new_pin_step">Nhập PIN mới</string>
+    <string name="verify_btn">Xác minh</string>
+    <string name="pin_verified">Đã xác minh PIN ✓</string>
+    <string name="pin_current_required">Vui lòng nhập mã PIN hiện tại</string>
 
     <!-- Home Screen -->
     <string name="home_greeting">Xin chào, %1$s! 👋</string>
@@ -749,8 +819,7 @@
     <string name="delete_product_title">Xoá sản phẩm?</string>
     <string name="delete_product_confirm">Bạn có chắc muốn xoá \"%1$s\"?</string>
 
-    <!-- POS Step 1 Screen -->
-    <string name="pos_step1_title">Bước 1: Chọn sản phẩm</string>
+    <!-- POS Screen -->
     <string name="cart_items_count">%1$d sản phẩm</string>
 
     <!-- POS Step 5 Screen -->
@@ -992,6 +1061,7 @@
     <!-- Variant POS -->
     <string name="has_variants_badge">Có biến thể</string>
     <string name="select_variant_hint">Chọn biến thể để thêm vào giỏ hàng</string>
+    <string name="shared_stock_notice">Tồn kho chung cho tất cả biến thể. Nhập theo biến thể để theo dõi riêng.</string>
     <string name="variant_label_badge">Biến thể</string>
     <string name="select_all_items_format">Chọn tất cả (%1$d mục)</string>
 
@@ -1000,6 +1070,16 @@
     <string name="msg_user_not_found">Không tìm thấy người dùng</string>
     <string name="msg_purchase_item_error">Lỗi nhập %1$s: %2$s</string>
     <string name="msg_purchase_success">Đã nhập %1$.0f sản phẩm (%2$d mặt hàng) thành công!</string>
+
+    <!-- Purchase Order Detail -->
+    <string name="purchase_detail_title">Chi tiết phiếu nhập</string>
+    <string name="purchase_detail_not_found">Không tìm thấy phiếu nhập</string>
+    <string name="purchase_detail_items_section">Danh sách hàng</string>
+    <string name="purchase_detail_no_items">Không có sản phẩm nào</string>
+    <string name="purchase_detail_total_products">Số loại hàng</string>
+    <string name="purchase_detail_total_amount">Tổng tiền nhập</string>
+    <string name="purchase_notes_label">Ghi chú</string>
+    <string name="unit_each">cái</string>
     <string name="error_variant_name_required">Vui lòng nhập tên biến thể</string>
     <string name="msg_barcode_not_found">Không tìm thấy sản phẩm với mã: %1$s</string>
     <string name="msg_pin_locked">Tài khoản bị khóa. Thử lại sau %1$d phút.</string>
@@ -1013,6 +1093,9 @@
     <string name="prod_stock_out">Hết hàng</string>
     <string name="prod_no_category">Chưa phân loại</string>
     <string name="prod_scan_barcode">Quét mã vạch</string>
+    <string name="prod_stock_banner_title">Quản lý tồn kho</string>
+    <string name="prod_stock_banner_warning">%1$d sản phẩm cần chú ý</string>
+    <string name="prod_stock_banner_desc">Xem tồn kho, thêm nhanh &amp; điều chỉnh số lượng</string>
 
     <!-- Stock Management Screen -->
     <string name="stock_mgmt_title">Quản lý kho</string>
@@ -1052,6 +1135,18 @@
     <string name="stock_mgmt_filter_applied">Lọc: %1$s</string>
     <string name="stock_mgmt_no_products">Không tìm thấy sản phẩm</string>
     <string name="stock_mgmt_no_products_desc">Thêm sản phẩm có theo dõi tồn kho để xem tại đây</string>
+
+    <!-- Quick Stock Add -->
+    <string name="quick_stock_add_title">Thêm nhanh tồn kho</string>
+    <string name="quick_stock_add_confirm">Thêm vào kho</string>
+    <string name="quick_stock_current">Tồn kho hiện tại</string>
+    <string name="quick_stock_after">Sau khi thêm</string>
+    <string name="quick_stock_qty_label">Số lượng thêm</string>
+    <string name="quick_stock_qty_hint">VD: 50</string>
+    <string name="quick_stock_notes_label">Ghi chú (không bắt buộc)</string>
+    <string name="quick_stock_notes_hint">VD: Nhận hàng từ nhà cung cấp</string>
+    <string name="quick_stock_info">Thao tác này sẽ cập nhật tồn kho ngay lập tức và ghi vào lịch sử thay đổi. Dùng Kiểm kho để điều chỉnh chi tiết hoặc Đơn nhập hàng để theo dõi nhà cung cấp.</string>
+    <string name="quick_stock_added">Đã thêm %1$d %2$s cho %3$s</string>
 
     <!-- Stock Audit Screen -->
     <string name="sa_title">Kiểm kho / Điều chỉnh</string>
@@ -1292,4 +1387,132 @@
     <string name="ss_section_hours">Giờ hoạt động</string>
     <string name="ss_open_time">Giờ mở cửa</string>
     <string name="ss_close_time">Giờ đóng cửa</string>
+
+    <!-- Feature coming soon / info dialogs -->
+    <string name="feature_coming_soon_title">Sắp ra mắt</string>
+    <string name="feature_coming_soon_msg">Tính năng đang được phát triển và sẽ có trong bản cập nhật tương lai.</string>
+    <string name="bluetooth_printer_info_title">Máy in Bluetooth</string>
+    <string name="bluetooth_printer_info_msg">Kết nối máy in Bluetooth sẽ có trong bản cập nhật tương lai.\n\nBạn hiện có thể chia sẻ hóa đơn dạng PDF hoặc hình ảnh từ màn hình chi tiết đơn hàng.</string>
+    <string name="help_feedback_title">Hỗ trợ &amp; Phản hồi</string>
+    <string name="help_feedback_msg">Cần trợ giúp hoặc có đề xuất?\n\n📧 Email: support@vipos.vn\n📱 Hotline: +84.888.3333.58\n\nChúng tôi rất mong nhận được phản hồi từ bạn!</string>
+    <string name="app_info_title">Về ViPOS</string>
+    <string name="app_info_msg">ViPOS v1.0.0\n\nỨng dụng Bán Hàng nhẹ, hoạt động offline, thiết kế cho các doanh nghiệp nhỏ.\n\n© 2026 ViPOS Team</string>
+    <string name="report_inventory_coming_msg">Báo cáo tồn kho chi tiết sẽ hiển thị giá trị hàng, tỷ lệ quay vòng và phân tích cũ mới.</string>
+    <string name="report_debt_coming_msg">Báo cáo công nợ sẽ hiển thị nợ khách hàng, lịch sử thanh toán và phân tích tuổi nợ.</string>
+    <string name="report_profit_coming_msg">Báo cáo lợi nhuận sẽ hiển thị lợi nhuận gộp, ròng, biên lợi nhuận theo sản phẩm và kỳ.</string>
+    <string name="report_export_coming_msg">Xuất Excel sẽ cho phép bạn tải báo cáo phục vụ kế toán và phân tích.</string>
+
+    <!-- Detail report: Inventory -->
+    <string name="report_inv_total_products">Tổng sản phẩm</string>
+    <string name="report_inv_stock_value">Giá trị tồn kho</string>
+    <string name="report_inv_low_stock">Sắp hết hàng</string>
+    <string name="report_inv_out_of_stock">Hết hàng</string>
+    <string name="report_inv_stock_in">Nhập kho</string>
+    <string name="report_inv_stock_out">Xuất kho</string>
+    <string name="report_inv_stock_overview">Tổng quan kho</string>
+    <string name="report_inv_unit_short">%1$s %2$s</string>
+    <string name="report_close">Đóng</string>
+
+    <!-- Detail report: Debt -->
+    <string name="report_debt_total">Tổng công nợ</string>
+    <string name="report_debt_customer_count">Khách hàng nợ</string>
+    <string name="report_debt_no_debt">Không có công nợ</string>
+
+    <!-- Detail report: Profit -->
+    <string name="report_profit_total_revenue">Tổng doanh thu</string>
+    <string name="report_profit_total_cost">Tổng giá vốn</string>
+    <string name="report_profit_gross_profit">Lợi nhuận gộp</string>
+    <string name="report_profit_margin">Biên lợi nhuận</string>
+    <string name="report_profit_by_product">Lợi nhuận theo SP</string>
+    <string name="report_profit_no_data">Không có dữ liệu lợi nhuận trong kỳ</string>
+
+    <!-- Detail report: Export -->
+    <string name="report_export_title">Xuất báo cáo</string>
+    <string name="report_export_generating">Đang tạo báo cáo…</string>
+    <string name="report_export_success">Xuất báo cáo thành công</string>
+    <string name="report_export_error">Lỗi xuất báo cáo</string>
+    <string name="report_export_share">Chia sẻ báo cáo</string>
+    <string name="report_export_sales">Báo cáo bán hàng</string>
+    <string name="tax_rate_title">Thuế mặc định</string>
+    <string name="tax_rate_hint">Nhập % thuế VAT (0 để tắt)</string>
+    <string name="ok">OK</string>
+    <string name="scan_barcode_to_add">Quét mã vạch để thêm sản phẩm</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_inventory">Kho hàng</string>
+    <string name="nav_management">Quản lý</string>
+    <string name="nav_reports">Báo cáo</string>
+    <string name="nav_more">Thêm</string>
+
+    <!-- Product card badges -->
+    <string name="badge_out_of_stock">Hết hàng</string>
+    <string name="badge_remaining_stock">Còn %1$d</string>
+    <string name="badge_stock_count">Tồn: %1$d</string>
+
+    <!-- Toast -->
+    <string name="toast_added">Đã thêm</string>
+    <string name="toast_cart_empty_hint">Chạm vào sản phẩm để thêm vào giỏ hàng trước</string>
+
+    <!-- Image picker sheet -->
+    <string name="choose_file">Chọn file</string>
+    <string name="remove_image">Xóa ảnh</string>
+
+    <!-- Quantity picker -->
+    <string name="line_total_label">Thành tiền: </string>
+
+    <!-- Barcode type descriptions -->
+    <string name="barcode_ean13_desc">Tiêu chuẩn quốc tế</string>
+    <string name="barcode_qr_desc">Mã QR đa dụng</string>
+    <string name="barcode_code128_desc">Mật độ cao</string>
+    <string name="barcode_code39_desc">Ký tự &amp; số</string>
+
+    <!-- Barcode filter -->
+    <string name="barcode_filter_all">Tất cả</string>
+    <string name="barcode_filter_no_barcode">Chưa có mã</string>
+    <string name="barcode_filter_has_barcode">Đã có mã</string>
+
+    <!-- Quantity picker -->
+    <string name="adjust_quantity">Chỉnh số lượng</string>
+
+    <!-- Store settings -->
+    <string name="receipt_thank_you_placeholder">Cảm ơn quý khách! Hẹn gặp lại! 🙏</string>
+    <string name="receipt_header_label">Header hóa đơn</string>
+    <string name="receipt_footer_label">Footer hóa đơn</string>
+
+    <!-- Customer -->
+    <string name="debt_limit_label">Hạn mức: %1$s</string>
+    <string name="debt_badge">Nợ %1$s</string>
+
+    <!-- Receipt preview samples -->
+    <string name="receipt_sample_item1">Coca Cola 330ml x2</string>
+    <string name="receipt_sample_price1">20,000đ</string>
+    <string name="receipt_sample_item2">Mì Hảo Hảo x1</string>
+    <string name="receipt_sample_price2">5,000đ</string>
+
+    <!-- Setup Guide -->
+    <string name="setup_guide_title">Thiết lập cửa hàng</string>
+    <string name="setup_guide_progress">%1$d / %2$d hoàn thành</string>
+    <string name="setup_guide_dismiss">Ẩn hướng dẫn</string>
+    <string name="setup_guide_skip">Bỏ qua hướng dẫn</string>
+    <string name="setup_step1_title">Tạo cửa hàng</string>
+    <string name="setup_step1_desc">Cửa hàng đã sẵn sàng!</string>
+    <string name="setup_step2_title">Thêm danh mục</string>
+    <string name="setup_step2_desc">Phân loại sản phẩm theo nhóm</string>
+    <string name="setup_step3_title">Thêm sản phẩm đầu tiên</string>
+    <string name="setup_step3_desc">Sản phẩm sẽ hiển thị trên màn hình POS</string>
+    <string name="setup_step4_title">Thêm nhà cung cấp</string>
+    <string name="setup_step4_desc">Quản lý nhà cung cấp cho đơn nhập hàng</string>
+    <string name="setup_step5_title">Bán hàng đầu tiên</string>
+    <string name="setup_step5_desc">Chọn sản phẩm và hoàn tất đơn hàng</string>
+
+    <!-- Stock Management Export -->
+    <string name="stock_export_success">Xuất báo cáo kho thành công</string>
+    <string name="stock_export_error">Xuất báo cáo kho thất bại</string>
+
+    <!-- Stock Audit Export / Messages -->
+    <string name="sa_export_report">Xuất báo cáo kiểm kho</string>
+    <string name="sa_product_not_found">Không tìm thấy sản phẩm với mã: %1$s</string>
+    <string name="sa_audit_export_success">Xuất báo cáo kiểm kho thành công</string>
+    <string name="sa_audit_export_error">Xuất báo cáo kiểm kho thất bại</string>
+    <string name="sa_diff_reason_title">Lý do chênh lệch</string>
 </resources>

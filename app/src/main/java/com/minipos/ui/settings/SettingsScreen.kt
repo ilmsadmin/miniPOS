@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -29,21 +28,102 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.minipos.BuildConfig
 import com.minipos.R
 import com.minipos.core.theme.AppColors
+import com.minipos.core.theme.AppLanguage
+import com.minipos.core.theme.ThemeMode
 import com.minipos.domain.model.StoreSettings
 import com.minipos.domain.model.User
 import com.minipos.domain.model.UserRole
+import com.minipos.core.backup.BackupFileInfo
 import com.minipos.ui.components.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToStoreSettings: () -> Unit = {},
+    onNavigateToWifiSync: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Info dialog states
+    var showBluetoothInfoDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+    var showAppInfoDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    // Bluetooth Printer Info Dialog
+    MiniPosAlertDialog(
+        visible = showBluetoothInfoDialog,
+        type = PopupType.INFO,
+        icon = Icons.Rounded.Print,
+        title = stringResource(R.string.bluetooth_printer_info_title),
+        message = stringResource(R.string.bluetooth_printer_info_msg),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { showBluetoothInfoDialog = false },
+    )
+
+    // Help & Feedback Dialog
+    MiniPosAlertDialog(
+        visible = showHelpDialog,
+        type = PopupType.INFO,
+        icon = Icons.Rounded.Help,
+        title = stringResource(R.string.help_feedback_title),
+        message = stringResource(R.string.help_feedback_msg),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { showHelpDialog = false },
+    )
+
+    // App Info Dialog
+    MiniPosAlertDialog(
+        visible = showAppInfoDialog,
+        type = PopupType.INFO,
+        icon = Icons.Rounded.Info,
+        title = stringResource(R.string.app_info_title),
+        message = stringResource(R.string.app_info_msg),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { showAppInfoDialog = false },
+    )
+
+    // Language Dialog — select list bottom sheet
+    val currentLang by viewModel.themeManager.language.collectAsState()
+    MiniPosSelectSheet(
+        visible = showLanguageDialog,
+        title = stringResource(R.string.language_label),
+        selectedId = currentLang.key,
+        items = AppLanguage.entries.map { lang ->
+            SelectListItem(
+                id = lang.key,
+                name = when (lang) {
+                    AppLanguage.SYSTEM -> stringResource(R.string.language_system)
+                    AppLanguage.ENGLISH -> "English"
+                    AppLanguage.VIETNAMESE -> "Tiếng Việt"
+                },
+                description = when (lang) {
+                    AppLanguage.SYSTEM -> stringResource(R.string.language_system_desc)
+                    AppLanguage.ENGLISH -> "English (US)"
+                    AppLanguage.VIETNAMESE -> "Tiếng Việt"
+                },
+                icon = when (lang) {
+                    AppLanguage.SYSTEM -> Icons.Rounded.Settings
+                    AppLanguage.ENGLISH -> Icons.Rounded.Translate
+                    AppLanguage.VIETNAMESE -> Icons.Rounded.Translate
+                },
+            )
+        },
+        onSelect = { item ->
+            val lang = AppLanguage.fromKey(item.id)
+            viewModel.setLanguage(lang)
+            showLanguageDialog = false
+        },
+        onDismiss = { showLanguageDialog = false },
+    )
 
     // Show messages
     LaunchedEffect(state.message) {
@@ -60,11 +140,23 @@ fun SettingsScreen(
             ownerUser = state.currentUser,
             ownerHasPin = state.currentUserHasPin,
             onDismiss = { viewModel.dismissStoreInfoDialog() },
-            onSave = { name, address, phone, ownerName, currentPin, newPin ->
+            onChangePin = { viewModel.dismissStoreInfoDialog(); viewModel.showChangePinDialog() },
+            onSave = { name, address, phone, ownerName ->
                 viewModel.updateStoreInfo(name, address, phone)
                 if (ownerName.isNotBlank()) viewModel.updateOwnerName(ownerName)
-                if (newPin.isNotBlank()) viewModel.updateOwnerPin(currentPin, newPin)
             },
+        )
+    }
+
+    // Change PIN Dialog (dedicated flow)
+    if (state.showChangePinDialog) {
+        ChangePinBottomSheet(
+            hasExistingPin = state.currentUserHasPin,
+            pinVerified = state.pinVerified,
+            pinVerifyError = state.pinVerifyError,
+            onVerifyPin = { viewModel.verifyCurrentPin(it) },
+            onSaveNewPin = { viewModel.saveNewPin(it) },
+            onDismiss = { viewModel.dismissChangePinDialog() },
         )
     }
 
@@ -118,56 +210,41 @@ fun SettingsScreen(
 
     // Delete User Confirm
     state.showDeleteUserConfirm?.let { user ->
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissDeleteUserConfirm() },
-            title = { Text(stringResource(R.string.delete_user_title)) },
-            text = { Text(stringResource(R.string.delete_user_confirm_msg, user.displayName)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.deleteUser(user.id) }) {
-                    Text(stringResource(R.string.delete_btn), color = AppColors.Error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { viewModel.dismissDeleteUserConfirm() }) { Text(stringResource(R.string.cancel)) } },
+        MiniPosConfirmDialog(
+            visible = true,
+            type = PopupType.DELETE,
+            icon = Icons.Rounded.PersonRemove,
+            title = stringResource(R.string.delete_user_title),
+            message = stringResource(R.string.delete_user_confirm_msg, user.displayName),
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.delete_btn),
+            confirmStyle = ConfirmButtonStyle.DANGER,
+            onCancel = { viewModel.dismissDeleteUserConfirm() },
+            onConfirm = { viewModel.deleteUser(user.id) },
         )
     }
 
-    // Backup info dialog
+    // ── Backup Dialog ──────────────────────────────────────────────────────
     if (state.showBackupDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissBackupDialog() },
-            title = { Text(stringResource(R.string.backup_title)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.backup_msg))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        stringResource(R.string.backup_msg_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.TextSecondary,
-                    )
-                }
-            },
-            confirmButton = { TextButton(onClick = { viewModel.dismissBackupDialog() }) { Text(stringResource(R.string.understood)) } },
+        BackupDialog(
+            isBackingUp = state.isBackingUp,
+            backupFiles = state.backupFiles,
+            onCreateBackup = { viewModel.createBackup() },
+            onDeleteBackup = { viewModel.deleteBackupFile(it) },
+            onDismiss = { viewModel.dismissBackupDialog() },
         )
     }
 
-    // Restore info dialog
+    // ── Restore Dialog ────────────────────────────────────────────────────
     if (state.showRestoreDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissRestoreDialog() },
-            title = { Text(stringResource(R.string.restore_title)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.restore_msg))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        stringResource(R.string.restore_msg_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.TextSecondary,
-                    )
-                }
-            },
-            confirmButton = { TextButton(onClick = { viewModel.dismissRestoreDialog() }) { Text(stringResource(R.string.understood)) } },
+        RestoreDialog(
+            isRestoring = state.isRestoring,
+            backupFiles = state.backupFiles,
+            confirmFile = state.restoreConfirmFile,
+            onSelectFile = { viewModel.confirmRestoreFile(it) },
+            onCancelConfirm = { viewModel.cancelRestoreConfirm() },
+            onConfirmRestore = { viewModel.executeRestore(it) },
+            onDismiss = { viewModel.dismissRestoreDialog() },
         )
     }
 
@@ -204,128 +281,82 @@ fun SettingsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                // ─── Profile card (like mock's .profile-card) ───
-                item {
-                    state.currentUser?.let { user ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
-                                .background(AppColors.Surface)
-                                .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl))
-                                .clickable { viewModel.showStoreInfoDialog() }
-                                .padding(20.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Avatar with accent gradient
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(MiniPosGradients.accent()),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    user.displayName.firstOrNull()?.uppercase() ?: "?",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White,
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    user.displayName,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = AppColors.TextPrimary,
-                                )
-                                Text(
-                                    when (user.role) {
-                                        UserRole.OWNER -> stringResource(R.string.role_owner)
-                                        UserRole.MANAGER -> stringResource(R.string.role_manager)
-                                        UserRole.CASHIER -> stringResource(R.string.role_cashier)
-                                    },
-                                    fontSize = 12.sp,
-                                    color = AppColors.TextTertiary,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                                state.store?.let { store ->
-                                    Text(
-                                        store.name,
-                                        fontSize = 11.sp,
-                                        color = AppColors.PrimaryLight,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
-                            }
-                            Icon(
-                                Icons.Rounded.ChevronRight,
-                                contentDescription = null,
-                                tint = AppColors.TextTertiary,
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+
+                // ─── Store settings group (OWNER only) ───
+                val isOwner = state.currentUser?.role == UserRole.OWNER
+                if (isOwner) {
+                    item { SettingsGroupTitle(stringResource(R.string.section_store)) }
+                    item {
+                        SettingsGroup {
+                            SettingsItemStyled(
+                                icon = Icons.Rounded.Storefront,
+                                iconGradient = listOf(Color(0xFF0E9AA0), Color(0xFF2EC4B6)),
+                                title = stringResource(R.string.store_info_label),
+                                subtitle = stringResource(R.string.store_info_desc),
+                                onClick = { onNavigateToStoreSettings() },
+                            )
+                            SettingsItemDivider()
+                            val settings = state.store?.settings ?: StoreSettings()
+                            SettingsItemStyled(
+                                icon = Icons.Rounded.Receipt,
+                                iconGradient = listOf(Color(0xFF14B8B0), Color(0xFF5AEDC5)),
+                                title = stringResource(R.string.sales_settings_label),
+                                subtitle = buildString {
+                                    if (settings.taxEnabled) append(stringResource(R.string.tax_enabled_format, settings.defaultTaxRate.toString()))
+                                    else append(stringResource(R.string.tax_disabled))
+                                },
+                                trailingValue = if (settings.taxEnabled) "${settings.defaultTaxRate.toInt()}%" else null,
+                                onClick = { viewModel.showSalesSettingsDialog() },
+                            )
+                            SettingsItemDivider()
+                            SettingsItemStyled(
+                                icon = Icons.Rounded.Print,
+                                iconGradient = listOf(Color(0xFFFF8A65), Color(0xFFFF5252)),
+                                title = stringResource(R.string.bluetooth_printer_label),
+                                subtitle = stringResource(R.string.bluetooth_not_connected),
+                                onClick = { showBluetoothInfoDialog = true },
+                            )
+                            SettingsItemDivider()
+                            SettingsItemStyled(
+                                icon = Icons.Rounded.CloudSync,
+                                iconGradient = listOf(Color(0xFF00E676), Color(0xFF69F0AE)),
+                                title = stringResource(R.string.backup_label),
+                                subtitle = stringResource(R.string.backup_desc),
+                                onClick = { viewModel.showBackupDialog() },
+                            )
+                            SettingsItemDivider()
+                            SettingsItemStyled(
+                                icon = Icons.Rounded.Restore,
+                                iconGradient = listOf(Color(0xFFFF8A65), Color(0xFFF4511E)),
+                                title = stringResource(R.string.restore_label),
+                                subtitle = stringResource(R.string.restore_desc),
+                                onClick = { viewModel.showRestoreDialog() },
+                            )
+                            SettingsItemDivider()
+                            SettingsItemStyled(
+                                icon = Icons.Rounded.ManageAccounts,
+                                iconGradient = listOf(Color(0xFFFFD54F), Color(0xFFF9A825)),
+                                title = stringResource(R.string.staff_label),
+                                subtitle = stringResource(R.string.staff_count, state.users.size),
+                                onClick = { viewModel.showUserManagement() },
                             )
                         }
                     }
+                    item { Spacer(modifier = Modifier.height(12.dp)) }
                 }
-
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-
-                // ─── Store settings group ───
-                item { SettingsGroupTitle(stringResource(R.string.section_store)) }
-                item {
-                    SettingsGroup {
-                        SettingsItemStyled(
-                            icon = Icons.Rounded.Storefront,
-                            iconGradient = listOf(Color(0xFF6C5CE7), Color(0xFFA29BFE)),
-                            title = stringResource(R.string.store_info_label),
-                            subtitle = stringResource(R.string.store_info_desc),
-                            onClick = { onNavigateToStoreSettings() },
-                        )
-                        SettingsItemDivider()
-                        val settings = state.store?.settings ?: StoreSettings()
-                        SettingsItemStyled(
-                            icon = Icons.Rounded.Receipt,
-                            iconGradient = listOf(Color(0xFF00D2FF), Color(0xFF3B9FDB)),
-                            title = stringResource(R.string.sales_settings_label),
-                            subtitle = buildString {
-                                if (settings.taxEnabled) append(stringResource(R.string.tax_enabled_format, settings.defaultTaxRate.toString()))
-                                else append(stringResource(R.string.tax_disabled))
-                            },
-                            trailingValue = if (settings.taxEnabled) "${settings.defaultTaxRate.toInt()}%" else null,
-                            onClick = { viewModel.showSalesSettingsDialog() },
-                        )
-                        SettingsItemDivider()
-                        SettingsItemStyled(
-                            icon = Icons.Rounded.Print,
-                            iconGradient = listOf(Color(0xFFFF8A65), Color(0xFFFF5252)),
-                            title = stringResource(R.string.bluetooth_printer_label),
-                            subtitle = stringResource(R.string.bluetooth_not_connected),
-                            onClick = { /* TODO: Bluetooth printer setup */ },
-                        )
-                        SettingsItemDivider()
-                        SettingsItemStyled(
-                            icon = Icons.Rounded.CloudSync,
-                            iconGradient = listOf(Color(0xFF00E676), Color(0xFF69F0AE)),
-                            title = stringResource(R.string.backup_label),
-                            subtitle = stringResource(R.string.backup_desc),
-                            onClick = { viewModel.showBackupDialog() },
-                        )
-                        SettingsItemDivider()
-                        SettingsItemStyled(
-                            icon = Icons.Rounded.ManageAccounts,
-                            iconGradient = listOf(Color(0xFFFFD54F), Color(0xFFF9A825)),
-                            title = stringResource(R.string.staff_label),
-                            subtitle = stringResource(R.string.staff_count, state.users.size),
-                            onClick = { viewModel.showUserManagement() },
-                        )
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.height(12.dp)) }
 
                 // ─── Appearance group ───
                 item { SettingsGroupTitle(stringResource(R.string.section_appearance)) }
                 item {
+                    val currentThemeMode by viewModel.themeManager.themeMode.collectAsState()
+                    val currentLanguage by viewModel.themeManager.language.collectAsState()
+                    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                    val isDark = when (currentThemeMode) {
+                        com.minipos.core.theme.ThemeMode.SYSTEM -> isSystemDark
+                        com.minipos.core.theme.ThemeMode.LIGHT -> false
+                        com.minipos.core.theme.ThemeMode.DARK -> true
+                    }
                     SettingsGroup {
                         SettingsItemStyled(
                             icon = Icons.Rounded.DarkMode,
@@ -333,23 +364,35 @@ fun SettingsScreen(
                             title = stringResource(R.string.dark_mode_label),
                             subtitle = stringResource(R.string.dark_mode_desc),
                             trailingContent = {
-                                // Dark mode toggle would need integration with theme state
-                                // For now, show a toggle placeholder
                                 Switch(
-                                    checked = true, // TODO: bind to actual theme state
-                                    onCheckedChange = { /* TODO: toggle theme */ },
+                                    checked = isDark,
+                                    onCheckedChange = { enabled ->
+                                        viewModel.setThemeMode(
+                                            if (enabled) com.minipos.core.theme.ThemeMode.DARK
+                                            else com.minipos.core.theme.ThemeMode.LIGHT,
+                                        )
+                                    },
                                     colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
                                 )
                             },
-                            onClick = { /* TODO: toggle theme */ },
+                            onClick = {
+                                viewModel.setThemeMode(
+                                    if (isDark) com.minipos.core.theme.ThemeMode.LIGHT
+                                    else com.minipos.core.theme.ThemeMode.DARK,
+                                )
+                            },
                         )
                         SettingsItemDivider()
                         SettingsItemStyled(
                             icon = Icons.Rounded.Translate,
-                            iconGradient = listOf(Color(0xFF4DD0E1), Color(0xFF0097A7)),
+                            iconGradient = listOf(Color(0xFF5AEDC5), Color(0xFF0097A7)),
                             title = stringResource(R.string.language_label),
-                            trailingValue = stringResource(R.string.language_vietnamese),
-                            onClick = { /* TODO: language picker */ },
+                            trailingValue = when (currentLanguage) {
+                                com.minipos.core.theme.AppLanguage.SYSTEM -> stringResource(R.string.language_system)
+                                com.minipos.core.theme.AppLanguage.ENGLISH -> "English"
+                                com.minipos.core.theme.AppLanguage.VIETNAMESE -> "Tiếng Việt"
+                            },
+                            onClick = { showLanguageDialog = true },
                         )
                     }
                 }
@@ -361,18 +404,26 @@ fun SettingsScreen(
                 item {
                     SettingsGroup {
                         SettingsItemStyled(
+                            icon = Icons.Rounded.Wifi,
+                            iconGradient = listOf(Color(0xFF0097A7), Color(0xFF5AEDC5)),
+                            title = stringResource(R.string.wifi_sync_label),
+                            subtitle = stringResource(R.string.wifi_sync_desc),
+                            onClick = onNavigateToWifiSync,
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
                             icon = Icons.Rounded.Help,
                             iconGradient = listOf(Color(0xFFCE93D8), Color(0xFFAB47BC)),
                             title = stringResource(R.string.help_feedback_label),
-                            onClick = { /* TODO */ },
+                            onClick = { showHelpDialog = true },
                         )
                         SettingsItemDivider()
                         SettingsItemStyled(
                             icon = Icons.Rounded.Info,
                             iconGradient = listOf(Color(0xFF90A4AE), Color(0xFF607D8B)),
                             title = stringResource(R.string.app_info_label),
-                            subtitle = stringResource(R.string.version_value),
-                            onClick = { /* TODO */ },
+                            subtitle = "ViPOS v${BuildConfig.VERSION_NAME}",
+                            onClick = { showAppInfoDialog = true },
                         )
                     }
                 }
@@ -387,13 +438,13 @@ fun SettingsScreen(
                     ) {
                         Row {
                             Text(
-                                "Mini POS ",
+                                "ViPOS ",
                                 fontSize = 12.sp,
                                 color = AppColors.TextTertiary,
                                 fontWeight = FontWeight.Medium,
                             )
                             Text(
-                                "v1.0.0",
+                                "v${BuildConfig.VERSION_NAME}",
                                 fontSize = 12.sp,
                                 color = AppColors.PrimaryLight,
                                 fontWeight = FontWeight.Bold,
@@ -416,7 +467,7 @@ fun SettingsScreen(
     }
 }
 
-// ============ Store Info Dialog ============
+// ============ Store Info Dialog → Bottom Sheet ============
 
 @Composable
 private fun StoreInfoDialog(
@@ -424,134 +475,289 @@ private fun StoreInfoDialog(
     ownerUser: com.minipos.domain.model.User?,
     ownerHasPin: Boolean,
     onDismiss: () -> Unit,
-    onSave: (name: String, address: String?, phone: String?, ownerName: String, currentPin: String, newPin: String) -> Unit,
+    onChangePin: () -> Unit,
+    onSave: (name: String, address: String?, phone: String?, ownerName: String) -> Unit,
 ) {
     var name by remember { mutableStateOf(store?.name ?: "") }
     var address by remember { mutableStateOf(store?.address ?: "") }
     var phone by remember { mutableStateOf(store?.phone ?: "") }
     var ownerName by remember { mutableStateOf(ownerUser?.displayName ?: "") }
+    var nameError by remember { mutableStateOf(false) }
+
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.store_info_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.save),
+                icon = Icons.Rounded.Check,
+                onClick = {
+                    if (name.isBlank()) { nameError = true; return@BottomSheetPrimaryButton }
+                    onSave(
+                        name.trim(),
+                        address.trim().ifBlank { null },
+                        phone.trim().ifBlank { null },
+                        ownerName.trim(),
+                    )
+                },
+            )
+        },
+    ) {
+        BottomSheetField(
+            label = stringResource(R.string.store_name_label),
+            value = name,
+            onValueChange = { name = it; nameError = false },
+            placeholder = stringResource(R.string.store_name),
+            required = true,
+        )
+        if (nameError) {
+            Text(stringResource(R.string.name_empty_error), fontSize = 11.sp, color = AppColors.Error)
+        }
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.address_label),
+            value = address,
+            onValueChange = { address = it },
+            placeholder = stringResource(R.string.store_address),
+        )
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.store_phone_label),
+            value = phone,
+            onValueChange = { phone = it },
+            placeholder = stringResource(R.string.store_phone),
+            keyboardType = KeyboardType.Phone,
+        )
+        Spacer(Modifier.height(16.dp))
+
+        HorizontalDivider(color = AppColors.Divider)
+        Spacer(Modifier.height(16.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.display_name_required),
+            value = ownerName,
+            onValueChange = { ownerName = it },
+            placeholder = stringResource(R.string.display_name),
+        )
+        Spacer(Modifier.height(16.dp))
+
+        HorizontalDivider(color = AppColors.Divider)
+        Spacer(Modifier.height(12.dp))
+
+        // Change PIN button — opens dedicated flow
+        Text(
+            stringResource(R.string.pin_section_title),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.TextSecondary,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        BottomSheetOutlineButton(
+            text = if (ownerHasPin) stringResource(R.string.change_pin_title) else stringResource(R.string.set_pin_title),
+            icon = Icons.Rounded.Lock,
+            onClick = onChangePin,
+        )
+
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+// ============ Change PIN Bottom Sheet (dedicated flow) ============
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun ChangePinBottomSheet(
+    hasExistingPin: Boolean,
+    pinVerified: Boolean,
+    pinVerifyError: String?,
+    onVerifyPin: (String) -> Unit,
+    onSaveNewPin: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     var currentPin by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
-    var nameError by remember { mutableStateOf(false) }
     var pinError by remember { mutableStateOf<String?>(null) }
 
-    val hasExistingPin = ownerHasPin
+    // If no existing PIN, skip verification step
+    val isVerified = !hasExistingPin || pinVerified
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.store_info_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; nameError = false },
-                    label = { Text(stringResource(R.string.store_name_label)) },
-                    isError = nameError,
-                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    label = { Text(stringResource(R.string.address_label)) },
-                    singleLine = false,
-                    maxLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text(stringResource(R.string.store_phone_label)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                HorizontalDivider()
-                OutlinedTextField(
-                    value = ownerName,
-                    onValueChange = { ownerName = it },
-                    label = { Text(stringResource(R.string.display_name_required)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                HorizontalDivider()
-                // PIN section
-                Text(
-                    stringResource(R.string.pin_section_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = AppColors.TextSecondary,
-                )
-                if (hasExistingPin) {
-                    OutlinedTextField(
-                        value = currentPin,
-                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { currentPin = it; pinError = null } },
-                        label = { Text(stringResource(R.string.pin_current_label)) },
-                        placeholder = { Text(stringResource(R.string.pin_current_hint)) },
-                        isError = pinError != null,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                    )
-                }
-                OutlinedTextField(
-                    value = newPin,
-                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { newPin = it; pinError = null } },
-                    label = { Text(stringResource(R.string.pin_new_label)) },
-                    placeholder = { Text(stringResource(R.string.pin_leave_blank)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                if (newPin.isNotBlank()) {
-                    OutlinedTextField(
-                        value = confirmPin,
-                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { confirmPin = it; pinError = null } },
-                        label = { Text(stringResource(R.string.pin_confirm_label)) },
-                        isError = pinError != null,
-                        supportingText = pinError?.let {{ Text(pinError!!) }},
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                    )
-                }
-            }
-        },
-        confirmButton = {
+    MiniPosBottomSheet(
+        visible = true,
+        title = if (hasExistingPin) stringResource(R.string.change_pin_title) else stringResource(R.string.set_pin_title),
+        onDismiss = onDismiss,
+        footer = {
             val pinLengthError = stringResource(R.string.pin_length_error)
             val pinMismatchError = stringResource(R.string.pin_mismatch_error)
-            TextButton(onClick = {
-                if (name.isBlank()) { nameError = true; return@TextButton }
-                if (newPin.isNotBlank()) {
-                    if (newPin.length < 4) { pinError = pinLengthError; return@TextButton }
-                    if (newPin != confirmPin) { pinError = pinMismatchError; return@TextButton }
-                }
-                onSave(
-                    name.trim(),
-                    address.trim().ifBlank { null },
-                    phone.trim().ifBlank { null },
-                    ownerName.trim(),
-                    currentPin,
-                    newPin,
+            val pinCurrentRequired = stringResource(R.string.pin_current_required)
+
+            if (!isVerified) {
+                // Step 1: Verify button
+                BottomSheetPrimaryButton(
+                    text = stringResource(R.string.verify_btn),
+                    icon = Icons.Rounded.VerifiedUser,
+                    onClick = {
+                        if (currentPin.isBlank()) {
+                            pinError = pinCurrentRequired
+                            return@BottomSheetPrimaryButton
+                        }
+                        if (currentPin.length < 4) {
+                            pinError = pinLengthError
+                            return@BottomSheetPrimaryButton
+                        }
+                        pinError = null
+                        onVerifyPin(currentPin)
+                    },
                 )
-            }) { Text(stringResource(R.string.save)) }
+            } else {
+                // Step 2: Save button
+                BottomSheetPrimaryButton(
+                    text = stringResource(R.string.save),
+                    icon = Icons.Rounded.Check,
+                    onClick = {
+                        if (newPin.length < 4) {
+                            pinError = pinLengthError
+                            return@BottomSheetPrimaryButton
+                        }
+                        if (newPin != confirmPin) {
+                            pinError = pinMismatchError
+                            return@BottomSheetPrimaryButton
+                        }
+                        pinError = null
+                        onSaveNewPin(newPin)
+                    },
+                )
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    ) {
+        if (hasExistingPin && !pinVerified) {
+            // ── Step 1: Verify current PIN ──
+            Text(
+                stringResource(R.string.verify_pin_step),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.Primary,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            BottomSheetField(
+                label = stringResource(R.string.pin_current_label),
+                value = currentPin,
+                onValueChange = {
+                    if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                        currentPin = it; pinError = null
+                    }
+                },
+                placeholder = stringResource(R.string.pin_current_hint),
+                keyboardType = KeyboardType.NumberPassword,
+                visualTransformation = PasswordVisualTransformation(),
+            )
+
+            // Show verify error from ViewModel
+            if (pinVerifyError != null) {
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Rounded.Error,
+                        contentDescription = null,
+                        tint = AppColors.Error,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(pinVerifyError, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppColors.Error)
+                }
+            }
+
+            // Show local error
+            if (pinError != null && pinVerifyError == null) {
+                Spacer(Modifier.height(4.dp))
+                Text(pinError!!, fontSize = 11.sp, color = AppColors.Error)
+            }
+        } else {
+            // ── Step 2 (or only step if no existing PIN): Enter new PIN ──
+            if (hasExistingPin) {
+                // Show verified badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AppColors.SuccessSoft, RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = AppColors.Success,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.pin_verified),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.Success,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    stringResource(R.string.new_pin_step),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Primary,
+                )
+            } else {
+                Text(
+                    stringResource(R.string.set_new_pin_step),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Primary,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            BottomSheetField(
+                label = stringResource(R.string.pin_new_label),
+                value = newPin,
+                onValueChange = {
+                    if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                        newPin = it; pinError = null
+                    }
+                },
+                placeholder = stringResource(R.string.pin_4_6_label),
+                keyboardType = KeyboardType.NumberPassword,
+                visualTransformation = PasswordVisualTransformation(),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            BottomSheetField(
+                label = stringResource(R.string.pin_confirm_label),
+                value = confirmPin,
+                onValueChange = {
+                    if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                        confirmPin = it; pinError = null
+                    }
+                },
+                placeholder = stringResource(R.string.confirm_password),
+                keyboardType = KeyboardType.NumberPassword,
+                visualTransformation = PasswordVisualTransformation(),
+            )
+
+            if (pinError != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(pinError!!, fontSize = 11.sp, color = AppColors.Error)
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+    }
 }
 
-// ============ Sales Settings Dialog ============
+// ============ Sales Settings Dialog → Bottom Sheet ============
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -567,117 +773,110 @@ private fun SalesSettingsDialog(
     var lowStockAlert by remember { mutableStateOf(settings.lowStockAlert) }
     var autoPrintReceipt by remember { mutableStateOf(settings.autoPrintReceipt) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.sales_settings_title)) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Tax toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(R.string.enable_tax), style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = taxEnabled,
-                        onCheckedChange = { taxEnabled = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.sales_settings_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.save),
+                icon = Icons.Rounded.Check,
+                onClick = {
+                    val rate = taxRate.toDoubleOrNull() ?: 0.0
+                    onSave(
+                        StoreSettings(
+                            receiptHeader = receiptHeader,
+                            receiptFooter = receiptFooter,
+                            taxEnabled = taxEnabled,
+                            defaultTaxRate = rate,
+                            lowStockAlert = lowStockAlert,
+                            autoPrintReceipt = autoPrintReceipt,
+                        )
                     )
-                }
-
-                // Tax rate
-                if (taxEnabled) {
-                    OutlinedTextField(
-                        value = taxRate,
-                        onValueChange = { taxRate = it.filter { c -> c.isDigit() || c == '.' } },
-                        label = { Text(stringResource(R.string.tax_rate_label)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        suffix = { Text("%") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                    )
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                // Receipt header
-                OutlinedTextField(
-                    value = receiptHeader,
-                    onValueChange = { receiptHeader = it },
-                    label = { Text("Header hóa đơn") },
-                    singleLine = false,
-                    maxLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-
-                // Receipt footer
-                OutlinedTextField(
-                    value = receiptFooter,
-                    onValueChange = { receiptFooter = it },
-                    label = { Text("Footer hóa đơn") },
-                    singleLine = false,
-                    maxLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                // Auto print receipt
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(R.string.auto_print_receipt), style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = autoPrintReceipt,
-                        onCheckedChange = { autoPrintReceipt = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
-                    )
-                }
-
-                // Low stock alert
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(R.string.low_stock_alert_label), style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = lowStockAlert,
-                        onCheckedChange = { lowStockAlert = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
-                    )
-                }
-            }
+                },
+            )
         },
-        confirmButton = {
-            TextButton(onClick = {
-                val rate = taxRate.toDoubleOrNull() ?: 0.0
-                onSave(
-                    StoreSettings(
-                        receiptHeader = receiptHeader,
-                        receiptFooter = receiptFooter,
-                        taxEnabled = taxEnabled,
-                        defaultTaxRate = rate,
-                        lowStockAlert = lowStockAlert,
-                        autoPrintReceipt = autoPrintReceipt,
-                    )
-                )
-            }) { Text(stringResource(R.string.save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    ) {
+        // Tax toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.enable_tax), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
+            Switch(
+                checked = taxEnabled,
+                onCheckedChange = { taxEnabled = it },
+                colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+
+        // Tax rate
+        if (taxEnabled) {
+            BottomSheetField(
+                label = stringResource(R.string.tax_rate_label),
+                value = taxRate,
+                onValueChange = { taxRate = it.filter { c -> c.isDigit() || c == '.' } },
+                placeholder = "0",
+                keyboardType = KeyboardType.Decimal,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
+        HorizontalDivider(color = AppColors.Divider)
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.receipt_header_label),
+            value = receiptHeader,
+            onValueChange = { receiptHeader = it },
+        )
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.receipt_footer_label),
+            value = receiptFooter,
+            onValueChange = { receiptFooter = it },
+        )
+        Spacer(Modifier.height(12.dp))
+
+        HorizontalDivider(color = AppColors.Divider)
+        Spacer(Modifier.height(12.dp))
+
+        // Auto print receipt
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.auto_print_receipt), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
+            Switch(
+                checked = autoPrintReceipt,
+                onCheckedChange = { autoPrintReceipt = it },
+                colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+
+        // Low stock alert
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.low_stock_alert_label), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
+            Switch(
+                checked = lowStockAlert,
+                onCheckedChange = { lowStockAlert = it },
+                colors = SwitchDefaults.colors(checkedTrackColor = AppColors.Primary),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+    }
 }
 
-// ============ User Management Dialog ============
+// ============ User Management Dialog → Bottom Sheet ============
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -690,26 +889,28 @@ private fun UserManagementDialog(
     onResetPin: (User) -> Unit,
     onDeleteUser: (User) -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(R.string.user_management_title))
-                IconButton(onClick = onAddUser) {
-                    Icon(Icons.Default.PersonAdd, contentDescription = stringResource(R.string.add_staff), tint = AppColors.Primary)
-                }
-            }
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.user_management_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.add_staff),
+                icon = Icons.Rounded.PersonAdd,
+                onClick = onAddUser,
+            )
         },
-        text = {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.heightIn(max = 400.dp),
-            ) {
-                items(users) { user ->
+    ) {
+        if (users.isEmpty()) {
+            Text(
+                stringResource(R.string.no_staff_yet),
+                fontSize = 13.sp,
+                color = AppColors.TextSecondary,
+                modifier = Modifier.padding(16.dp),
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                users.forEach { user ->
                     UserCard(
                         user = user,
                         isCurrent = user.id == currentUserId,
@@ -718,20 +919,9 @@ private fun UserManagementDialog(
                         onDelete = { onDeleteUser(user) },
                     )
                 }
-                if (users.isEmpty()) {
-                    item {
-                        Text(
-                            stringResource(R.string.no_staff_yet),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AppColors.TextSecondary,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
-    )
+        }
+    }
 }
 
 @Composable
@@ -742,83 +932,101 @@ private fun UserCard(
     onResetPin: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    var showActions by remember { mutableStateOf(false) }
 
-    Card(
-        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) AppColors.Primary.copy(alpha = 0.08f) else AppColors.Surface
-        ),
+    // Action Sheet for user options
+    MiniPosActionSheet(
+        visible = showActions,
+        title = user.displayName,
+        description = when (user.role) {
+            UserRole.OWNER -> stringResource(R.string.role_owner)
+            UserRole.MANAGER -> stringResource(R.string.role_manager)
+            UserRole.CASHIER -> stringResource(R.string.role_cashier)
+        },
+        items = buildList {
+            add(ActionSheetItem(stringResource(R.string.edit_label), Icons.Rounded.Edit) { showActions = false; onEdit() })
+            add(ActionSheetItem(stringResource(R.string.reset_pin_label), Icons.Rounded.Lock) { showActions = false; onResetPin() })
+            if (!isCurrent && user.role != UserRole.OWNER) {
+                add(ActionSheetItem(stringResource(R.string.delete), Icons.Rounded.Delete, ActionSheetItemStyle.DANGER) { showActions = false; onDelete() })
+            }
+        },
+        cancelText = stringResource(R.string.cancel),
+        onDismiss = { showActions = false },
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+            .background(if (isCurrent) AppColors.Primary.copy(alpha = 0.08f) else AppColors.InputBackground)
+            .clickable { showActions = true }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
+        // Avatar
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isCurrent) Brush.linearGradient(listOf(AppColors.Primary, AppColors.PrimaryLight))
+                    else Brush.linearGradient(listOf(AppColors.TextTertiary, AppColors.TextSecondary))
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = if (isCurrent) AppColors.Primary else AppColors.TextSecondary,
-                modifier = Modifier.size(28.dp),
+            Text(
+                user.displayName.firstOrNull()?.uppercase() ?: "?",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        user.displayName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    if (isCurrent) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            stringResource(R.string.you_label),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppColors.Primary,
-                        )
-                    }
-                }
-                Text(
-                    when (user.role) {
-                        UserRole.OWNER -> stringResource(R.string.role_owner)
-                        UserRole.MANAGER -> stringResource(R.string.role_manager)
-                        UserRole.CASHIER -> stringResource(R.string.role_cashier)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.TextSecondary,
-                )
-            }
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = AppColors.TextSecondary)
-                }
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.edit_label)) },
-                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        onClick = { showMenu = false; onEdit() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.reset_pin_label)) },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        onClick = { showMenu = false; onResetPin() },
-                    )
-                    if (!isCurrent && user.role != UserRole.OWNER) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = AppColors.Error) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = AppColors.Error, modifier = Modifier.size(20.dp)) },
-                            onClick = { showMenu = false; onDelete() },
-                        )
-                    }
-                }
-            }
         }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    user.displayName,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary,
+                )
+                if (isCurrent) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.you_label),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppColors.PrimaryLight,
+                        modifier = Modifier
+                            .background(AppColors.PrimaryLight.copy(alpha = 0.1f), RoundedCornerShape(MiniPosTokens.RadiusFull))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
+            Text(
+                when (user.role) {
+                    UserRole.OWNER -> stringResource(R.string.role_owner)
+                    UserRole.MANAGER -> stringResource(R.string.role_manager)
+                    UserRole.CASHIER -> stringResource(R.string.role_cashier)
+                },
+                fontSize = 11.sp,
+                color = AppColors.TextTertiary,
+            )
+        }
+        Icon(
+            Icons.Rounded.MoreVert,
+            contentDescription = "Menu",
+            tint = AppColors.TextTertiary,
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .clickable { showActions = true }
+                .padding(4.dp),
+        )
     }
 }
 
-// ============ Add User Dialog ============
+// ============ Add User Dialog → Bottom Sheet ============
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -833,77 +1041,83 @@ private fun AddUserDialog(
     var nameError by remember { mutableStateOf(false) }
     var pinError by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_staff_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; nameError = false },
-                    label = { Text(stringResource(R.string.staff_name_label)) },
-                    isError = nameError,
-                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text(stringResource(R.string.pin_4_6_label)) },
-                    isError = pinError != null,
-                    supportingText = pinError?.let {{ Text(pinError!!) }},
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                OutlinedTextField(
-                    value = confirmPin,
-                    onValueChange = { confirmPin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text(stringResource(R.string.confirm_password)) },
-                    isError = pinError != null,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-
-                Text(stringResource(R.string.role_selection), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MiniPosFilterChip(
-                        label = stringResource(R.string.role_manager),
-                        selected = selectedRole == UserRole.MANAGER,
-                        onClick = { selectedRole = UserRole.MANAGER },
-                    )
-                    MiniPosFilterChip(
-                        label = stringResource(R.string.role_cashier),
-                        selected = selectedRole == UserRole.CASHIER,
-                        onClick = { selectedRole = UserRole.CASHIER },
-                    )
-                }
-            }
-        },
-        confirmButton = {
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.add_staff_title),
+        onDismiss = onDismiss,
+        footer = {
             val pinLengthError = stringResource(R.string.pin_length_error)
             val pinMismatchError = stringResource(R.string.pin_mismatch_error)
-            TextButton(onClick = {
-                when {
-                    name.isBlank() -> nameError = true
-                    pin.length < 4 -> pinError = pinLengthError
-                    pin != confirmPin -> pinError = pinMismatchError
-                    else -> onSave(name.trim(), pin, selectedRole)
-                }
-            }) { Text(stringResource(R.string.add_btn)) }
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.add_btn),
+                icon = Icons.Rounded.PersonAdd,
+                onClick = {
+                    when {
+                        name.isBlank() -> nameError = true
+                        pin.length < 4 -> pinError = pinLengthError
+                        pin != confirmPin -> pinError = pinMismatchError
+                        else -> onSave(name.trim(), pin, selectedRole)
+                    }
+                },
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    ) {
+        BottomSheetField(
+            label = stringResource(R.string.staff_name_label),
+            value = name,
+            onValueChange = { name = it; nameError = false },
+            required = true,
+            placeholder = stringResource(R.string.display_name),
+        )
+        if (nameError) {
+            Text(stringResource(R.string.name_empty_error), fontSize = 11.sp, color = AppColors.Error)
+        }
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.pin_4_6_label),
+            value = pin,
+            onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
+            required = true,
+            placeholder = "••••",
+            keyboardType = KeyboardType.NumberPassword,
+        )
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.confirm_password),
+            value = confirmPin,
+            onValueChange = { confirmPin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
+            required = true,
+            placeholder = "••••",
+            keyboardType = KeyboardType.NumberPassword,
+        )
+
+        if (pinError != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(pinError!!, fontSize = 11.sp, color = AppColors.Error)
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text(stringResource(R.string.role_selection), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AppColors.TextSecondary)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MiniPosFilterChip(
+                label = stringResource(R.string.role_manager),
+                selected = selectedRole == UserRole.MANAGER,
+                onClick = { selectedRole = UserRole.MANAGER },
+            )
+            MiniPosFilterChip(
+                label = stringResource(R.string.role_cashier),
+                selected = selectedRole == UserRole.CASHIER,
+                onClick = { selectedRole = UserRole.CASHIER },
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+    }
 }
 
-// ============ Edit User Dialog ============
+// ============ Edit User Dialog → Bottom Sheet ============
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -916,54 +1130,59 @@ private fun EditUserDialog(
     var selectedRole by remember { mutableStateOf(user.role) }
     var nameError by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.edit_staff_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; nameError = false },
-                    label = { Text(stringResource(R.string.edit_staff_name)) },
-                    isError = nameError,
-                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_empty_error)) }} else null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-
-                if (user.role != UserRole.OWNER) {
-                    Text(stringResource(R.string.role_selection), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MiniPosFilterChip(
-                            label = stringResource(R.string.role_manager),
-                            selected = selectedRole == UserRole.MANAGER,
-                            onClick = { selectedRole = UserRole.MANAGER },
-                        )
-                        MiniPosFilterChip(
-                            label = stringResource(R.string.role_cashier),
-                            selected = selectedRole == UserRole.CASHIER,
-                            onClick = { selectedRole = UserRole.CASHIER },
-                        )
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.edit_staff_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.save),
+                icon = Icons.Rounded.Check,
+                onClick = {
+                    if (name.isBlank()) {
+                        nameError = true
+                    } else {
+                        onSave(user.copy(displayName = name.trim(), role = selectedRole))
                     }
-                }
+                },
+            )
+        },
+    ) {
+        BottomSheetField(
+            label = stringResource(R.string.edit_staff_name),
+            value = name,
+            onValueChange = { name = it; nameError = false },
+            required = true,
+            placeholder = stringResource(R.string.display_name),
+        )
+        if (nameError) {
+            Text(stringResource(R.string.name_empty_error), fontSize = 11.sp, color = AppColors.Error)
+        }
+        Spacer(Modifier.height(16.dp))
+
+        if (user.role != UserRole.OWNER) {
+            Text(stringResource(R.string.role_selection), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AppColors.TextSecondary)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MiniPosFilterChip(
+                    label = stringResource(R.string.role_manager),
+                    selected = selectedRole == UserRole.MANAGER,
+                    onClick = { selectedRole = UserRole.MANAGER },
+                )
+                MiniPosFilterChip(
+                    label = stringResource(R.string.role_cashier),
+                    selected = selectedRole == UserRole.CASHIER,
+                    onClick = { selectedRole = UserRole.CASHIER },
+                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (name.isBlank()) {
-                    nameError = true
-                } else {
-                    onSave(user.copy(displayName = name.trim(), role = selectedRole))
-                }
-            }) { Text(stringResource(R.string.save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+        }
+        Spacer(Modifier.height(12.dp))
+    }
 }
 
-// ============ Reset PIN Dialog ============
+// ============ Reset PIN Dialog → Bottom Sheet ============
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ResetPinDialog(
     user: User,
@@ -974,50 +1193,59 @@ private fun ResetPinDialog(
     var confirmPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.reset_pin_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.reset_pin_for, user.displayName), style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text(stringResource(R.string.new_pin_label)) },
-                    isError = pinError != null,
-                    supportingText = pinError?.let {{ Text(pinError!!) }},
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-                OutlinedTextField(
-                    value = confirmPin,
-                    onValueChange = { confirmPin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
-                    label = { Text(stringResource(R.string.confirm_password)) },
-                    isError = pinError != null,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-            }
+    val pinLengthError = stringResource(R.string.pin_length_error)
+    val pinMismatchError = stringResource(R.string.pin_mismatch_error)
+
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.reset_pin_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.reset_btn),
+                icon = Icons.Rounded.LockReset,
+                onClick = {
+                    when {
+                        pin.length < 4 -> pinError = pinLengthError
+                        pin != confirmPin -> pinError = pinMismatchError
+                        else -> onSave(pin)
+                    }
+                },
+            )
         },
-        confirmButton = {
-            val pinLengthError = stringResource(R.string.pin_length_error)
-            val pinMismatchError = stringResource(R.string.pin_mismatch_error)
-            TextButton(onClick = {
-                when {
-                    pin.length < 4 -> pinError = pinLengthError
-                    pin != confirmPin -> pinError = pinMismatchError
-                    else -> onSave(pin)
-                }
-            }) { Text(stringResource(R.string.reset_btn)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    ) {
+        Text(
+            stringResource(R.string.reset_pin_for, user.displayName),
+            fontSize = 13.sp,
+            color = AppColors.TextSecondary,
+        )
+        Spacer(Modifier.height(16.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.new_pin_label),
+            value = pin,
+            onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
+            required = true,
+            placeholder = "••••",
+            keyboardType = KeyboardType.NumberPassword,
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        if (pinError != null) {
+            Text(pinError!!, fontSize = 11.sp, color = AppColors.Error)
+        }
+        Spacer(Modifier.height(12.dp))
+
+        BottomSheetField(
+            label = stringResource(R.string.confirm_password),
+            value = confirmPin,
+            onValueChange = { confirmPin = it.filter { c -> c.isDigit() }.take(6); pinError = null },
+            required = true,
+            placeholder = "••••",
+            keyboardType = KeyboardType.NumberPassword,
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        Spacer(Modifier.height(12.dp))
+    }
 }
 
 // ============ Shared Components (matching mock design) ============
@@ -1118,5 +1346,495 @@ private fun SettingsItemStyled(
                 modifier = Modifier.size(18.dp),
             )
         }
+    }
+}
+
+// ============ Backup Dialog ============
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackupDialog(
+    isBackingUp: Boolean,
+    backupFiles: List<BackupFileInfo>,
+    onCreateBackup: () -> Unit,
+    onDeleteBackup: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AppColors.Surface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 4.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusFull))
+                    .background(AppColors.Border),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            // ── Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF43A047), Color(0xFF66BB6A)),
+                            ),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.CloudUpload,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.backup_title),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        stringResource(R.string.backup_subtitle),
+                        fontSize = 12.sp,
+                        color = AppColors.TextTertiary,
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, contentDescription = null, tint = AppColors.TextTertiary)
+                }
+            }
+
+            // ── Create Backup Button
+            Button(
+                onClick = onCreateBackup,
+                enabled = !isBackingUp,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF43A047),
+                    disabledContainerColor = AppColors.Border,
+                ),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+            ) {
+                if (isBackingUp) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = AppColors.TextSecondary,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.backup_creating),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextSecondary,
+                    )
+                } else {
+                    Icon(
+                        Icons.Rounded.AddCircleOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.White,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.backup_create_btn),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // ── Backup Files List
+            if (backupFiles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                        .background(AppColors.Background)
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Rounded.FolderOff,
+                            contentDescription = null,
+                            tint = AppColors.TextTertiary,
+                            modifier = Modifier.size(32.dp),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.backup_no_files),
+                            fontSize = 13.sp,
+                            color = AppColors.TextTertiary,
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    stringResource(R.string.backup_existing_files, backupFiles.size),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AppColors.TextTertiary,
+                    letterSpacing = 0.8.sp,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                        .background(AppColors.Background)
+                        .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg)),
+                ) {
+                    backupFiles.forEachIndexed { index, file ->
+                        if (index > 0) {
+                            HorizontalDivider(color = AppColors.Divider, modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        BackupFileRow(file = file, onDelete = { onDeleteBackup(file.filePath) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackupFileRow(
+    file: BackupFileInfo,
+    onDelete: () -> Unit,
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        MiniPosConfirmDialog(
+            visible = true,
+            type = PopupType.DELETE,
+            icon = Icons.Rounded.DeleteOutline,
+            title = stringResource(R.string.backup_delete_title),
+            message = stringResource(R.string.backup_delete_confirm),
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.delete_btn),
+            confirmStyle = ConfirmButtonStyle.DANGER,
+            onCancel = { showDeleteConfirm = false },
+            onConfirm = { showDeleteConfirm = false; onDelete() },
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Rounded.Lock,
+            contentDescription = null,
+            tint = Color(0xFF43A047),
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                file.fileName,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.TextPrimary,
+                maxLines = 1,
+            )
+            Text(
+                buildString {
+                    val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                        .format(Date(file.createdAt))
+                    append(dateStr)
+                    append("  •  ")
+                    append(String.format("%.2f MB", file.sizeBytes / 1024.0 / 1024.0))
+                },
+                fontSize = 11.sp,
+                color = AppColors.TextTertiary,
+            )
+        }
+        IconButton(
+            onClick = { showDeleteConfirm = true },
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                Icons.Rounded.DeleteOutline,
+                contentDescription = stringResource(R.string.delete_btn),
+                tint = AppColors.Error,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+// ============ Restore Dialog ============
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RestoreDialog(
+    isRestoring: Boolean,
+    backupFiles: List<BackupFileInfo>,
+    confirmFile: BackupFileInfo?,
+    onSelectFile: (BackupFileInfo) -> Unit,
+    onCancelConfirm: () -> Unit,
+    onConfirmRestore: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Confirm restore dialog
+    if (confirmFile != null) {
+        MiniPosConfirmDialog(
+            visible = true,
+            type = PopupType.WARNING,
+            icon = Icons.Rounded.Warning,
+            title = stringResource(R.string.restore_confirm_title),
+            message = stringResource(
+                R.string.restore_confirm_msg,
+                confirmFile.fileName,
+            ),
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.restore_confirm_btn),
+            confirmStyle = ConfirmButtonStyle.DANGER,
+            onCancel = onCancelConfirm,
+            onConfirm = { onConfirmRestore(confirmFile.filePath) },
+        )
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AppColors.Surface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 4.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusFull))
+                    .background(AppColors.Border),
+            )
+        },
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+            ) {
+                // ── Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFFFF8A65), Color(0xFFF4511E)),
+                                ),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Restore,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.restore_title),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary,
+                        )
+                        Text(
+                            stringResource(R.string.restore_subtitle),
+                            fontSize = 12.sp,
+                            color = AppColors.TextTertiary,
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Rounded.Close, contentDescription = null, tint = AppColors.TextTertiary)
+                    }
+                }
+
+                // ── Warning notice
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusMd))
+                        .background(Color(0xFFFFF3E0))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFFF8A00),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.restore_warning),
+                        fontSize = 12.sp,
+                        color = Color(0xFFE65100),
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // ── File list
+                if (backupFiles.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                            .background(AppColors.Background)
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Rounded.FolderOff,
+                                contentDescription = null,
+                                tint = AppColors.TextTertiary,
+                                modifier = Modifier.size(32.dp),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.backup_no_files),
+                                fontSize = 13.sp,
+                                color = AppColors.TextTertiary,
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        stringResource(R.string.restore_select_file),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppColors.TextTertiary,
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                            .background(AppColors.Background)
+                            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg)),
+                    ) {
+                        backupFiles.forEachIndexed { index, file ->
+                            if (index > 0) {
+                                HorizontalDivider(color = AppColors.Divider, modifier = Modifier.padding(horizontal = 16.dp))
+                            }
+                            RestoreFileRow(file = file, onSelect = { onSelectFile(file) })
+                        }
+                    }
+                }
+            }
+
+            // ── Loading overlay
+            if (isRestoring) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(AppColors.Surface.copy(alpha = 0.85f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Color(0xFFFF8A65))
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.restore_in_progress),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextPrimary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RestoreFileRow(
+    file: BackupFileInfo,
+    onSelect: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Rounded.Lock,
+            contentDescription = null,
+            tint = Color(0xFFFF8A65),
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                file.fileName,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.TextPrimary,
+                maxLines = 1,
+            )
+            Text(
+                buildString {
+                    val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                        .format(Date(file.createdAt))
+                    append(dateStr)
+                    append("  •  ")
+                    append(String.format("%.2f MB", file.sizeBytes / 1024.0 / 1024.0))
+                },
+                fontSize = 11.sp,
+                color = AppColors.TextTertiary,
+            )
+        }
+        Icon(
+            Icons.Rounded.ChevronRight,
+            contentDescription = null,
+            tint = AppColors.TextTertiary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }

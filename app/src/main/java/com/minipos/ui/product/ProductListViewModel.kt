@@ -35,8 +35,10 @@ data class ProductListState(
     val showBarcodeScanner: Boolean = false,
     // Variants
     val variants: List<ProductVariant> = emptyList(),
+    val pendingVariants: List<ProductVariant> = emptyList(), // variants added before product is saved
     val showVariantForm: Boolean = false,
     val editingVariant: ProductVariant? = null,
+    val pendingProductId: String? = null, // pre-generated ID for new product
 )
 
 data class ProductFormState(
@@ -107,7 +109,7 @@ class ProductListViewModel @Inject constructor(
             val products = productRepository.getAll(storeId)
             val categories = categoryRepository.getAll(storeId)
             val stockMap = products.associate { p ->
-                p.id to (inventoryRepository.getStock(storeId, p.id)?.quantity ?: 0.0)
+                p.id to inventoryRepository.getTotalStock(storeId, p.id, p.hasVariants)
             }
             _state.update { it.copy(products = products, stockMap = stockMap, categories = categories, isLoading = false) }
         }
@@ -122,7 +124,7 @@ class ProductListViewModel @Inject constructor(
                 productRepository.search(storeId, query)
             }
             val stockMap = products.associate { p ->
-                p.id to (inventoryRepository.getStock(storeId, p.id)?.quantity ?: 0.0)
+                p.id to inventoryRepository.getTotalStock(storeId, p.id, p.hasVariants)
             }
             _state.update { it.copy(products = products, stockMap = stockMap) }
         }
@@ -136,7 +138,7 @@ class ProductListViewModel @Inject constructor(
                 productRepository.getAll(storeId)
             }
             val stockMap = products.associate { p ->
-                p.id to (inventoryRepository.getStock(storeId, p.id)?.quantity ?: 0.0)
+                p.id to inventoryRepository.getTotalStock(storeId, p.id, p.hasVariants)
             }
             _state.update { it.copy(selectedCategory = category, products = products, stockMap = stockMap) }
         }
@@ -146,7 +148,15 @@ class ProductListViewModel @Inject constructor(
         viewModelScope.launch {
             val sku = productRepository.generateSku(storeId)
             _formState.value = ProductFormState(sku = sku)
-            _state.update { it.copy(showForm = true, editingProduct = null) }
+            _state.update {
+                it.copy(
+                    showForm = true,
+                    editingProduct = null,
+                    variants = emptyList(),
+                    pendingVariants = emptyList(),
+                    pendingProductId = UuidGenerator.generate(),
+                )
+            }
         }
     }
 
@@ -167,7 +177,7 @@ class ProductListViewModel @Inject constructor(
             additionalImages = product.additionalImages,
             hasVariants = product.hasVariants,
         )
-        _state.update { it.copy(showForm = true, editingProduct = product) }
+        _state.update { it.copy(showForm = true, editingProduct = product, pendingVariants = emptyList(), pendingProductId = null) }
         loadVariants(product.id)
     }
 
@@ -189,7 +199,7 @@ class ProductListViewModel @Inject constructor(
     }
 
     fun dismissForm() {
-        _state.update { it.copy(showForm = false, editingProduct = null) }
+        _state.update { it.copy(showForm = false, editingProduct = null, pendingVariants = emptyList(), pendingProductId = null) }
     }
 
     fun updateFormField(block: ProductFormState.() -> ProductFormState) {
@@ -205,8 +215,9 @@ class ProductListViewModel @Inject constructor(
         _formState.update { it.copy(isSaving = true, error = null) }
         viewModelScope.launch {
             val existing = _state.value.editingProduct
+            val productId = existing?.id ?: _state.value.pendingProductId ?: UuidGenerator.generate()
             val product = Product(
-                id = existing?.id ?: UuidGenerator.generate(),
+                id = productId,
                 storeId = storeId,
                 name = form.name,
                 sku = form.sku,
@@ -228,6 +239,20 @@ class ProductListViewModel @Inject constructor(
             val result = if (existing != null) productRepository.update(product) else productRepository.create(product)
             when (result) {
                 is Result.Success -> {
+                    // If variants were turned OFF, merge variant stock back to product and delete variants
+                    if (existing != null && existing.hasVariants && !form.hasVariants) {
+                        inventoryRepository.mergeVariantStockToProduct(storeId, product.id)
+                        productRepository.deleteAllVariants(product.id)
+                    }
+                    // Save pending variants (added during product creation before product was saved)
+                    val pendingVariants = _state.value.pendingVariants
+                    if (existing == null && pendingVariants.isNotEmpty()) {
+                        for (pv in pendingVariants) {
+                            // Update productId in case it was different
+                            val variantToSave = pv.copy(productId = productId)
+                            productRepository.createVariant(variantToSave)
+                        }
+                    }
                     _formState.update { it.copy(isSaving = false) }
                     dismissForm()
                     loadData()
@@ -312,7 +337,8 @@ class ProductListViewModel @Inject constructor(
 
     fun saveVariant() {
         val form = _variantFormState.value
-        val productId = _state.value.editingProduct?.id ?: return
+        val isNewProduct = _state.value.editingProduct == null
+        val productId = _state.value.editingProduct?.id ?: _state.value.pendingProductId ?: return
         if (form.variantName.isBlank()) {
             _variantFormState.update { it.copy(error = app.getString(R.string.error_variant_name_required)) }
             return
@@ -320,12 +346,30 @@ class ProductListViewModel @Inject constructor(
         _variantFormState.update { it.copy(isSaving = true, error = null) }
         viewModelScope.launch {
             val existing = _state.value.editingVariant
+            val baseSku = _formState.value.sku
+            val autoSku = if (form.sku.isBlank()) {
+                if (isNewProduct) {
+                    // For new product, generate SKU based on pending variants count
+                    val pendingCount = _state.value.pendingVariants.size
+                    val existingMax = _state.value.pendingVariants
+                        .mapNotNull { v ->
+                            val suffix = v.sku.substringAfterLast("-", "")
+                            suffix.toIntOrNull()
+                        }
+                        .maxOrNull() ?: 0
+                    "$baseSku-${maxOf(existingMax, pendingCount) + 1}"
+                } else {
+                    productRepository.getNextVariantSku(productId, baseSku)
+                }
+            } else {
+                form.sku
+            }
             val variant = ProductVariant(
                 id = existing?.id ?: UuidGenerator.generate(),
                 storeId = storeId,
                 productId = productId,
                 variantName = form.variantName,
-                sku = form.sku.ifBlank { "${_formState.value.sku}-${form.variantName}" },
+                sku = autoSku,
                 barcode = form.barcode.ifBlank { null },
                 costPrice = form.costPrice.toDoubleOrNull(),
                 sellingPrice = form.sellingPrice.toDoubleOrNull(),
@@ -333,24 +377,56 @@ class ProductListViewModel @Inject constructor(
                 createdAt = existing?.createdAt ?: System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis(),
             )
-            val result = if (existing != null) productRepository.updateVariant(variant) else productRepository.createVariant(variant)
-            when (result) {
-                is Result.Success -> {
-                    _variantFormState.update { it.copy(isSaving = false) }
-                    dismissVariantForm()
-                    loadVariants(productId)
+
+            if (isNewProduct) {
+                // Product not yet saved — store variant in-memory
+                if (existing != null) {
+                    // Editing a pending variant
+                    _state.update { s ->
+                        s.copy(
+                            pendingVariants = s.pendingVariants.map { if (it.id == existing.id) variant else it },
+                            variants = s.pendingVariants.map { if (it.id == existing.id) variant else it },
+                        )
+                    }
+                } else {
+                    // Adding a new pending variant
+                    _state.update { s ->
+                        val updated = s.pendingVariants + variant
+                        s.copy(pendingVariants = updated, variants = updated)
+                    }
                 }
-                is Result.Error -> {
-                    _variantFormState.update { it.copy(isSaving = false, error = result.message) }
+                _variantFormState.update { it.copy(isSaving = false) }
+                dismissVariantForm()
+            } else {
+                // Product exists — save to DB as before
+                val result = if (existing != null) productRepository.updateVariant(variant) else productRepository.createVariant(variant)
+                when (result) {
+                    is Result.Success -> {
+                        _variantFormState.update { it.copy(isSaving = false) }
+                        dismissVariantForm()
+                        loadVariants(productId)
+                    }
+                    is Result.Error -> {
+                        _variantFormState.update { it.copy(isSaving = false, error = result.message) }
+                    }
                 }
             }
         }
     }
 
     fun deleteVariant(variant: ProductVariant) {
-        viewModelScope.launch {
-            productRepository.deleteVariant(variant.id)
-            loadVariants(variant.productId)
+        val isNewProduct = _state.value.editingProduct == null
+        if (isNewProduct) {
+            // Remove from pending list
+            _state.update { s ->
+                val updated = s.pendingVariants.filter { it.id != variant.id }
+                s.copy(pendingVariants = updated, variants = updated)
+            }
+        } else {
+            viewModelScope.launch {
+                productRepository.deleteVariant(variant.id)
+                loadVariants(variant.productId)
+            }
         }
     }
 }

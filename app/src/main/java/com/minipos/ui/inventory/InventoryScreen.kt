@@ -866,7 +866,6 @@ private fun StockAdjustDialog(
     var amount by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(StockMovementType.PURCHASE_IN) }
     var selectedSupplierId by remember { mutableStateOf<String?>(null) }
-    var supplierExpanded by remember { mutableStateOf(false) }
 
     val types = listOf(
         StockMovementType.PURCHASE_IN to stringResource(R.string.movement_purchase_in_label),
@@ -877,96 +876,79 @@ private fun StockAdjustDialog(
     )
 
     val isPurchaseIn = selectedType == StockMovementType.PURCHASE_IN
-    val selectedSupplierName = suppliers.find { it.id == selectedSupplierId }?.name ?: stringResource(R.string.supplier_select)
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.adjust_stock_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+    val supplierNone = stringResource(R.string.supplier_none)
+    val supplierSelectLabel = stringResource(R.string.supplier_select_label)
+    val supplierSelectTitle = stringResource(R.string.supplier_select)
 
-                // Type selection
-                types.forEach { (type, label) ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = selectedType == type,
-                            onClick = {
-                                selectedType = type
-                                if (type != StockMovementType.PURCHASE_IN) {
-                                    selectedSupplierId = null
-                                }
-                            },
-                        )
-                        Text(label, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-
-                // Supplier selection - only for PURCHASE_IN
-                if (isPurchaseIn) {
-                    ExposedDropdownMenuBox(
-                        expanded = supplierExpanded,
-                        onExpandedChange = { supplierExpanded = !supplierExpanded },
-                    ) {
-                        OutlinedTextField(
-                            value = selectedSupplierName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text(stringResource(R.string.supplier_select_label)) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supplierExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                            singleLine = true,
-                        )
-                        ExposedDropdownMenu(
-                            expanded = supplierExpanded,
-                            onDismissRequest = { supplierExpanded = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.supplier_none), color = AppColors.TextSecondary) },
-                                onClick = {
-                                    selectedSupplierId = null
-                                    supplierExpanded = false
-                                },
-                            )
-                            suppliers.forEach { supplier ->
-                                DropdownMenuItem(
-                                    text = { Text(supplier.name) },
-                                    onClick = {
-                                        selectedSupplierId = supplier.id
-                                        supplierExpanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text(stringResource(R.string.quantity_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-                )
-
-                if (error != null) {
-                    Text(error, color = AppColors.Error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.adjust_stock_title),
+        onDismiss = onDismiss,
+        footer = {
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.confirm_btn),
+                icon = Icons.Filled.Check,
                 onClick = {
                     val qty = amount.toDoubleOrNull()
                     if (qty != null && qty > 0) onAdjust(qty, selectedType, selectedSupplierId)
                 },
-                enabled = (amount.toDoubleOrNull() ?: 0.0) > 0,
-                shape = RoundedCornerShape(MiniPosTokens.RadiusSm),
-            ) { Text(stringResource(R.string.confirm_btn)) }
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    ) {
+        Text(productName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+        Spacer(Modifier.height(12.dp))
+
+        // Type selection
+        types.forEach { (type, label) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedType == type,
+                    onClick = {
+                        selectedType = type
+                        if (type != StockMovementType.PURCHASE_IN) {
+                            selectedSupplierId = null
+                        }
+                    },
+                )
+                Text(label, fontSize = 14.sp, color = AppColors.TextPrimary)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
+        // Supplier selection - only for PURCHASE_IN
+        if (isPurchaseIn) {
+            val supplierItems = buildList {
+                add(SelectListItem(id = "__none__", name = supplierNone, icon = Icons.Filled.Block, iconTint = AppColors.TextTertiary))
+                suppliers.forEach { supplier ->
+                    add(SelectListItem(id = supplier.id, name = supplier.name, icon = Icons.Filled.Business, iconTint = AppColors.Primary))
+                }
+            }
+            MiniPosSelectBox(
+                label = supplierSelectLabel,
+                title = supplierSelectTitle,
+                items = supplierItems,
+                selectedId = selectedSupplierId ?: "__none__",
+                placeholder = supplierNone,
+                onSelect = { item ->
+                    selectedSupplierId = if (item.id == "__none__") null else item.id
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
+        BottomSheetField(
+            label = stringResource(R.string.quantity_label),
+            value = amount,
+            onValueChange = { amount = it.filter { c -> c.isDigit() || c == '.' } },
+            placeholder = "0",
+            keyboardType = KeyboardType.Number,
+        )
+
+        if (error != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(error, color = AppColors.Error, fontSize = 12.sp)
+        }
+        Spacer(Modifier.height(12.dp))
+    }
 }

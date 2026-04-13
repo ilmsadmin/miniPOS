@@ -312,7 +312,7 @@ fun BarcodeScannerScreen(
                                     onClick = onClose,
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
-                                    Text("Xong")
+                                    Text(stringResource(R.string.done))
                                 }
                             }
                         }

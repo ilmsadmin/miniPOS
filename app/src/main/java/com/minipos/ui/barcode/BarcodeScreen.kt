@@ -175,7 +175,7 @@ fun BarcodeScreen(
                 SectionTitle(title = stringResource(R.string.barcode_type_section))
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Row 1
+                    // Single row: EAN-13 and QR Code
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -190,24 +190,6 @@ fun BarcodeScreen(
                             type = BarcodeType.QR_CODE,
                             selected = state.barcodeType == BarcodeType.QR_CODE,
                             onClick = { viewModel.setBarcodeType(BarcodeType.QR_CODE) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    // Row 2
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        BarcodeTypeCard(
-                            type = BarcodeType.CODE_128,
-                            selected = state.barcodeType == BarcodeType.CODE_128,
-                            onClick = { viewModel.setBarcodeType(BarcodeType.CODE_128) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        BarcodeTypeCard(
-                            type = BarcodeType.CODE_39,
-                            selected = state.barcodeType == BarcodeType.CODE_39,
-                            onClick = { viewModel.setBarcodeType(BarcodeType.CODE_39) },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -288,6 +270,7 @@ fun BarcodeScreen(
                     product = state.previewProduct,
                     showName = state.showProductName,
                     showPrice = state.showPrice,
+                    barcodeType = state.barcodeType,
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -453,7 +436,7 @@ private fun BarcodeTypeCard(
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            type.description,
+            stringResource(type.descriptionRes),
             fontSize = 10.sp,
             color = AppColors.TextTertiary,
         )
@@ -528,13 +511,16 @@ private fun QuantityButton(
     }
 }
 
-/** Barcode preview card showing visual barcode */
+/** Barcode preview card showing visual barcode or QR code */
 @Composable
 private fun BarcodePreviewCard(
     product: BarcodeProductItem?,
     showName: Boolean,
     showPrice: Boolean,
+    barcodeType: BarcodeType = BarcodeType.EAN_13,
 ) {
+    val isQr = barcodeType == BarcodeType.QR_CODE
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -567,40 +553,76 @@ private fun BarcodePreviewCard(
             )
         } else {
             val barcode = product.currentBarcode
-            val barcodePreview = remember(barcode) {
-                barcode?.let {
-                    try {
-                        BarcodeGenerator.generateBarcodeBitmap(it, width = 400, height = 120, showText = false)
-                    } catch (_: Exception) { null }
-                }
-            }
 
-            // Barcode visual
-            if (barcodePreview != null) {
-                Image(
-                    bitmap = barcodePreview.asImageBitmap(),
-                    contentDescription = "Barcode",
-                    modifier = Modifier
-                        .width(200.dp)
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    contentScale = ContentScale.FillBounds,
-                )
-            } else {
-                // Placeholder bars
-                Box(
-                    modifier = Modifier
-                        .width(200.dp)
-                        .height(60.dp)
-                        .background(AppColors.InputBackground, RoundedCornerShape(4.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Rounded.QrCode,
-                        contentDescription = null,
-                        tint = AppColors.TextTertiary,
-                        modifier = Modifier.size(32.dp),
+            if (isQr) {
+                // QR Code preview
+                val qrBitmap = remember(barcode) {
+                    barcode?.let {
+                        try {
+                            BarcodeGenerator.generateQrCodeBitmap(it, width = 200, height = 200)
+                        } catch (_: Exception) { null }
+                    }
+                }
+
+                if (qrBitmap != null) {
+                    Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "QR Code",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        contentScale = ContentScale.FillBounds,
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .background(AppColors.InputBackground, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.QrCode,
+                            contentDescription = null,
+                            tint = AppColors.TextTertiary,
+                            modifier = Modifier.size(48.dp),
+                        )
+                    }
+                }
+            } else {
+                // EAN-13 barcode preview
+                val barcodePreview = remember(barcode) {
+                    barcode?.let {
+                        try {
+                            BarcodeGenerator.generateBarcodeBitmap(it, width = 400, height = 120, showText = false)
+                        } catch (_: Exception) { null }
+                    }
+                }
+
+                if (barcodePreview != null) {
+                    Image(
+                        bitmap = barcodePreview.asImageBitmap(),
+                        contentDescription = "Barcode",
+                        modifier = Modifier
+                            .width(200.dp)
+                            .height(60.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        contentScale = ContentScale.FillBounds,
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .width(200.dp)
+                            .height(60.dp)
+                            .background(AppColors.InputBackground, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.QrCode,
+                            contentDescription = null,
+                            tint = AppColors.TextTertiary,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
                 }
             }
 
@@ -608,15 +630,17 @@ private fun BarcodePreviewCard(
 
             // Barcode number
             if (barcode != null) {
-                val formatted = if (barcode.length == 13) {
+                val formatted = if (!isQr && barcode.length == 13) {
                     "${barcode[0]} ${barcode.substring(1, 7)} ${barcode.substring(7, 13)}"
                 } else barcode
                 Text(
                     formatted,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp,
+                    letterSpacing = if (isQr) 0.sp else 2.sp,
                     color = AppColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -913,47 +937,105 @@ private fun BarcodeLabelPreviewDialog(
 // ═══════════════════════════════════════════════════════════════
 
 @SuppressLint("MissingPermission")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PrinterPickerDialog(
     devices: List<android.bluetooth.BluetoothDevice>,
     onSelect: (android.bluetooth.BluetoothDevice) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.select_printer_title)) },
-        text = {
-            if (devices.isEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.select_printer_title),
+        onDismiss = onDismiss,
+    ) {
+        if (devices.isEmpty()) {
+            // Empty state
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(AppColors.InputBackground, CircleShape),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.BluetoothDisabled, contentDescription = null, modifier = Modifier.size(48.dp), tint = AppColors.TextTertiary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.no_printer_found),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AppColors.TextSecondary,
+                    Icon(
+                        Icons.Rounded.BluetoothDisabled,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = AppColors.TextTertiary,
                     )
                 }
-            } else {
-                LazyColumn {
-                    items(devices) { device ->
-                        val unknownName = stringResource(R.string.unknown_name)
-                        val deviceName = try { device.name ?: unknownName } catch (_: Exception) { unknownName }
-                        ListItem(
-                            headlineContent = { Text(deviceName) },
-                            supportingContent = { Text(device.address, style = MaterialTheme.typography.bodySmall) },
-                            leadingContent = { Icon(Icons.Default.Print, contentDescription = null, tint = AppColors.Primary) },
-                            modifier = Modifier.clickable { onSelect(device) },
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.no_printer_found),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextSecondary,
+                )
+            }
+        } else {
+            // Device list
+            devices.forEach { device ->
+                val unknownName = stringResource(R.string.unknown_name)
+                val deviceName = try { device.name ?: unknownName } catch (_: Exception) { unknownName }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                        .clickable { onSelect(device) }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Icon
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(AppColors.PrimaryLight.copy(alpha = 0.1f), RoundedCornerShape(MiniPosTokens.RadiusMd)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Print,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
+                    Spacer(Modifier.width(12.dp))
+                    // Info
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            deviceName,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary,
+                        )
+                        Text(
+                            device.address,
+                            fontSize = 11.sp,
+                            color = AppColors.TextTertiary,
+                        )
+                    }
+                    // Arrow
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.TextTertiary,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
+
+                HorizontalDivider(
+                    color = AppColors.Divider,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
-        },
-    )
+        }
+        Spacer(Modifier.height(8.dp))
+    }
 }

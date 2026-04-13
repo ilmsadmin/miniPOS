@@ -17,11 +17,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.minipos.R
 import com.minipos.core.theme.AppColors
 
 // ═══════════════════════════════════════
@@ -114,7 +116,7 @@ fun MiniPosTopBar(
 fun MiniPosSearchBar(
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String = "Tìm kiếm...",
+    placeholder: String = "Search…",
     modifier: Modifier = Modifier,
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
@@ -449,9 +451,9 @@ fun StockBadge(
     lowThreshold: Int = 10,
 ) {
     val (text, bgColor, textColor) = when {
-        stock <= 0 -> Triple("Hết hàng", AppColors.Error.copy(alpha = 0.12f), AppColors.Error)
-        stock <= lowThreshold -> Triple("Còn $stock", AppColors.Warning.copy(alpha = 0.12f), AppColors.Warning)
-        else -> Triple("Kho: $stock", AppColors.SuccessSoft, AppColors.Success)
+        stock <= 0 -> Triple(stringResource(R.string.badge_out_of_stock), AppColors.Error.copy(alpha = 0.12f), AppColors.Error)
+        stock <= lowThreshold -> Triple(stringResource(R.string.badge_remaining_stock, stock), AppColors.Warning.copy(alpha = 0.12f), AppColors.Warning)
+        else -> Triple(stringResource(R.string.badge_stock_count, stock), AppColors.SuccessSoft, AppColors.Success)
     }
     Text(
         text = text,

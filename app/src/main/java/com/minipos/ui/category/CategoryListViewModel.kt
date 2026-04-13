@@ -10,6 +10,7 @@ import com.minipos.domain.repository.StoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -55,17 +56,52 @@ class CategoryListViewModel @Inject constructor(
 
     private var storeId: String = ""
 
-    init { loadData() }
+    init { observeData() }
 
-    private fun loadData() {
+    private fun observeData() {
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
             storeId = store.id
+            categoryRepository.observeCategories(storeId).collectLatest { categories ->
+                val allProducts = productRepository.getAll(storeId)
+                val countMap = mutableMapOf<String, Int>()
+                categories.forEach { cat ->
+                    val productsInCat = allProducts.filter { it.categoryId == cat.id }
+                    var total = 0
+                    productsInCat.forEach { product ->
+                        // Each product counts as 1 (root variant) + number of child variants
+                        val variantCount = productRepository.getVariantCount(product.id)
+                        total += 1 + variantCount
+                    }
+                    countMap[cat.id] = total
+                }
+                _state.update {
+                    it.copy(
+                        categories = categories,
+                        productCountMap = countMap,
+                        isLoading = false,
+                    )
+                }
+            }
+        }
+    }
+
+    /** Force refresh (e.g. after save on same VM instance) */
+    private fun loadData() {
+        viewModelScope.launch {
+            if (storeId.isBlank()) return@launch
             val categories = categoryRepository.getAll(storeId)
             val allProducts = productRepository.getAll(storeId)
             val countMap = mutableMapOf<String, Int>()
             categories.forEach { cat ->
-                countMap[cat.id] = allProducts.count { it.categoryId == cat.id }
+                val productsInCat = allProducts.filter { it.categoryId == cat.id }
+                var total = 0
+                productsInCat.forEach { product ->
+                    // Each product counts as 1 (root variant) + number of child variants
+                    val variantCount = productRepository.getVariantCount(product.id)
+                    total += 1 + variantCount
+                }
+                countMap[cat.id] = total
             }
             _state.update {
                 it.copy(
