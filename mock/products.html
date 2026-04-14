@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Sản phẩm</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="store-management.html"><span class="mi">arrow_back</span></a>
+    <span class="title">Sản phẩm</span>
+    <button class="action-btn"><span class="mi">add</span></button>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-bar">
+    <span class="mi">search</span>
+    <input type="text" placeholder="Tìm sản phẩm...">
+    <button style="width:44px;height:36px;border-radius:50%;border:1px solid var(--border-light);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <span class="mi" style="font-size:20px;color:var(--text-secondary)">qr_code_scanner</span>
+    </button>
+  </div>
+
+  <!-- Category filter chips -->
+  <div class="chips">
+    <div class="chip active"><span class="mi">apps</span> Tất cả</div>
+    <div class="chip">Áo</div>
+    <div class="chip">Quần</div>
+    <div class="chip">Giày dép</div>
+    <div class="chip">Phụ kiện</div>
+  </div>
+
+  <!-- Count + Low stock banner -->
+  <div style="padding:0 16px 8px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:13px;font-weight:600;color:var(--text-tertiary)">48 sản phẩm</span>
+    <div style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius-full);background:var(--warning-soft)">
+      <span class="mi" style="font-size:14px;color:var(--warning)">warning</span>
+      <span style="font-size:11px;font-weight:700;color:var(--warning)">5 sắp hết hàng</span>
+    </div>
+  </div>
+
+  <div class="content" style="padding:0 16px 24px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+
+      <!-- Product item 1 - Áo thun trắng -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/4066288/pexels-photo-4066288.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Áo thun trắng"></div>
+        <div class="prod-info">
+          <div class="prod-name">Áo thun trắng basic</div>
+          <div class="prod-meta">Áo • Còn 50</div>
+        </div>
+        <div class="prod-price price-gradient">250.000₫</div>
+      </div>
+
+      <!-- Product item 2 - Quần jeans -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/1082529/pexels-photo-1082529.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Quần jeans"></div>
+        <div class="prod-info">
+          <div class="prod-name">Quần jeans slim fit</div>
+          <div class="prod-meta">Quần • Còn 30</div>
+        </div>
+        <div class="prod-price price-gradient">450.000₫</div>
+      </div>
+
+      <!-- Product item 3 - Áo khoác bomber -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/5592271/pexels-photo-5592271.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Áo khoác bomber"></div>
+        <div class="prod-info">
+          <div class="prod-name">Áo khoác bomber</div>
+          <div class="prod-meta">Áo • Còn 20</div>
+        </div>
+        <div class="prod-price price-gradient">680.000₫</div>
+      </div>
+
+      <!-- Product item 4 - Giày sneaker (low stock) -->
+      <div class="prod-item" style="border-left:3px solid var(--warning)">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/6531405/pexels-photo-6531405.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Giày sneaker"></div>
+        <div class="prod-info">
+          <div class="prod-name">Giày sneaker trắng</div>
+          <div class="prod-meta" style="color:var(--warning)">Giày dép • Còn 3 ⚠</div>
+        </div>
+        <div class="prod-price price-gradient">890.000₫</div>
+      </div>
+
+      <!-- Product item 5 - Áo polo -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/10962177/pexels-photo-10962177.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Áo polo"></div>
+        <div class="prod-info">
+          <div class="prod-name">Áo polo nam classic</div>
+          <div class="prod-meta">Áo • Còn 15</div>
+        </div>
+        <div class="prod-price price-gradient">320.000₫</div>
+      </div>
+
+      <!-- Product item 6 - Túi xách (out of stock) -->
+      <div class="prod-item" style="opacity:.5;border-left:3px solid var(--error)">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/9327162/pexels-photo-9327162.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Túi xách"></div>
+        <div class="prod-info">
+          <div class="prod-name">Túi xách da nữ</div>
+          <div class="prod-meta" style="color:var(--error)">Phụ kiện • Hết hàng</div>
+        </div>
+        <div class="prod-price" style="color:var(--text-tertiary)">750.000₫</div>
+      </div>
+
+      <!-- Product item 7 - Váy liền -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/5997006/pexels-photo-5997006.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Váy liền"></div>
+        <div class="prod-info">
+          <div class="prod-name">Váy liền hoa nhí</div>
+          <div class="prod-meta">Quần • Còn 40</div>
+        </div>
+        <div class="prod-price price-gradient">420.000₫</div>
+      </div>
+
+      <!-- Product item 8 - Mũ bucket -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/7956535/pexels-photo-7956535.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Mũ bucket"></div>
+        <div class="prod-info">
+          <div class="prod-name">Mũ bucket hat</div>
+          <div class="prod-meta">Phụ kiện • Còn 25</div>
+        </div>
+        <div class="prod-price price-gradient">180.000₫</div>
+      </div>
+
+      <!-- Product item 9 - Kính mát -->
+      <div class="prod-item">
+        <div class="prod-thumb" style="overflow:hidden;padding:0"><img src="https://images.pexels.com/photos/5202051/pexels-photo-5202051.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Kính mát"></div>
+        <div class="prod-info">
+          <div class="prod-name">Kính mát thời trang</div>
+          <div class="prod-meta">Phụ kiện • Còn 12</div>
+        </div>
+        <div class="prod-price price-gradient">350.000₫</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="store-management.html">← Quản lý</a>
+  <a href="orders.html">Đơn hàng →</a>
+</div>
+</body>
+</html>

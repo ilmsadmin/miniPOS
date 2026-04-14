@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Splash</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone" style="background:#F5F9F9">
+  <!-- Full screen splash -->
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden">
+    <!-- Ambient orbs -->
+    <div style="position:absolute;top:-60px;left:-80px;width:220px;height:220px;border-radius:50%;background:rgba(14,154,160,.08);filter:blur(60px)"></div>
+    <div style="position:absolute;bottom:-40px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(90,237,197,.06);filter:blur(50px)"></div>
+    <div style="position:absolute;top:40%;left:60%;width:160px;height:160px;border-radius:50%;background:rgba(46,196,182,.05);filter:blur(50px)"></div>
+
+    <!-- Logo area -->
+    <div style="position:relative;margin-bottom:20px">
+      <!-- Pulse rings -->
+      <div style="position:absolute;top:-16px;left:-16px;right:-16px;bottom:-16px;border-radius:50%;border:2px solid rgba(14,154,160,.08)"></div>
+      <div style="position:absolute;top:-32px;left:-32px;right:-32px;bottom:-32px;border-radius:50%;border:2px solid rgba(14,154,160,.04)"></div>
+      <!-- Logo circle -->
+      <div style="width:120px;height:120px;border-radius:50%;overflow:hidden;box-shadow:0 20px 60px rgba(14,154,160,.3)">
+        <img src="logo.png" alt="ViPOS" style="width:100%;height:100%;object-fit:cover">
+      </div>
+    </div>
+
+    <!-- Brand text -->
+    <div style="font-size:32px;font-weight:900;background:linear-gradient(135deg,#1A2B2E,#5AEDC5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px">ViPOS</div>
+    <div style="font-size:14px;color:#5A6E72;font-weight:500">Quản lý bán hàng thông minh</div>
+
+    <!-- Loading bar -->
+    <div style="margin-top:40px;width:160px;height:3px;background:rgba(0,0,0,.06);border-radius:2px;overflow:hidden">
+      <div style="width:65%;height:100%;background:linear-gradient(90deg,#0E9AA0,#5AEDC5,#2EC4B6);border-radius:2px"></div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:#8B9EA3;font-weight:500">Đang tải...</div>
+
+    <!-- Bottom brand -->
+    <div style="position:absolute;bottom:40px;text-align:center">
+      <div style="font-size:11px;color:#8B9EA3;font-weight:500">Thiết kế bởi</div>
+      <div style="font-size:14px;font-weight:800;background:linear-gradient(135deg,#0E9AA0,#5AEDC5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-top:2px">ZENIX LABS</div>
+      <div style="font-size:11px;color:#8B9EA3;font-weight:500;margin-top:4px">v1.1.0</div>
+    </div>
+  </div>
+</div>
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="onboarding.html">Onboarding →</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Login</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+  <div class="content" style="padding:0 20px">
+    <!-- Ambient orbs -->
+    <div style="position:fixed;top:-40px;left:-60px;width:180px;height:180px;border-radius:50%;background:rgba(14,154,160,.06);filter:blur(50px);pointer-events:none"></div>
+    <div style="position:fixed;bottom:60px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(90,237,197,.05);filter:blur(40px);pointer-events:none"></div>
+
+    <!-- Store header -->
+    <div style="text-align:center;padding-top:24px;margin-bottom:32px">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#0E9AA0,#5AEDC5);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 12px 32px rgba(14,154,160,.25)">
+        <span class="mi" style="font-size:36px;color:white">storefront</span>
+      </div>
+      <div style="font-size:24px;font-weight:900;color:#0E9AA0">Cửa hàng của tôi</div>
+      <div style="font-size:14px;color:#5A6E72;margin-top:6px;font-weight:500">Chọn tài khoản để tiếp tục</div>
+    </div>
+
+    <!-- User cards -->
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div class="user-card selected">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#0E9AA0,#2EC4B6)">A</div>
+        <div class="user-info">
+          <h4>Nguyễn Văn An</h4>
+          <span class="role" style="background:rgba(14,154,160,.1);color:#0E9AA0">Chủ cửa hàng</span>
+        </div>
+        <span class="mi" style="font-size:22px;color:#0E9AA0">check_circle</span>
+      </div>
+
+      <div class="user-card">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#5AEDC5,#3DCBA8)">B</div>
+        <div class="user-info">
+          <h4>Trần Thị Bình</h4>
+          <span class="role" style="background:rgba(90,237,197,.1);color:#3DCBA8">Quản lý</span>
+        </div>
+      </div>
+
+      <div class="user-card">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#00B862,#69F0AE)">C</div>
+        <div class="user-info">
+          <h4>Lê Văn Cường</h4>
+          <span class="role" style="background:rgba(0,184,98,.1);color:#00B862">Thu ngân</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIN Section -->
+    <div style="text-align:center;margin-top:40px">
+      <div style="font-size:15px;font-weight:700;color:#1A2B2E;margin-bottom:4px">Nhập mã PIN</div>
+      <div style="font-size:12px;color:#5A6E72;margin-bottom:20px">Nhập mã PIN 4 số để đăng nhập</div>
+
+      <!-- PIN dots -->
+      <div class="pin-dots">
+        <div class="pin-dot filled"></div>
+        <div class="pin-dot filled"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+
+      <!-- Numeric keypad -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto">
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">1</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">2</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">3</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">4</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">5</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">6</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">7</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">8</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">9</button>
+        <div></div>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:rgba(0,0,0,.04);font-size:24px;font-weight:700;color:#1A2B2E;cursor:pointer;justify-self:center;font-family:inherit">0</button>
+        <button style="width:72px;height:56px;border-radius:16px;border:none;background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;justify-self:center"><span class="mi" style="font-size:24px;color:#5A6E72">backspace</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="onboarding.html">← Onboarding</a>
+  <a href="home.html">Home →</a>
+</div>
+</body>
+</html>

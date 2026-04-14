@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Lịch sử đơn hàng</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="home.html"><span class="mi">arrow_back</span></a>
+    <span class="title">Lịch sử đơn hàng</span>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-bar">
+    <span class="mi">search</span>
+    <input type="text" placeholder="Tìm đơn hàng...">
+  </div>
+
+  <!-- Period chips -->
+  <div class="chips">
+    <div class="chip active">Hôm nay</div>
+    <div class="chip">7 ngày</div>
+    <div class="chip">30 ngày</div>
+    <div class="chip"><span class="mi" style="font-size:14px">date_range</span> Tùy chọn</div>
+  </div>
+
+  <div class="content" style="padding:0 16px 24px">
+    <!-- Today group -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span class="mi" style="font-size:18px;color:var(--primary)">today</span>
+      <span style="font-size:14px;font-weight:700;color:var(--text-primary)">Hôm nay</span>
+      <span style="font-size:12px;color:var(--text-tertiary);font-weight:500">• 5 đơn hàng</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0125</span>
+          <span class="order-amount">950.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Nguyễn Thị Hoa • 2 Áo thun, 1 Quần jeans</div>
+        <div class="order-bottom">
+          <span class="order-time">14:30</span>
+          <span class="badge badge-success">Hoàn tất</span>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0124</span>
+          <span class="order-amount">1.570.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Khách lẻ • 1 Áo khoác, 1 Giày sneaker</div>
+        <div class="order-bottom">
+          <span class="order-time">13:15</span>
+          <span class="badge badge-success">Hoàn tất</span>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0123</span>
+          <span class="order-amount">500.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Trần Văn Minh • 1 Áo polo, 1 Mũ bucket</div>
+        <div class="order-bottom">
+          <span class="order-time">11:45</span>
+          <span class="badge badge-warning">Đang xử lý</span>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0122</span>
+          <span class="order-amount">1.170.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Lê Thị Mai • 1 Váy liền, 1 Túi xách</div>
+        <div class="order-bottom">
+          <span class="order-time">10:20</span>
+          <span class="badge badge-success">Hoàn tất</span>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0121</span>
+          <span class="order-amount">350.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Khách lẻ • 1 Kính mát thời trang</div>
+        <div class="order-bottom">
+          <span class="order-time">09:10</span>
+          <span class="badge badge-error">Đã hủy</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yesterday group -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span class="mi" style="font-size:18px;color:var(--text-tertiary)">event</span>
+      <span style="font-size:14px;font-weight:700;color:var(--text-primary)">Hôm qua</span>
+      <span style="font-size:12px;color:var(--text-tertiary);font-weight:500">• 8 đơn hàng</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0120</span>
+          <span class="order-amount">1.340.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Phạm Văn Đức • 2 Áo khoác bomber</div>
+        <div class="order-bottom">
+          <span class="order-time">Hôm qua, 18:45</span>
+          <span class="badge badge-success">Hoàn tất</span>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#DH-0119</span>
+          <span class="order-amount">890.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">person</span> Khách lẻ • 1 Giày sneaker trắng</div>
+        <div class="order-bottom">
+          <span class="order-time">Hôm qua, 16:30</span>
+          <span class="badge badge-success">Hoàn tất</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="products.html">← Sản phẩm</a>
+  <a href="reports.html">Báo cáo →</a>
+</div>
+</body>
+</html>

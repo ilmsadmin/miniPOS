@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Trang chủ POS</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Header (48dp) -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-logo" style="padding:0;overflow:hidden">
+        <img src="logo.png" alt="ViPOS" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">
+      </div>
+      <span class="brand-text">ViPOS</span>
+    </div>
+    <div class="actions">
+      <div class="icon-btn"><span class="mi">dark_mode</span></div>
+      <div class="icon-btn" style="position:relative">
+        <span class="mi">receipt</span>
+        <div class="badge-dot">3</div>
+      </div>
+      <div class="avatar">
+        <div class="avatar-inner">A</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-bar">
+    <span class="mi">search</span>
+    <input type="text" placeholder="Tìm sản phẩm...">
+    <button class="scan-btn"><span class="mi">qr_code_scanner</span></button>
+  </div>
+
+  <!-- Category chips -->
+  <div class="chips">
+    <div class="chip active"><span class="mi">apps</span> Tất cả</div>
+    <div class="chip">Áo</div>
+    <div class="chip">Quần</div>
+    <div class="chip">Giày dép</div>
+    <div class="chip">Phụ kiện</div>
+  </div>
+
+  <!-- Product grid -->
+  <div class="content" style="flex:1;overflow-y:auto;padding-bottom:16px">
+    <div class="product-grid">
+      <!-- Product 1 - Áo thun trắng (in cart) -->
+      <div class="product-card in-cart">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/4066288/pexels-photo-4066288.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Áo thun trắng">
+          <div class="qty-badge">2</div>
+          <div class="stock-badge">SL: 50</div>
+        </div>
+        <div class="info">
+          <div class="name">Áo thun trắng basic</div>
+          <div class="price price-gradient">250.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 50</div>
+        </div>
+      </div>
+
+      <!-- Product 2 - Quần jeans (in cart) -->
+      <div class="product-card in-cart">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/1082529/pexels-photo-1082529.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Quần jeans">
+          <div class="qty-badge">1</div>
+          <div class="stock-badge">SL: 30</div>
+        </div>
+        <div class="info">
+          <div class="name">Quần jeans slim fit</div>
+          <div class="price price-gradient">450.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 30</div>
+        </div>
+      </div>
+
+      <!-- Product 3 - Áo khoác bomber -->
+      <div class="product-card">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/5592271/pexels-photo-5592271.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Áo khoác bomber">
+          <div class="stock-badge">SL: 20</div>
+        </div>
+        <div class="info">
+          <div class="name">Áo khoác bomber</div>
+          <div class="price price-gradient">680.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 20</div>
+        </div>
+      </div>
+
+      <!-- Product 4 - Giày sneaker (low stock) -->
+      <div class="product-card">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/6531405/pexels-photo-6531405.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Giày sneaker">
+          <div class="stock-badge low">Sắp hết</div>
+        </div>
+        <div class="info">
+          <div class="name">Giày sneaker trắng</div>
+          <div class="price price-gradient">890.000₫</div>
+          <div class="stock-line" style="color:#E5A800"><span class="mi">warning</span> Còn 3</div>
+        </div>
+      </div>
+
+      <!-- Product 5 - Áo polo -->
+      <div class="product-card">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/10962177/pexels-photo-10962177.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Áo polo">
+          <div class="stock-badge">SL: 15</div>
+        </div>
+        <div class="info">
+          <div class="name">Áo polo nam classic</div>
+          <div class="price price-gradient">320.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 15</div>
+        </div>
+      </div>
+
+      <!-- Product 6 - Túi xách (out of stock) -->
+      <div class="product-card" style="opacity:.5">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/9327162/pexels-photo-9327162.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Túi xách">
+          <div class="stock-badge out">Hết hàng</div>
+        </div>
+        <div class="info">
+          <div class="name">Túi xách da nữ</div>
+          <div class="price" style="color:#8B9EA3">750.000₫</div>
+          <div class="stock-line" style="color:#E53935"><span class="mi">error</span> Hết hàng</div>
+        </div>
+      </div>
+
+      <!-- Product 7 - Váy liền -->
+      <div class="product-card">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/5997006/pexels-photo-5997006.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Váy liền">
+          <div class="stock-badge">SL: 40</div>
+        </div>
+        <div class="info">
+          <div class="name">Váy liền hoa nhí</div>
+          <div class="price price-gradient">420.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 40</div>
+        </div>
+      </div>
+
+      <!-- Product 8 - Mũ bucket -->
+      <div class="product-card">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/7956535/pexels-photo-7956535.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Mũ bucket">
+          <div class="stock-badge">SL: 25</div>
+        </div>
+        <div class="info">
+          <div class="name">Mũ bucket hat</div>
+          <div class="price price-gradient">180.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 25</div>
+        </div>
+      </div>
+
+      <!-- Product 9 - Kính mát -->
+      <div class="product-card">
+        <div class="thumb">
+          <img src="https://images.pexels.com/photos/5202051/pexels-photo-5202051.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop" alt="Kính mát">
+          <div class="stock-badge">SL: 12</div>
+        </div>
+        <div class="info">
+          <div class="name">Kính mát thời trang</div>
+          <div class="price price-gradient">350.000₫</div>
+          <div class="stock-line"><span class="mi">inventory_2</span> Còn 12</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart bar -->
+  <a href="cart.html" class="cart-bar" style="text-decoration:none;color:white">
+    <div class="cart-left">
+      <span class="mi">shopping_cart</span>
+      <span>3 sản phẩm</span>
+    </div>
+    <div class="cart-right">
+      <span class="cart-total">950.000₫</span>
+      <div class="cart-arrow"><span class="mi" style="font-size:18px">keyboard_arrow_up</span></div>
+    </div>
+  </a>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <a class="nav-item" href="inventory.html">
+      <div class="nav-icon"><span class="mi">warehouse</span></div>
+      <span class="nav-label">Kho hàng</span>
+    </a>
+    <a class="nav-item" href="store-management.html">
+      <div class="nav-icon"><span class="mi">list_alt</span></div>
+      <span class="nav-label">Quản lý</span>
+    </a>
+    <div class="fab-container">
+      <div class="fab">
+        <div class="fab-inner">
+          <span class="mi">point_of_sale</span>
+          <span class="fab-label">POS</span>
+        </div>
+      </div>
+    </div>
+    <a class="nav-item" style="visibility:hidden">
+      <div class="nav-icon"><span class="mi">circle</span></div>
+      <span class="nav-label">POS</span>
+    </a>
+    <a class="nav-item" href="reports.html">
+      <div class="nav-icon"><span class="mi">bar_chart</span></div>
+      <span class="nav-label">Báo cáo</span>
+    </a>
+    <a class="nav-item" href="settings.html">
+      <div class="nav-icon"><span class="mi">more_horiz</span></div>
+      <span class="nav-label">Thêm</span>
+    </a>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="login.html">← Login</a>
+  <a href="cart.html">Giỏ hàng →</a>
+  <a href="inventory.html">Kho hàng →</a>
+</div>
+</body>
+</html>

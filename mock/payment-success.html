@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Thanh toán thành công</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* ═══ Confetti animation ═══ */
+  @keyframes confettiFall {
+    0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+  .confetti-container {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1;
+  }
+  .confetti {
+    position: absolute; top: -20px;
+    width: 8px; height: 8px; border-radius: 2px;
+    animation: confettiFall 3s ease-out forwards;
+  }
+
+  /* ═══ Pulse ring animation ═══ */
+  @keyframes pulseRing {
+    0% { transform: scale(.8); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: scale(1.15); opacity: 0; }
+  }
+  @keyframes popIn {
+    0% { transform: scale(.3); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes checkPop {
+    0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes fadeUp {
+    0% { transform: translateY(16px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .success-circle-outer {
+    width: 148px; height: 148px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .success-ring {
+    position: absolute; border-radius: 50%;
+  }
+  .success-ring.outer {
+    width: 148px; height: 148px;
+    border: 2px solid rgba(0,184,98,.2);
+    animation: pulseRing 2s ease-in-out infinite;
+  }
+  .success-ring.inner {
+    width: 120px; height: 120px;
+    border: 3px solid var(--success);
+    animation: popIn .6s .2s ease-out both;
+  }
+  .success-main {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--success), #69F0AE);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 20px 60px rgba(0,184,98,.3);
+    animation: popIn .5s .1s ease-out both;
+  }
+  .success-main .mi {
+    font-size: 56px; color: white;
+    animation: checkPop .4s .5s ease-out both;
+  }
+  .fade-up { animation: fadeUp .5s ease-out both; }
+</style>
+</head>
+<body>
+<div class="phone" style="background:var(--bg)">
+  <div class="status-bar">9:41</div>
+
+  <!-- Confetti particles -->
+  <div class="confetti-container" id="confetti"></div>
+
+  <!-- Main content (centered) -->
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;position:relative;z-index:2">
+
+    <!-- ═══ Success check circle with animated rings ═══ -->
+    <div class="success-circle-outer">
+      <div class="success-ring outer"></div>
+      <div class="success-ring inner"></div>
+      <div class="success-main">
+        <span class="mi">check</span>
+      </div>
+    </div>
+
+    <div style="height:28px"></div>
+
+    <!-- ═══ Title ═══ -->
+    <div class="fade-up" style="animation-delay:.6s;font-size:24px;font-weight:900;color:var(--text-primary);text-align:center">
+      Thanh toán thành công!
+    </div>
+
+    <div style="height:6px"></div>
+
+    <!-- ═══ Order ID ═══ -->
+    <div class="fade-up" style="animation-delay:.7s;font-size:14px;font-weight:600;color:var(--text-tertiary);text-align:center">
+      Đơn hàng #DH-0126
+    </div>
+
+    <div style="height:6px"></div>
+
+    <!-- ═══ Amount ═══ -->
+    <div class="fade-up" style="animation-delay:.8s">
+      <span style="font-size:32px;font-weight:900;letter-spacing:-.5px;background:linear-gradient(135deg,var(--accent),var(--primary-light));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">950.000₫</span>
+    </div>
+
+    <div style="height:6px"></div>
+
+    <!-- ═══ Date ═══ -->
+    <div class="fade-up" style="animation-delay:.9s;font-size:12px;font-weight:500;color:var(--text-tertiary)">
+      14/04/2026 — 14:35
+    </div>
+
+    <div style="height:32px"></div>
+
+    <!-- ═══ Action buttons ═══ -->
+    <div class="fade-up" style="animation-delay:1s;width:100%;display:flex;flex-direction:column;gap:8px">
+      <!-- Print receipt -->
+      <div class="action-row-btn">
+        <div class="action-row-icon"><span class="mi">print</span></div>
+        <span class="action-row-text">In hóa đơn</span>
+        <span class="mi" style="font-size:18px;color:var(--text-tertiary)">chevron_right</span>
+      </div>
+
+      <!-- Share via Zalo/SMS -->
+      <div class="action-row-btn">
+        <div class="action-row-icon"><span class="mi">share</span></div>
+        <span class="action-row-text">Chia sẻ Zalo / SMS</span>
+        <span class="mi" style="font-size:18px;color:var(--text-tertiary)">chevron_right</span>
+      </div>
+
+      <!-- View order detail -->
+      <div class="action-row-btn">
+        <div class="action-row-icon"><span class="mi">receipt_long</span></div>
+        <span class="action-row-text">Xem chi tiết đơn hàng</span>
+        <span class="mi" style="font-size:18px;color:var(--text-tertiary)">chevron_right</span>
+      </div>
+
+      <div style="height:8px"></div>
+
+      <!-- Primary CTA - New order -->
+      <a href="home.html" style="text-decoration:none">
+        <div style="width:100%;height:56px;border-radius:var(--radius-2xl);background:linear-gradient(135deg,var(--primary),var(--accent),var(--primary-light));display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px var(--primary-glow);cursor:pointer">
+          <span class="mi" style="font-size:22px;color:white">add_circle</span>
+          <span style="font-size:16px;font-weight:800;color:white">Tạo đơn hàng mới</span>
+        </div>
+      </a>
+    </div>
+
+    <div style="height:20px"></div>
+
+    <!-- ═══ Auto-redirect text ═══ -->
+    <div class="fade-up" style="animation-delay:1.2s;font-size:12px;font-weight:500;color:var(--text-tertiary);text-align:center">
+      Tự động quay lại sau <span id="countdown" style="font-weight:800;color:var(--primary)">15</span> giây
+    </div>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="cart.html">← Thanh toán</a>
+  <a href="home.html">Home →</a>
+</div>
+
+<script>
+// Confetti particles
+(function() {
+  const container = document.getElementById('confetti');
+  const colors = ['#0E9AA0','#5AEDC5','#00B862','#E5A800','#2EC4B6','#FF8A65','#69F0AE','#FFD54F'];
+  for (let i = 0; i < 30; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = (Math.random() * 100) + '%';
+    el.style.width = (4 + Math.random() * 8) + 'px';
+    el.style.height = (4 + Math.random() * 8) + 'px';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDelay = (Math.random() * 1.5) + 's';
+    el.style.animationDuration = (2 + Math.random() * 2) + 's';
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    container.appendChild(el);
+  }
+})();
+
+// Countdown timer
+(function() {
+  let count = 15;
+  const el = document.getElementById('countdown');
+  const timer = setInterval(function() {
+    count--;
+    el.textContent = count;
+    if (count <= 0) {
+      clearInterval(timer);
+      window.location.href = 'home.html';
+    }
+  }, 1000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Onboarding</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .slide { display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:0 32px; }
+  .slide.active { display:flex; }
+  .ob-orbit { z-index:3; }
+  .ob-orbit.pos-tl { top:0; left:30px; }
+  .ob-orbit.pos-tr { top:0; right:30px; }
+  .ob-orbit.pos-bl { bottom:0; left:30px; }
+  .ob-orbit.pos-br { bottom:0; right:30px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Slide 1: Bán hàng siêu tốc -->
+  <div class="slide active" id="slide1">
+    <div class="ob-illustration">
+      <div class="ob-glow" style="background:radial-gradient(circle,rgba(14,154,160,.12),transparent 70%)"></div>
+      <div class="ob-ring"></div>
+      <div class="ob-center g-primary" style="box-shadow:0 8px 32px rgba(14,154,160,.3)">
+        <span class="mi">point_of_sale</span>
+      </div>
+      <div class="ob-orbit pos-tl" style="color:#0E9AA0"><span class="mi">checkroom</span></div>
+      <div class="ob-orbit pos-tr" style="color:#FF8A65"><span class="mi">styler</span></div>
+      <div class="ob-orbit pos-bl" style="color:#FFD54F"><span class="mi">shopping_bag</span></div>
+      <div class="ob-orbit pos-br" style="color:#CE93D8"><span class="mi">diamond</span></div>
+    </div>
+    <div class="ob-tag" style="background:rgba(14,154,160,.1);color:#0E9AA0;margin-bottom:16px">
+      <span class="mi" style="font-size:14px">bolt</span> BÁN HÀNG
+    </div>
+    <div style="font-size:26px;font-weight:900;color:#1A2B2E;text-align:center;line-height:1.2;margin-bottom:12px">
+      Bán hàng<br><span class="gradient-text">siêu tốc</span>
+    </div>
+    <div style="font-size:14px;color:#5A6E72;text-align:center;line-height:1.6;font-weight:500">
+      Thanh toán nhanh chóng, quét mã vạch, in hóa đơn chỉ trong vài giây
+    </div>
+  </div>
+
+  <!-- Slide 2: Quản lý thông minh -->
+  <div class="slide" id="slide2">
+    <div class="ob-illustration">
+      <div class="ob-glow" style="background:radial-gradient(circle,rgba(90,237,197,.12),transparent 70%)"></div>
+      <div class="ob-ring"></div>
+      <div class="ob-center g-accent" style="box-shadow:0 8px 32px rgba(90,237,197,.3)">
+        <span class="mi">analytics</span>
+      </div>
+      <div class="ob-orbit pos-tl" style="color:#0E9AA0"><span class="mi">qr_code_scanner</span></div>
+      <div class="ob-orbit pos-tr" style="color:#FF8A65"><span class="mi">inventory_2</span></div>
+      <div class="ob-orbit pos-bl" style="color:#FFD54F"><span class="mi">trending_up</span></div>
+      <div class="ob-orbit pos-br" style="color:#CE93D8"><span class="mi">receipt_long</span></div>
+    </div>
+    <div class="ob-tag" style="background:rgba(90,237,197,.1);color:#3DCBA8;margin-bottom:16px">
+      <span class="mi" style="font-size:14px">auto_awesome</span> QUẢN LÝ
+    </div>
+    <div style="font-size:26px;font-weight:900;color:#1A2B2E;text-align:center;line-height:1.2;margin-bottom:12px">
+      Quản lý<br><span style="background:linear-gradient(135deg,#5AEDC5,#0E9AA0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">thông minh</span>
+    </div>
+    <div style="font-size:14px;color:#5A6E72;text-align:center;line-height:1.6;font-weight:500">
+      Theo dõi tồn kho, quản lý nhân viên, kiểm soát doanh thu real-time
+    </div>
+  </div>
+
+  <!-- Slide 3: Sẵn sàng khởi nghiệp -->
+  <div class="slide" id="slide3">
+    <div class="ob-illustration">
+      <div class="ob-glow" style="background:radial-gradient(circle,rgba(0,184,98,.12),transparent 70%)"></div>
+      <div class="ob-ring"></div>
+      <div class="ob-center g-success" style="box-shadow:0 8px 32px rgba(0,184,98,.3)">
+        <span class="mi">rocket_launch</span>
+      </div>
+      <div class="ob-orbit pos-tl" style="color:#00B862"><span class="mi">verified</span></div>
+      <div class="ob-orbit pos-tr" style="color:#0E9AA0"><span class="mi">cloud_done</span></div>
+      <div class="ob-orbit pos-bl" style="color:#FFD54F"><span class="mi">shield</span></div>
+      <div class="ob-orbit pos-br" style="color:#CE93D8"><span class="mi">speed</span></div>
+    </div>
+    <div class="ob-tag" style="background:rgba(0,184,98,.1);color:#00B862;margin-bottom:16px">
+      <span class="mi" style="font-size:14px">rocket_launch</span> KHỞI NGHIỆP
+    </div>
+    <div style="font-size:26px;font-weight:900;color:#1A2B2E;text-align:center;line-height:1.2;margin-bottom:12px">
+      Sẵn sàng<br><span style="background:linear-gradient(135deg,#00B862,#69F0AE);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">khởi nghiệp</span>
+    </div>
+    <div style="font-size:14px;color:#5A6E72;text-align:center;line-height:1.6;font-weight:500">
+      Thiết lập cửa hàng trong 5 phút, bắt đầu bán hàng ngay lập tức
+    </div>
+  </div>
+
+  <!-- Bottom controls -->
+  <div style="padding:0 32px 40px;flex-shrink:0">
+    <!-- Dots -->
+    <div class="ob-dots" style="justify-content:center;margin-bottom:24px" id="dots">
+      <div class="ob-dot active" data-idx="0"></div>
+      <div class="ob-dot inactive" data-idx="1"></div>
+      <div class="ob-dot inactive" data-idx="2"></div>
+    </div>
+
+    <!-- Non-last slide controls -->
+    <div id="ctrl-next" style="display:flex;justify-content:space-between;align-items:center">
+      <button onclick="goSlide(2)" style="background:none;border:none;font-size:14px;font-weight:600;color:#8B9EA3;cursor:pointer;font-family:inherit;padding:12px 0">Bỏ qua</button>
+      <button class="btn-next" onclick="nextSlide()">
+        Tiếp tục <span class="mi" style="font-size:18px">arrow_forward</span>
+      </button>
+    </div>
+
+    <!-- Last slide controls -->
+    <div id="ctrl-start" style="display:none;flex-direction:column;gap:12px">
+      <button class="btn-primary" onclick="location.href='login.html'">
+        <span class="mi" style="font-size:22px">rocket_launch</span> Bắt đầu sử dụng
+      </button>
+      <button class="btn-secondary">
+        <span class="mi" style="font-size:20px">sync</span> Tham gia cửa hàng
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="splash.html">← Splash</a>
+  <a href="login.html">Login →</a>
+</div>
+
+<script>
+let current = 0;
+const slides = [document.getElementById('slide1'), document.getElementById('slide2'), document.getElementById('slide3')];
+const dots = document.querySelectorAll('.ob-dot');
+
+function goSlide(idx) {
+  slides.forEach(s => s.classList.remove('active'));
+  slides[idx].classList.add('active');
+  dots.forEach((d,i) => { d.className = 'ob-dot ' + (i===idx?'active':'inactive'); });
+  current = idx;
+  document.getElementById('ctrl-next').style.display = idx===2?'none':'flex';
+  document.getElementById('ctrl-start').style.display = idx===2?'flex':'none';
+}
+function nextSlide() { if(current<2) goSlide(current+1); }
+</script>
+</body>
+</html>

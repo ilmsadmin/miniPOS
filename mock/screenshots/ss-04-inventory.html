@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>Screenshot 4 — Quản lý kho hàng</title>
+<link rel="stylesheet" href="screenshot-common.css">
+</head>
+<body>
+<div>
+<div class="screenshot" style="background:linear-gradient(160deg, #1A0A0A 0%, #2D1B0E 25%, #3D2B1A 50%, #0A3D40 100%)">
+  <div class="bg-orb" style="width:500px;height:500px;top:-100px;right:-50px;background:rgba(255,138,101,.12)"></div>
+  <div class="bg-orb" style="width:400px;height:400px;bottom:200px;left:-80px;background:rgba(14,154,160,.15)"></div>
+  <div class="bg-orb" style="width:300px;height:300px;bottom:-50px;right:200px;background:rgba(90,237,197,.08)"></div>
+  <div class="bg-grid"></div>
+
+  <div class="top-section">
+    <div class="ss-logo">
+      <div class="logo-circle"><img src="../logo.png" alt="ViPOS"></div>
+      <div class="logo-text">ViPOS</div>
+    </div>
+    <div class="ss-badge" style="background:rgba(255,138,101,.12);border:1.5px solid rgba(255,138,101,.3);color:#FF8A65">
+      <span class="mi" style="font-size:20px">warehouse</span>
+      KHO HÀNG
+    </div>
+    <div class="ss-title">
+      Quản lý kho hàng<br><span class="highlight">chính xác tuyệt đối</span>
+    </div>
+    <div class="ss-subtitle">
+      Nhập hàng, kiểm kho, cảnh báo sắp hết hàng. Theo dõi giá trị tồn kho.
+    </div>
+  </div>
+
+  <div class="phone-container">
+    <div class="phone-frame" style="display:flex;flex-direction:column">
+      <div class="ph-status">9:41</div>
+      <div class="ph-topbar">
+        <span class="mi back">arrow_back</span>
+        <span class="title">Kho hàng</span>
+      </div>
+      <div class="ph-content" style="padding:0 12px;overflow:hidden">
+        <!-- Quick Actions title -->
+        <div class="ph-chart-title" style="margin-top:4px"><span class="mi">flash_on</span><span>Thao tác nhanh</span></div>
+        <!-- Quick Actions 2x2 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+          <div style="background:var(--surface);border-radius:20px;padding:18px">
+            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#0E9AA0,#2EC4B6);display:flex;align-items:center;justify-content:center;margin-bottom:10px"><span class="mi" style="font-size:26px;color:white">inventory</span></div>
+            <div style="font-size:15px;font-weight:700;color:var(--text-primary)">Nhập hàng</div>
+            <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-top:2px">Tạo phiếu nhập mới</div>
+          </div>
+          <div style="background:var(--surface);border-radius:20px;padding:18px">
+            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#14B8B0,#5AEDC5);display:flex;align-items:center;justify-content:center;margin-bottom:10px"><span class="mi" style="font-size:26px;color:white">history</span></div>
+            <div style="font-size:15px;font-weight:700;color:var(--text-primary)">Lịch sử đơn</div>
+            <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-top:2px">Xem đơn hàng</div>
+          </div>
+          <div style="background:var(--surface);border-radius:20px;padding:18px">
+            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#FF8A65,#FF5252);display:flex;align-items:center;justify-content:center;margin-bottom:10px"><span class="mi" style="font-size:26px;color:white">warehouse</span></div>
+            <div style="font-size:15px;font-weight:700;color:var(--text-primary)">Quản lý kho</div>
+            <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-top:2px">Kiểm soát tồn kho</div>
+          </div>
+          <div style="background:var(--surface);border-radius:20px;padding:18px">
+            <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#FFD54F,#F9A825);display:flex;align-items:center;justify-content:center;margin-bottom:10px"><span class="mi" style="font-size:26px;color:white">qr_code_2</span></div>
+            <div style="font-size:15px;font-weight:700;color:var(--text-primary)">Tạo mã vạch</div>
+            <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-top:2px">In mã cho SP</div>
+          </div>
+        </div>
+        <!-- Stock overview -->
+        <div class="ph-chart-title"><span class="mi">monitoring</span><span>Tổng quan tồn kho</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid #E5A800;border-radius:14px;padding:14px 16px">
+            <span class="mi" style="font-size:24px;color:#E5A800">warning</span>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text-primary)">5</div><div style="font-size:11px;font-weight:600;color:var(--text-tertiary)">Sắp hết hàng</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid #E53935;border-radius:14px;padding:14px 16px">
+            <span class="mi" style="font-size:24px;color:#E53935">error</span>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text-primary)">2</div><div style="font-size:11px;font-weight:600;color:var(--text-tertiary)">Hết hàng</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid #0E9AA0;border-radius:14px;padding:14px 16px">
+            <span class="mi" style="font-size:24px;color:#0E9AA0">payments</span>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text-primary)">85.600.000₫</div><div style="font-size:11px;font-weight:600;color:var(--text-tertiary)">Tổng giá trị kho</div></div>
+          </div>
+        </div>
+        <!-- Recent PO -->
+        <div class="ph-chart-title"><span class="mi">receipt_long</span><span>Nhập hàng gần đây</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="ph-order">
+            <div class="top"><span class="code">#PO-001</span><span class="amount">15.000.000₫</span></div>
+            <div class="mid"><span class="mi">business</span> NCC Thời Trang Việt</div>
+            <div class="bottom"><span class="time">Hôm nay, 10:30</span><span class="ph-badge success">Hoàn tất</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="ph-nav">
+        <div class="fab-m"><div class="inner"><span class="mi">point_of_sale</span><span>POS</span></div></div>
+        <div class="ni active"><span class="mi">warehouse</span><span>Kho</span></div>
+        <div class="ni"><span class="mi">list_alt</span><span>Quản lý</span></div>
+        <div style="width:60px"></div>
+        <div class="ni"><span class="mi">bar_chart</span><span>Báo cáo</span></div>
+        <div class="ni"><span class="mi">more_horiz</span><span>Thêm</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-pills">
+    <div class="pill"><span class="mi">inventory</span><span>Nhập hàng</span></div>
+    <div class="pill"><span class="mi">warning</span><span>Cảnh báo tồn kho</span></div>
+    <div class="pill"><span class="mi">qr_code_2</span><span>Mã vạch</span></div>
+  </div>
+</div>
+<div class="caption">Screenshot 4/8 — <code>1080 × 1920 px</code></div>
+</div>
+</body>
+</html>

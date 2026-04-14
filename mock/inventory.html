@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Kho hàng</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="home.html"><span class="mi">arrow_back</span></a>
+    <span class="title">Kho hàng</span>
+  </div>
+
+  <div class="content" style="padding:0 16px 24px">
+    <!-- Quick Actions title -->
+    <div class="sec-title mt-8">
+      <span class="mi">flash_on</span>
+      <span>Thao tác nhanh</span>
+    </div>
+
+    <!-- Quick Actions 2x2 grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+      <div class="qa-card">
+        <div class="qa-icon g-primary"><span class="mi">inventory</span></div>
+        <h4>Nhập hàng</h4>
+        <p>Tạo phiếu nhập mới</p>
+      </div>
+      <div class="qa-card">
+        <div class="qa-icon g-cust"><span class="mi">history</span></div>
+        <h4>Lịch sử đơn</h4>
+        <p>Xem đơn hàng</p>
+      </div>
+      <div class="qa-card">
+        <div class="qa-icon g-cat"><span class="mi">warehouse</span></div>
+        <h4>Quản lý kho</h4>
+        <p>Kiểm soát tồn kho</p>
+      </div>
+      <div class="qa-card">
+        <div class="qa-icon g-supp"><span class="mi">qr_code_2</span></div>
+        <h4>Tạo mã vạch</h4>
+        <p>In mã cho sản phẩm</p>
+      </div>
+    </div>
+
+    <!-- Stock overview title -->
+    <div class="sec-title">
+      <span class="mi">monitoring</span>
+      <span>Tổng quan tồn kho</span>
+    </div>
+
+    <!-- Stock stats -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+      <div class="stat-card" style="border-left:3px solid #E5A800">
+        <span class="mi" style="color:#E5A800">warning</span>
+        <div>
+          <div class="stat-value" style="font-size:16px">5</div>
+          <div class="stat-label">Sắp hết hàng</div>
+        </div>
+      </div>
+      <div class="stat-card" style="border-left:3px solid #E53935">
+        <span class="mi" style="color:#E53935">error</span>
+        <div>
+          <div class="stat-value" style="font-size:16px">2</div>
+          <div class="stat-label">Hết hàng</div>
+        </div>
+      </div>
+      <div class="stat-card" style="border-left:3px solid #0E9AA0">
+        <span class="mi" style="color:#0E9AA0">payments</span>
+        <div>
+          <div class="stat-value" style="font-size:16px">85.600.000₫</div>
+          <div class="stat-label">Tổng giá trị kho</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent purchases -->
+    <div class="sec-title">
+      <span class="mi">receipt_long</span>
+      <span>Nhập hàng gần đây</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#PO-001</span>
+          <span class="order-amount">15.000.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">business</span> NCC Thời Trang Việt</div>
+        <div class="order-bottom">
+          <span class="order-time">Hôm nay, 10:30</span>
+          <span class="badge badge-success">Hoàn tất</span>
+        </div>
+      </div>
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-code">#PO-002</span>
+          <span class="order-amount">8.500.000₫</span>
+        </div>
+        <div class="order-mid"><span class="mi">business</span> Xưởng Giày Minh Phát</div>
+        <div class="order-bottom">
+          <span class="order-time">Hôm qua, 15:20</span>
+          <span class="badge badge-warning">Đang xử lý</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <a class="nav-item active">
+      <div class="nav-icon"><span class="mi">warehouse</span></div>
+      <span class="nav-label">Kho hàng</span>
+    </a>
+    <a class="nav-item" href="store-management.html">
+      <div class="nav-icon"><span class="mi">list_alt</span></div>
+      <span class="nav-label">Quản lý</span>
+    </a>
+    <div class="fab-container">
+      <a class="fab" href="home.html">
+        <div class="fab-inner">
+          <span class="mi">point_of_sale</span>
+          <span class="fab-label">POS</span>
+        </div>
+      </a>
+    </div>
+    <a class="nav-item" style="visibility:hidden">
+      <div class="nav-icon"><span class="mi">circle</span></div>
+      <span class="nav-label">POS</span>
+    </a>
+    <a class="nav-item" href="reports.html">
+      <div class="nav-icon"><span class="mi">bar_chart</span></div>
+      <span class="nav-label">Báo cáo</span>
+    </a>
+    <a class="nav-item" href="settings.html">
+      <div class="nav-icon"><span class="mi">more_horiz</span></div>
+      <span class="nav-label">Thêm</span>
+    </a>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="home.html">← Home</a>
+  <a href="store-management.html">Quản lý →</a>
+</div>
+</body>
+</html>

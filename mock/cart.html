@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Giỏ hàng & Thanh toán</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="home.html"><span class="mi">arrow_back</span></a>
+    <span class="title">Thanh toán</span>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="content" style="padding:0 24px 16px">
+
+    <!-- ═══ Amount Display ═══ -->
+    <div style="text-align:center;padding:12px 0 20px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-tertiary)">Tổng thanh toán</div>
+      <div style="font-size:36px;font-weight:900;color:var(--primary);letter-spacing:-1px;margin-top:4px">950.000₫</div>
+    </div>
+
+    <!-- ═══ Payment Methods ═══ -->
+    <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">PHƯƠNG THỨC THANH TOÁN</div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <!-- Cash - selected -->
+      <div style="flex:1;border:2px solid var(--primary);border-radius:var(--radius-lg);background:rgba(14,154,160,.08);padding:16px 8px;text-align:center;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
+          <span class="mi" style="font-size:24px;color:white">payments</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-primary)">Tiền mặt</div>
+      </div>
+      <!-- Transfer -->
+      <div style="flex:1;border:2px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);padding:16px 8px;text-align:center;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:var(--radius-md);background:var(--surface-elevated);display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
+          <span class="mi" style="font-size:24px;color:var(--text-tertiary)">account_balance</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-secondary)">Chuyển khoản</div>
+      </div>
+      <!-- E-wallet -->
+      <div style="flex:1;border:2px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);padding:16px 8px;text-align:center;cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:var(--radius-md);background:var(--surface-elevated);display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
+          <span class="mi" style="font-size:24px;color:var(--text-tertiary)">smartphone</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-secondary)">Ví điện tử</div>
+      </div>
+    </div>
+
+    <!-- ═══ Customer pays input ═══ -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <span style="font-size:13px;font-weight:700;color:var(--text-secondary)">Khách trả</span>
+      <div style="flex:1;height:48px;border:2px solid var(--border-light);border-radius:var(--radius-lg);background:var(--input-bg);display:flex;align-items:center;justify-content:flex-end;padding:0 16px">
+        <span style="font-size:22px;font-weight:800;color:var(--text-primary)">1.000.000₫</span>
+      </div>
+    </div>
+
+    <!-- ═══ Quick amounts ═══ -->
+    <div style="display:flex;gap:6px;margin-bottom:4px">
+      <div style="flex:1;height:38px;border:1px solid var(--primary);border-radius:var(--radius-md);background:rgba(14,154,160,.06);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:13px;font-weight:700;color:var(--primary-light)">950K</span>
+      </div>
+      <div style="flex:1;height:38px;border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:13px;font-weight:700;color:var(--text-secondary)">1.000K</span>
+      </div>
+      <div style="flex:1;height:38px;border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:13px;font-weight:700;color:var(--text-secondary)">1.100K</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <div style="flex:1;height:38px;border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:13px;font-weight:700;color:var(--text-secondary)">1.200K</span>
+      </div>
+      <div style="flex:1;height:38px;border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:13px;font-weight:700;color:var(--text-secondary)">1.500K</span>
+      </div>
+      <div style="flex:1;height:38px;border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:13px;font-weight:700;color:var(--text-secondary)">2.000K</span>
+      </div>
+    </div>
+
+    <!-- ═══ Change display ═══ -->
+    <div style="display:flex;justify-content:center;padding:6px 0">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 20px;border-radius:var(--radius-full);background:var(--success-soft)">
+        <span class="mi" style="font-size:18px;color:var(--success)">check_circle</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text-secondary)">Tiền thừa</span>
+        <span style="font-size:16px;font-weight:900;color:var(--success)">50.000₫</span>
+      </div>
+    </div>
+
+    <!-- ═══ Numpad ═══ -->
+    <div style="display:flex;flex-direction:column;gap:8px;padding:8px 0">
+      <div style="display:flex;gap:8px;height:52px">
+        <div class="numpad-key">1</div>
+        <div class="numpad-key">2</div>
+        <div class="numpad-key">3</div>
+      </div>
+      <div style="display:flex;gap:8px;height:52px">
+        <div class="numpad-key">4</div>
+        <div class="numpad-key">5</div>
+        <div class="numpad-key">6</div>
+      </div>
+      <div style="display:flex;gap:8px;height:52px">
+        <div class="numpad-key">7</div>
+        <div class="numpad-key">8</div>
+        <div class="numpad-key">9</div>
+      </div>
+      <div style="display:flex;gap:8px;height:52px">
+        <div class="numpad-key">000</div>
+        <div class="numpad-key">0</div>
+        <div class="numpad-key"><span class="mi" style="font-size:24px;color:var(--error)">backspace</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Bottom actions (fixed) ═══ -->
+  <div style="padding:0 24px;padding-top:8px;padding-bottom:12px;background:var(--bg);flex-shrink:0">
+    <!-- Notes -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span class="mi" style="font-size:20px;color:var(--text-tertiary)">edit_note</span>
+      <div style="flex:1;height:44px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--input-bg);display:flex;align-items:center;padding:0 14px">
+        <span style="font-size:13px;color:var(--text-tertiary)">Ghi chú đơn hàng...</span>
+      </div>
+    </div>
+    <!-- Confirm payment button -->
+    <a href="payment-success.html" style="text-decoration:none">
+      <div style="width:100%;height:56px;border-radius:var(--radius-2xl);background:linear-gradient(135deg,var(--primary),var(--accent),var(--primary-light));display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px var(--primary-glow);cursor:pointer">
+        <span class="mi" style="font-size:22px;color:white">verified</span>
+        <span style="font-size:16px;font-weight:800;color:white">Xác nhận thanh toán</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="home.html">← Home</a>
+  <a href="payment-success.html">Thành công →</a>
+</div>
+</body>
+</html>

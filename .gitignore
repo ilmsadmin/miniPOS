@@ -77,3 +77,9 @@ Thumbs.db
 
 # Secrets
 *.env
+
+# Node modules (screenshot tools)
+node_modules/
+
+# Screenshot output (generated PNGs)
+mock/screenshots/output/

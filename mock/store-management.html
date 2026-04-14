@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Quản lý cửa hàng</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="home.html"><span class="mi">arrow_back</span></a>
+    <span class="title">Quản lý cửa hàng</span>
+  </div>
+
+  <div class="content" style="padding:0 16px 24px">
+    <!-- Menu items -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
+      <a class="menu-item" href="products.html">
+        <div class="menu-icon g-cat"><span class="mi">category</span></div>
+        <div class="menu-text">
+          <h4>Danh mục</h4>
+          <p>4 danh mục (Áo, Quần, Giày dép, Phụ kiện)</p>
+        </div>
+        <div class="menu-arrow"><span class="mi">chevron_right</span></div>
+      </a>
+
+      <a class="menu-item" href="products.html">
+        <div class="menu-icon g-primary"><span class="mi">inventory_2</span></div>
+        <div class="menu-text">
+          <h4>Sản phẩm</h4>
+          <p>48 sản phẩm</p>
+        </div>
+        <div class="menu-arrow"><span class="mi">chevron_right</span></div>
+      </a>
+
+      <div class="menu-item">
+        <div class="menu-icon g-cust"><span class="mi">group</span></div>
+        <div class="menu-text">
+          <h4>Khách hàng</h4>
+          <p>120 khách hàng</p>
+        </div>
+        <div class="menu-arrow"><span class="mi">chevron_right</span></div>
+      </div>
+
+      <div class="menu-item">
+        <div class="menu-icon g-supp"><span class="mi">local_shipping</span></div>
+        <div class="menu-text">
+          <h4>Nhà cung cấp</h4>
+          <p>8 nhà cung cấp</p>
+        </div>
+        <div class="menu-arrow"><span class="mi">chevron_right</span></div>
+      </div>
+    </div>
+
+    <!-- Quick Stats title -->
+    <div class="sec-title">
+      <span class="mi">query_stats</span>
+      <span>Thống kê nhanh</span>
+    </div>
+
+    <!-- Stats 2x2 grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <span class="mi" style="color:#0E9AA0;font-size:22px">inventory_2</span>
+        <div class="stat-value">48</div>
+        <div class="stat-label">Tổng sản phẩm</div>
+      </div>
+      <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <span class="mi" style="color:#14B8B0;font-size:22px">group</span>
+        <div class="stat-value">120</div>
+        <div class="stat-label">Khách hàng</div>
+      </div>
+      <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <span class="mi" style="color:#FF8A65;font-size:22px">category</span>
+        <div class="stat-value">4</div>
+        <div class="stat-label">Danh mục</div>
+      </div>
+      <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <span class="mi" style="color:#FFD54F;font-size:22px">local_shipping</span>
+        <div class="stat-value">8</div>
+        <div class="stat-label">Nhà cung cấp</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <a class="nav-item" href="inventory.html">
+      <div class="nav-icon"><span class="mi">warehouse</span></div>
+      <span class="nav-label">Kho hàng</span>
+    </a>
+    <a class="nav-item active">
+      <div class="nav-icon"><span class="mi">list_alt</span></div>
+      <span class="nav-label">Quản lý</span>
+    </a>
+    <div class="fab-container">
+      <a class="fab" href="home.html">
+        <div class="fab-inner">
+          <span class="mi">point_of_sale</span>
+          <span class="fab-label">POS</span>
+        </div>
+      </a>
+    </div>
+    <a class="nav-item" style="visibility:hidden">
+      <div class="nav-icon"><span class="mi">circle</span></div>
+      <span class="nav-label">POS</span>
+    </a>
+    <a class="nav-item" href="reports.html">
+      <div class="nav-icon"><span class="mi">bar_chart</span></div>
+      <span class="nav-label">Báo cáo</span>
+    </a>
+    <a class="nav-item" href="settings.html">
+      <div class="nav-icon"><span class="mi">more_horiz</span></div>
+      <span class="nav-label">Thêm</span>
+    </a>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="inventory.html">← Kho hàng</a>
+  <a href="products.html">Sản phẩm →</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViPOS — Báo cáo</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <a class="back-btn" href="home.html"><span class="mi">arrow_back</span></a>
+    <span class="title">Báo cáo</span>
+  </div>
+
+  <!-- Period chips -->
+  <div class="chips" style="padding-bottom:16px">
+    <div class="chip active">Hôm nay</div>
+    <div class="chip">Tuần này</div>
+    <div class="chip">Tháng này</div>
+    <div class="chip" style="opacity:.5"><span class="mi" style="font-size:14px">lock</span> Tùy chọn</div>
+  </div>
+
+  <div class="content" style="padding:0 16px 24px">
+    <!-- KPI 2x2 grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px">
+      <!-- Revenue -->
+      <div class="kpi-card">
+        <div class="kpi-icon g-success"><span class="mi">payments</span></div>
+        <div class="kpi-value">21.9M</div>
+        <div class="kpi-label">Doanh thu</div>
+        <div class="kpi-trend up"><span class="mi" style="font-size:14px">trending_up</span> +12.5%</div>
+      </div>
+      <!-- Orders -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg,#5AEDC5,#3DCBA8)"><span class="mi">receipt</span></div>
+        <div class="kpi-value">18</div>
+        <div class="kpi-label">Đơn hàng</div>
+        <div class="kpi-trend up"><span class="mi" style="font-size:14px">trending_up</span> +8.3%</div>
+      </div>
+      <!-- Products sold -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg,#2EC4B6,#0E9AA0)"><span class="mi">sell</span></div>
+        <div class="kpi-value">45</div>
+        <div class="kpi-label">SP đã bán</div>
+        <div class="kpi-trend up"><span class="mi" style="font-size:14px">trending_up</span> +15.2%</div>
+      </div>
+      <!-- Customers -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg,#E5A800,#FFD54F)"><span class="mi">group</span></div>
+        <div class="kpi-value">12</div>
+        <div class="kpi-label">Khách hàng</div>
+        <div class="kpi-trend down"><span class="mi" style="font-size:14px">trending_down</span> -3.1%</div>
+      </div>
+    </div>
+
+    <!-- Revenue chart -->
+    <div class="sec-title">
+      <span class="mi">show_chart</span>
+      <span>Doanh thu theo giờ</span>
+    </div>
+    <div class="chart-placeholder" style="margin-bottom:24px">
+      <div class="chart-bar" style="height:30px;background:linear-gradient(180deg,rgba(14,154,160,.3),rgba(14,154,160,.05))"></div>
+      <div class="chart-bar" style="height:55px;background:linear-gradient(180deg,rgba(14,154,160,.4),rgba(14,154,160,.08))"></div>
+      <div class="chart-bar" style="height:80px;background:linear-gradient(180deg,rgba(14,154,160,.5),rgba(14,154,160,.1))"></div>
+      <div class="chart-bar" style="height:120px;background:linear-gradient(180deg,#0E9AA0,rgba(14,154,160,.15));border-radius:6px 6px 0 0"></div>
+      <div class="chart-bar" style="height:95px;background:linear-gradient(180deg,rgba(14,154,160,.5),rgba(14,154,160,.1))"></div>
+      <div class="chart-bar" style="height:60px;background:linear-gradient(180deg,rgba(14,154,160,.4),rgba(14,154,160,.08))"></div>
+      <div class="chart-bar" style="height:45px;background:linear-gradient(180deg,rgba(14,154,160,.3),rgba(14,154,160,.05))"></div>
+      <div class="chart-bar" style="height:70px;background:linear-gradient(180deg,rgba(14,154,160,.45),rgba(14,154,160,.09))"></div>
+    </div>
+
+    <!-- Top products -->
+    <div class="sec-title">
+      <span class="mi">workspace_premium</span>
+      <span>Sản phẩm bán chạy</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <!-- Top 1 -->
+      <div class="prod-item">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FFD54F,#F9A825);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:white;flex-shrink:0">1</div>
+        <div class="prod-info" style="margin-left:0">
+          <div class="prod-name">Áo thun trắng basic</div>
+          <div class="prod-meta">Đã bán: 15 • 3.750.000₫</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:2px;font-size:11px;font-weight:700;color:var(--success)">
+          <span class="mi" style="font-size:14px">trending_up</span> 20%
+        </div>
+      </div>
+
+      <!-- Top 2 -->
+      <div class="prod-item">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#B0BEC5,#90A4AE);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:white;flex-shrink:0">2</div>
+        <div class="prod-info" style="margin-left:0">
+          <div class="prod-name">Quần jeans slim fit</div>
+          <div class="prod-meta">Đã bán: 10 • 4.500.000₫</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:2px;font-size:11px;font-weight:700;color:var(--success)">
+          <span class="mi" style="font-size:14px">trending_up</span> 12%
+        </div>
+      </div>
+
+      <!-- Top 3 -->
+      <div class="prod-item">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#A1887F,#8D6E63);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:white;flex-shrink:0">3</div>
+        <div class="prod-info" style="margin-left:0">
+          <div class="prod-name">Giày sneaker trắng</div>
+          <div class="prod-meta">Đã bán: 8 • 7.120.000₫</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:2px;font-size:11px;font-weight:700;color:var(--error)">
+          <span class="mi" style="font-size:14px">trending_down</span> 5%
+        </div>
+      </div>
+
+      <!-- Top 4 -->
+      <div class="prod-item">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-elevated);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--text-tertiary);flex-shrink:0">4</div>
+        <div class="prod-info" style="margin-left:0">
+          <div class="prod-name">Áo khoác bomber</div>
+          <div class="prod-meta">Đã bán: 6 • 4.080.000₫</div>
+        </div>
+      </div>
+
+      <!-- Top 5 -->
+      <div class="prod-item">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-elevated);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--text-tertiary);flex-shrink:0">5</div>
+        <div class="prod-info" style="margin-left:0">
+          <div class="prod-name">Váy liền hoa nhí</div>
+          <div class="prod-meta">Đã bán: 6 • 2.520.000₫</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <a class="nav-item" href="inventory.html">
+      <div class="nav-icon"><span class="mi">warehouse</span></div>
+      <span class="nav-label">Kho hàng</span>
+    </a>
+    <a class="nav-item" href="store-management.html">
+      <div class="nav-icon"><span class="mi">list_alt</span></div>
+      <span class="nav-label">Quản lý</span>
+    </a>
+    <div class="fab-container">
+      <a class="fab" href="home.html">
+        <div class="fab-inner">
+          <span class="mi">point_of_sale</span>
+          <span class="fab-label">POS</span>
+        </div>
+      </a>
+    </div>
+    <a class="nav-item" style="visibility:hidden">
+      <div class="nav-icon"><span class="mi">circle</span></div>
+      <span class="nav-label">POS</span>
+    </a>
+    <a class="nav-item active">
+      <div class="nav-icon"><span class="mi">bar_chart</span></div>
+      <span class="nav-label">Báo cáo</span>
+    </a>
+    <a class="nav-item" href="settings.html">
+      <div class="nav-icon"><span class="mi">more_horiz</span></div>
+      <span class="nav-label">Thêm</span>
+    </a>
+  </div>
+</div>
+
+<div class="mock-nav">
+  <a href="index.html">← Tất cả</a>
+  <a href="orders.html">← Đơn hàng</a>
+  <a href="settings.html">Cài đặt →</a>
+</div>
+</body>
+</html>
