@@ -1847,37 +1847,27 @@ private fun HomeCustomerPickerSheet(
     onQuickCreate: (String, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.step3_title),
+        onDismiss = onDismiss,
     ) {
-        Column(
+        // Walk-in option
+        Row(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.7f)
-                .clip(RoundedCornerShape(20.dp))
-                .background(AppColors.Surface),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringResource(R.string.step3_title), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, null, tint = AppColors.TextSecondary)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                .background(
+                    if (selectedCustomer == null) AppColors.PrimaryLight.copy(alpha = 0.08f)
+                    else Color.Transparent,
+                )
+                .let {
+                    if (selectedCustomer == null) it.border(1.5.dp, AppColors.Primary, RoundedCornerShape(MiniPosTokens.RadiusLg))
+                    else it
                 }
-            }
-
-            // Walk-in option
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(null) }
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                .clickable { onSelect(null) }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     if (selectedCustomer == null) Icons.Rounded.CheckCircle else Icons.Rounded.Person,
@@ -1890,20 +1880,18 @@ private fun HomeCustomerPickerSheet(
                     Text(stringResource(R.string.pos_skip_customer), fontSize = 12.sp, color = AppColors.TextSecondary)
                 }
                 if (selectedCustomer == null) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.Primary),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    }
+                    Icon(
+                        Icons.Rounded.CheckCircle,
+                        null,
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
             }
 
-            HorizontalDivider(color = AppColors.BorderLight, modifier = Modifier.padding(horizontal = 20.dp))
+            Spacer(Modifier.height(12.dp))
 
+            // Quick create form or search bar
             if (showCreateForm) {
                 HomeQuickCreateCustomerCard(onCancel = onToggleCreateForm, onCreate = onQuickCreate)
             } else {
@@ -1911,43 +1899,70 @@ private fun HomeCustomerPickerSheet(
                     value = searchQuery,
                     onValueChange = onSearch,
                     placeholder = stringResource(R.string.search_customer),
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     trailingIcon = {
-                        IconButton(onClick = onToggleCreateForm) {
-                            Icon(Icons.Rounded.PersonAdd, null, tint = AppColors.Accent)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.Accent.copy(alpha = 0.1f))
+                                .clickable { onToggleCreateForm() },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.PersonAdd, null, tint = AppColors.Accent, modifier = Modifier.size(18.dp))
                         }
                     },
                 )
             }
 
+            Spacer(Modifier.height(8.dp))
+
             val displayCustomers = if (searchQuery.isNotBlank()) searchResults else customers
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                items(displayCustomers) { customer ->
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                displayCustomers.forEach { customer ->
+                    val isSelected = selectedCustomer?.id == customer.id
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(MiniPosTokens.RadiusSm))
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
                             .background(
-                                if (selectedCustomer?.id == customer.id) AppColors.PrimaryContainer
+                                if (isSelected) AppColors.PrimaryLight.copy(alpha = 0.08f)
                                 else Color.Transparent,
                             )
+                            .let {
+                                if (isSelected) it.border(1.5.dp, AppColors.Primary, RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                else it
+                            }
                             .clickable { onSelect(customer) }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            if (selectedCustomer?.id == customer.id) Icons.Rounded.CheckCircle
-                            else Icons.Rounded.Person,
-                            null,
-                            tint = if (selectedCustomer?.id == customer.id) AppColors.Primary
-                            else AppColors.TextTertiary,
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected)
+                                        Brush.linearGradient(listOf(AppColors.Primary, AppColors.Accent))
+                                    else
+                                        Brush.linearGradient(listOf(AppColors.InputBackground, AppColors.InputBackground))
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                customer.name.firstOrNull()?.uppercase() ?: "?",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (isSelected) Color.White else AppColors.TextTertiary,
+                            )
+                        }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(customer.name, fontWeight = FontWeight.Medium)
+                            Text(
+                                customer.name,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.TextPrimary,
+                            )
                             if (!customer.phone.isNullOrBlank()) {
                                 Text(customer.phone, fontSize = 12.sp, color = AppColors.TextSecondary)
                             }
@@ -1972,44 +1987,61 @@ private fun HomeQuickCreateCustomerCard(
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+            .background(AppColors.InputBackground)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusXl))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.add_new_customer_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.customer_name_required)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(8.dp),
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text(stringResource(R.string.phone_number)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                shape = RoundedCornerShape(8.dp),
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = { if (name.isNotBlank()) onCreate(name, phone.ifBlank { null }) },
-                    enabled = name.isNotBlank(),
-                    shape = RoundedCornerShape(8.dp),
-                ) { Text(stringResource(R.string.add_btn)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(AppColors.Primary, AppColors.Accent))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.PersonAdd, null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.add_new_customer_title),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = AppColors.TextPrimary,
+            )
+        }
+        BottomSheetField(
+            label = stringResource(R.string.customer_name_required),
+            value = name,
+            onValueChange = { name = it },
+            required = true,
+            autoFocus = true,
+        )
+        BottomSheetField(
+            label = stringResource(R.string.phone_number),
+            value = phone,
+            onValueChange = { phone = it },
+            keyboardType = KeyboardType.Phone,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            BottomSheetOutlineButton(
+                text = stringResource(R.string.cancel),
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+            )
+            BottomSheetPrimaryButton(
+                text = stringResource(R.string.add_btn),
+                icon = Icons.Rounded.Check,
+                onClick = { if (name.isNotBlank()) onCreate(name, phone.ifBlank { null }) },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -2440,43 +2472,91 @@ private fun HomeProfileSheet(
 // ─── Order Discount Dialog ───
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeOrderDiscountDialog(    current: Discount?,
+private fun HomeOrderDiscountDialog(
+    current: Discount?,
     onDismiss: () -> Unit,
     onApply: (Discount?) -> Unit,
 ) {
     var type by remember { mutableStateOf(current?.type ?: "percent") }
-    var value by remember { mutableStateOf(current?.value?.toString() ?: "") }
+    var value by remember { mutableStateOf(current?.value?.let {
+        if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString()
+    } ?: "") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.order_discount_dialog_title)) },
-        text = {
-            Column {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = type == "percent", onClick = { type = "percent" }, label = { Text(stringResource(R.string.percent_label)) })
-                    FilterChip(selected = type == "fixed", onClick = { type = "fixed" }, label = { Text(stringResource(R.string.fixed_amount_label)) })
-                }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text(if (type == "percent") stringResource(R.string.percent_field) else stringResource(R.string.amount_field)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    suffix = { Text(if (type == "percent") "%" else stringResource(R.string.currency_symbol)) },
-                    modifier = Modifier.fillMaxWidth(),
+    MiniPosBottomSheet(
+        visible = true,
+        title = stringResource(R.string.order_discount_dialog_title),
+        onDismiss = onDismiss,
+        footer = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                BottomSheetPrimaryButton(
+                    text = stringResource(R.string.apply),
+                    icon = Icons.Rounded.Check,
+                    onClick = {
+                        val v = value.toDoubleOrNull()
+                        if (v != null && v > 0) onApply(Discount(type, v))
+                        else onApply(null)
+                    },
                 )
+                if (current != null) {
+                    BottomSheetDangerButton(
+                        text = stringResource(R.string.remove_discount),
+                        icon = Icons.Rounded.RemoveCircleOutline,
+                        onClick = { onApply(null) },
+                    )
+                }
             }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                val v = value.toDoubleOrNull()
-                if (v != null && v > 0) onApply(Discount(type, v))
-                else onApply(null)
-            }) { Text(stringResource(R.string.apply)) }
-        },
-        dismissButton = {
-            TextButton(onClick = { onApply(null) }) { Text(stringResource(R.string.remove_discount)) }
-        },
-    )
+    ) {
+        // Type selector — 2 toggle chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf("percent" to stringResource(R.string.percent_label), "fixed" to stringResource(R.string.fixed_amount_label))
+                .forEach { (key, label) ->
+                    val selected = type == key
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                            .background(
+                                if (selected) AppColors.Primary else AppColors.InputBackground
+                            )
+                            .border(
+                                1.dp,
+                                if (selected) AppColors.Primary else AppColors.Border,
+                                RoundedCornerShape(MiniPosTokens.RadiusLg),
+                            )
+                            .clickable { type = key; value = "" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            label,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (selected) Color.White else AppColors.TextSecondary,
+                        )
+                    }
+                }
+        }
+        Spacer(Modifier.height(16.dp))
+        BottomSheetField(
+            label = if (type == "percent") stringResource(R.string.percent_field) else stringResource(R.string.amount_field),
+            value = value,
+            onValueChange = { value = it.filter { c -> c.isDigit() || c == '.' } },
+            keyboardType = KeyboardType.Number,
+            required = true,
+            autoFocus = true,
+            trailingIcon = {
+                Text(
+                    if (type == "percent") "%" else stringResource(R.string.currency_symbol),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextTertiary,
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+            },
+        )
+    }
 }
