@@ -1552,4 +1552,23 @@
     <string name="sa_audit_export_success">Audit report exported successfully</string>
     <string name="sa_audit_export_error">Failed to export audit report</string>
     <string name="sa_diff_reason_title">Difference reason</string>
+
+    <!-- App Rating -->
+    <string name="rate_app_label">Rate App</string>
+    <string name="rate_app_desc">Tell us what you think about ViPOS</string>
+    <string name="rating_title">Enjoying ViPOS?</string>
+    <string name="rating_subtitle">Your feedback helps us improve.\nHow would you rate your experience?</string>
+    <string name="rating_1_star">We\'re sorry to hear that 😔\nPlease tell us what went wrong.</string>
+    <string name="rating_2_star">We can do better 😕\nLet us know how to improve.</string>
+    <string name="rating_3_star">Thanks for the feedback 🤔\nTell us what we can improve.</string>
+    <string name="rating_4_star">Glad you like it! 😊\nA review helps us a lot!</string>
+    <string name="rating_5_star">Awesome! You\'re the best! 🎉\nShare the love on Play Store!</string>
+    <string name="rating_submit_positive">Rate on Play Store ⭐</string>
+    <string name="rating_submit_feedback">Send Feedback ✉️</string>
+    <string name="rating_later">Maybe Later</string>
+    <string name="rating_thank_you_title">Thank You! ❤️</string>
+    <string name="rating_thank_you_message">Your feedback means the world to us.\nWe\'ll keep improving ViPOS for you!</string>
+    <string name="rating_email_subject">[ViPOS Feedback] Rating: %1$d/5</string>
+    <string name="rating_email_body_hint">Please tell us what you\'d like us to improve:\n\n</string>
+    <string name="rating_choose_email_app">Send feedback via</string>
 </resources>

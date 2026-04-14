@@ -7,6 +7,7 @@ import com.minipos.R
 import com.minipos.core.barcode.BarcodeGenerator
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.core.auth.SessionManager
+import com.minipos.core.rating.RatingManager
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Permission
 import com.minipos.domain.model.Product
@@ -85,6 +86,7 @@ class ProductListViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
     private val inventoryRepository: InventoryRepository,
     private val sessionManager: SessionManager,
+    private val ratingManager: RatingManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductListState())
@@ -277,6 +279,7 @@ class ProductListViewModel @Inject constructor(
                     dismissForm()
                     loadData()
                     _saveSuccess.emit(true)
+                    ratingManager.onSuccessAction()
                 }
                 is Result.Error -> {
                     _formState.update { it.copy(isSaving = false, error = result.message) }

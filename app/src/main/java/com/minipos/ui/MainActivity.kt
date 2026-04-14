@@ -22,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.minipos.core.theme.MiniPosTheme
 import com.minipos.core.theme.ThemeManager
 import com.minipos.core.theme.ThemeMode
+import com.minipos.core.rating.AppRatingDialog
 import com.minipos.ui.navigation.MiniPosNavGraph
 import com.minipos.ui.navigation.Screen
 import com.minipos.ui.onboarding.CreateStoreScreen
@@ -69,6 +70,14 @@ fun MiniPosApp() {
     val viewModel: MainViewModel = hiltViewModel()
     val appState by viewModel.appState.collectAsState()
     val navController = rememberNavController()
+
+    // ── Rating Dialog ──
+    val showRating by viewModel.ratingManager.showRatingDialog.collectAsState()
+    AppRatingDialog(
+        visible = showRating,
+        onDismiss = { viewModel.dismissRating() },
+        onRated = { stars -> viewModel.onRatingCompleted(stars) },
+    )
 
     AnimatedContent(
         targetState = appState,
@@ -145,6 +154,8 @@ fun MiniPosApp() {
                     startDestination = Screen.Home.route,
                     onLogout = { viewModel.logout() },
                     onSwitchUser = { viewModel.switchUser() },
+                    onSuccessAction = { viewModel.notifySuccessAction() },
+                    onRateApp = { viewModel.forceShowRating() },
                 )
             }
         }

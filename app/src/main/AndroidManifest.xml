@@ -83,4 +83,15 @@
 
     </application>
 
+    <!-- Package visibility: needed from Android 11+ to resolve email apps -->
+    <queries>
+        <!-- Gmail -->
+        <package android:name="com.google.android.gm" />
+        <!-- Generic mailto intent -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+    </queries>
+
 </manifest>

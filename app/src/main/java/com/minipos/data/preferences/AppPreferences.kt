@@ -29,6 +29,12 @@ class AppPreferences @Inject constructor(
         private val KEY_SETUP_GUIDE_DISMISSED = booleanPreferencesKey("setup_guide_dismissed")
         private val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
         private val KEY_LAST_SEEN_TODAY_ORDERS = intPreferencesKey("last_seen_today_orders")
+        // Rating / Review
+        private val KEY_HAS_RATED = booleanPreferencesKey("has_rated")
+        private val KEY_RATING_DISMISS_COUNT = intPreferencesKey("rating_dismiss_count")
+        private val KEY_SUCCESS_ACTION_COUNT = intPreferencesKey("success_action_count")
+        private val KEY_LAST_RATING_DISMISS_TIME = longPreferencesKey("last_rating_dismiss_time")
+        private val KEY_RATING_GIVEN_STARS = intPreferencesKey("rating_given_stars")
     }
 
     val currentStoreId: Flow<String?> = context.dataStore.data.map { it[KEY_CURRENT_STORE_ID] }
@@ -111,6 +117,49 @@ class AppPreferences @Inject constructor(
 
     suspend fun setLastSeenTodayOrders(count: Int) {
         context.dataStore.edit { it[KEY_LAST_SEEN_TODAY_ORDERS] = count }
+    }
+
+    // ── Rating / Review ──
+
+    suspend fun hasRated(): Boolean =
+        context.dataStore.data.first()[KEY_HAS_RATED] ?: false
+
+    suspend fun setHasRated(value: Boolean) {
+        context.dataStore.edit { it[KEY_HAS_RATED] = value }
+    }
+
+    suspend fun getRatingDismissCount(): Int =
+        context.dataStore.data.first()[KEY_RATING_DISMISS_COUNT] ?: 0
+
+    suspend fun setRatingDismissCount(count: Int) {
+        context.dataStore.edit { it[KEY_RATING_DISMISS_COUNT] = count }
+    }
+
+    suspend fun getSuccessActionCount(): Int =
+        context.dataStore.data.first()[KEY_SUCCESS_ACTION_COUNT] ?: 0
+
+    suspend fun incrementSuccessActionCount(): Int {
+        val current = getSuccessActionCount() + 1
+        context.dataStore.edit { it[KEY_SUCCESS_ACTION_COUNT] = current }
+        return current
+    }
+
+    suspend fun resetSuccessActionCount() {
+        context.dataStore.edit { it[KEY_SUCCESS_ACTION_COUNT] = 0 }
+    }
+
+    suspend fun getLastRatingDismissTime(): Long =
+        context.dataStore.data.first()[KEY_LAST_RATING_DISMISS_TIME] ?: 0L
+
+    suspend fun setLastRatingDismissTime(timestamp: Long) {
+        context.dataStore.edit { it[KEY_LAST_RATING_DISMISS_TIME] = timestamp }
+    }
+
+    suspend fun getRatingGivenStars(): Int =
+        context.dataStore.data.first()[KEY_RATING_GIVEN_STARS] ?: 0
+
+    suspend fun setRatingGivenStars(stars: Int) {
+        context.dataStore.edit { it[KEY_RATING_GIVEN_STARS] = stars }
     }
 
     suspend fun logout() {

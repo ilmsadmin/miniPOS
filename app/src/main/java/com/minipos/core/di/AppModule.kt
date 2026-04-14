@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.minipos.core.backup.BackupManager
 import com.minipos.core.constants.AppConstants
+import com.minipos.core.rating.RatingManager
 import com.minipos.core.utils.UuidGenerator
 import com.minipos.data.database.MiniPosDatabase
 import com.minipos.data.database.dao.*
@@ -139,4 +140,10 @@ object AppModule {
         database: MiniPosDatabase,
         prefs: AppPreferences,
     ): BackupManager = BackupManager(context, database, prefs)
+
+    @Provides
+    @Singleton
+    fun provideRatingManager(
+        prefs: AppPreferences,
+    ): RatingManager = RatingManager(prefs)
 }

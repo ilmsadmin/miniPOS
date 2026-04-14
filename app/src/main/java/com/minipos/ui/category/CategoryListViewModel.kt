@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.domain.model.Category
 import com.minipos.domain.model.Result
+import com.minipos.core.rating.RatingManager
 import com.minipos.domain.repository.CategoryRepository
 import com.minipos.domain.repository.ProductRepository
 import com.minipos.domain.repository.StoreRepository
@@ -49,6 +50,7 @@ class CategoryListViewModel @Inject constructor(
     private val storeRepository: StoreRepository,
     private val categoryRepository: CategoryRepository,
     private val productRepository: ProductRepository,
+    private val ratingManager: RatingManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CategoryListState())
@@ -148,6 +150,7 @@ class CategoryListViewModel @Inject constructor(
             if (result is Result.Success) {
                 dismissForm()
                 loadData()
+                ratingManager.onSuccessAction()
             }
         }
     }

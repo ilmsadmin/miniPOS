@@ -48,6 +48,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToStoreSettings: () -> Unit = {},
     onNavigateToWifiSync: () -> Unit = {},
+    onRateApp: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -423,6 +424,14 @@ fun SettingsScreen(
                             title = stringResource(R.string.wifi_sync_label),
                             subtitle = stringResource(R.string.wifi_sync_desc),
                             onClick = onNavigateToWifiSync,
+                        )
+                        SettingsItemDivider()
+                        SettingsItemStyled(
+                            icon = Icons.Rounded.Star,
+                            iconGradient = listOf(Color(0xFFFFB800), Color(0xFFFF9800)),
+                            title = stringResource(R.string.rate_app_label),
+                            subtitle = stringResource(R.string.rate_app_desc),
+                            onClick = onRateApp,
                         )
                         SettingsItemDivider()
                         SettingsItemStyled(

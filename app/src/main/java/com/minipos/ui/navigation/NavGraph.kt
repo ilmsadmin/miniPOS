@@ -6,6 +6,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -45,6 +46,8 @@ fun MiniPosNavGraph(
     startDestination: String,
     onLogout: () -> Unit = {},
     onSwitchUser: () -> Unit = {},
+    onSuccessAction: () -> Unit = {},
+    onRateApp: () -> Unit = {},
 ) {
     NavHost(
         navController = navController,
@@ -76,6 +79,8 @@ fun MiniPosNavGraph(
             )
         }
         composable(Screen.PosStep5.route) {
+            // Successful order completion → notify rating manager
+            LaunchedEffect(Unit) { onSuccessAction() }
             PosStep5Screen(
                 onNewOrder = {
                     navController.navigate(Screen.Home.route) {
@@ -308,6 +313,7 @@ fun MiniPosNavGraph(
                 onBack = { navController.popBackStack() },
                 onNavigateToStoreSettings = { navController.navigate(Screen.StoreSettings.route) },
                 onNavigateToWifiSync = { navController.navigate(Screen.WifiSync.route) },
+                onRateApp = onRateApp,
             )
         }
 

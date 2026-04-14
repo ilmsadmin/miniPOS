@@ -1519,6 +1519,25 @@
     <string name="sa_audit_export_error">Xuất báo cáo kiểm kho thất bại</string>
     <string name="sa_diff_reason_title">Lý do chênh lệch</string>
 
+    <!-- App Rating -->
+    <string name="rate_app_label">Đánh giá ứng dụng</string>
+    <string name="rate_app_desc">Cho chúng tôi biết bạn nghĩ gì về ViPOS</string>
+    <string name="rating_title">Bạn thấy ViPOS thế nào?</string>
+    <string name="rating_subtitle">Đánh giá của bạn giúp chúng tôi cải thiện.\nBạn đánh giá trải nghiệm bao nhiêu sao?</string>
+    <string name="rating_1_star">Chúng tôi rất tiếc 😔\nHãy cho chúng tôi biết vấn đề nhé.</string>
+    <string name="rating_2_star">Chúng tôi có thể làm tốt hơn 😕\nHãy cho chúng tôi biết cần cải thiện gì.</string>
+    <string name="rating_3_star">Cảm ơn bạn đã góp ý 🤔\nChúng tôi sẽ cải thiện thêm.</string>
+    <string name="rating_4_star">Vui vì bạn thích! 😊\nĐánh giá trên Store giúp chúng tôi rất nhiều!</string>
+    <string name="rating_5_star">Tuyệt vời! Bạn là số 1! 🎉\nHãy chia sẻ trên Play Store nhé!</string>
+    <string name="rating_submit_positive">Đánh giá trên Play Store ⭐</string>
+    <string name="rating_submit_feedback">Gửi phản hồi ✉️</string>
+    <string name="rating_later">Để sau</string>
+    <string name="rating_thank_you_title">Cảm ơn bạn! ❤️</string>
+    <string name="rating_thank_you_message">Phản hồi của bạn rất có ý nghĩa.\nChúng tôi sẽ tiếp tục cải thiện ViPOS!</string>
+    <string name="rating_email_subject">[ViPOS Phản hồi] Đánh giá: %1$d/5</string>
+    <string name="rating_email_body_hint">Hãy cho chúng tôi biết bạn muốn cải thiện điều gì:\n\n</string>
+    <string name="rating_choose_email_app">Gửi phản hồi qua</string>
+
     <!-- Password management -->
     <string name="change_password_title">Đổi mật khẩu</string>
     <string name="set_password_title">Tạo mật khẩu</string>

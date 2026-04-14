@@ -164,6 +164,10 @@ dependencies {
     // Coil (Image loading)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // Google Play In-App Review
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.google.android.play:review-ktx:2.0.1")
+
     // Charts
     implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
 

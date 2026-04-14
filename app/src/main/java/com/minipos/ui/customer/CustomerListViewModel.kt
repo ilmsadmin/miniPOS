@@ -3,6 +3,7 @@ package com.minipos.ui.customer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minipos.core.utils.UuidGenerator
+import com.minipos.core.rating.RatingManager
 import com.minipos.domain.model.Customer
 import com.minipos.domain.model.Result
 import com.minipos.domain.repository.CustomerRepository
@@ -59,6 +60,7 @@ data class CustomerListState(
 class CustomerListViewModel @Inject constructor(
     private val storeRepository: StoreRepository,
     private val customerRepository: CustomerRepository,
+    private val ratingManager: RatingManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CustomerListState())
@@ -141,6 +143,7 @@ class CustomerListViewModel @Inject constructor(
             if (result is Result.Success) {
                 dismissForm()
                 loadData()
+                ratingManager.onSuccessAction()
             }
         }
     }
@@ -209,6 +212,7 @@ class CustomerListViewModel @Inject constructor(
             if (result is Result.Success) {
                 _saveSuccess.emit(Unit)
                 loadData()
+                ratingManager.onSuccessAction()
             }
         }
     }
