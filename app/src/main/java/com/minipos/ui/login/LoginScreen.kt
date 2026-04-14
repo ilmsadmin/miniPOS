@@ -14,6 +14,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -142,7 +144,7 @@ fun LoginScreen(
                             .background(AppColors.InputBackground),
                     ) {
                         Icon(
-                            Icons.Rounded.ArrowBack,
+                            Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = stringResource(R.string.back),
                             tint = AppColors.TextPrimary,
                             modifier = Modifier.size(20.dp),
@@ -515,7 +517,7 @@ private fun PinInputContent(
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.ArrowBack, contentDescription = null, tint = AppColors.TextSecondary, modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null, tint = AppColors.TextSecondary, modifier = Modifier.size(20.dp))
             }
         }
         Spacer(Modifier.height(20.dp))
@@ -692,7 +694,7 @@ private fun PinInputContent(
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Rounded.Login,
+                        Icons.AutoMirrored.Rounded.Login,
                         contentDescription = null,
                         tint = if (buttonEnabled) Color.White else AppColors.TextTertiary,
                         modifier = Modifier.size(22.dp),
