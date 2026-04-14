@@ -1,5 +1,6 @@
 package com.minipos.ui.onboarding
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,6 +53,7 @@ fun CreateStoreScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
@@ -246,7 +249,40 @@ private fun StoreInfoStep(state: CreateStoreState, viewModel: CreateStoreViewMod
             { Text(stringResource(R.string.error_password_mismatch), color = AppColors.Error) }
         } else null,
     )
-    Spacer(modifier = Modifier.height(32.dp))
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // ── Data storage warning ──
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = AppColors.Warning.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(12.dp),
+            )
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            Icons.Rounded.WarningAmber,
+            contentDescription = null,
+            tint = AppColors.Warning,
+            modifier = Modifier.size(24.dp),
+        )
+        Column {
+            Text(
+                text = stringResource(R.string.onboarding_data_warning_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = AppColors.Warning,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.onboarding_data_warning_message),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.TextSecondary,
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
 
     Button(
         onClick = { viewModel.createStore() },

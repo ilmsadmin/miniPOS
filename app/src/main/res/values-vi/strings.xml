@@ -406,7 +406,7 @@
     <string name="share_receipt_title">Chia sẻ hóa đơn</string>
     <string name="select_share_format">Chọn định dạng chia sẻ:</string>
     <string name="share_pdf">Chia sẻ PDF</string>
-    <string name="share_pdf_desc">Gửi hóa đơn dạng file PDF đẹp</string>
+    <string name="share_receipt_pdf_desc">Gửi hóa đơn dạng file PDF đẹp</string>
     <string name="share_text">Chia sẻ văn bản</string>
     <string name="share_text_desc">Gửi qua Zalo, SMS, Messenger…</string>
     <string name="order_not_found">Không tìm thấy đơn hàng</string>
@@ -481,6 +481,8 @@
     <string name="admin_password_hint">Tối thiểu 6 ký tự, dùng cho thao tác nhạy cảm</string>
     <string name="confirm_password_required">Xác nhận mật khẩu *</string>
     <string name="create_store_btn">🏪  Tạo cửa hàng</string>
+    <string name="onboarding_data_warning_title">⚠️ Lưu ý quan trọng</string>
+    <string name="onboarding_data_warning_message">Toàn bộ dữ liệu của bạn chỉ được lưu trữ trên thiết bị này. Ứng dụng hoàn toàn không lưu trữ dữ liệu trực tuyến. Hãy ghi nhớ mã PIN và mật khẩu — nếu quên, dữ liệu không thể khôi phục.</string>
 
     <!-- Create Store section header -->
     <string name="create_owner_account_section">Tài khoản chủ cửa hàng</string>

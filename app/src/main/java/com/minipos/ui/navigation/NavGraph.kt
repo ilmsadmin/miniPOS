@@ -6,9 +6,12 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.minipos.ui.home.HomeScreen
 import com.minipos.ui.pos.*
 import com.minipos.ui.product.ProductListScreen
@@ -29,6 +32,7 @@ import com.minipos.ui.purchase.PurchaseOrderDetailScreen
 import com.minipos.ui.report.ReportScreen
 import com.minipos.ui.settings.SettingsScreen
 import com.minipos.ui.barcode.BarcodeScreen
+import com.minipos.ui.barcode.BarcodePreviewScreen
 import com.minipos.ui.scan.ScanToPosScreen
 import com.minipos.ui.home.StoreManagementScreen
 import com.minipos.ui.stockmanagement.StockManagementScreen
@@ -314,11 +318,34 @@ fun MiniPosNavGraph(
             )
         }
 
-        // Barcode management
-        composable(Screen.BarcodeManagement.route) {
-            BarcodeScreen(
-                onBack = { navController.popBackStack() },
-            )
+        // Barcode management (nested graph to share ViewModel)
+        navigation(
+            startDestination = Screen.BarcodeManagement.route,
+            route = Screen.BarcodeGraph.route,
+        ) {
+            composable(Screen.BarcodeManagement.route) { entry ->
+                val parentEntry = remember(entry) {
+                    navController.getBackStackEntry(Screen.BarcodeGraph.route)
+                }
+                val sharedViewModel: com.minipos.ui.barcode.BarcodeViewModel = hiltViewModel(parentEntry)
+                BarcodeScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPreview = { navController.navigate(Screen.BarcodePreview.route) },
+                    viewModel = sharedViewModel,
+                )
+            }
+
+            // Barcode preview (full screen)
+            composable(Screen.BarcodePreview.route) { entry ->
+                val parentEntry = remember(entry) {
+                    navController.getBackStackEntry(Screen.BarcodeGraph.route)
+                }
+                val sharedViewModel: com.minipos.ui.barcode.BarcodeViewModel = hiltViewModel(parentEntry)
+                BarcodePreviewScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = sharedViewModel,
+                )
+            }
         }
 
         // Store Management hub

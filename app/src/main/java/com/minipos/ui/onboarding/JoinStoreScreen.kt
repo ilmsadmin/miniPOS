@@ -126,6 +126,7 @@ private fun EnterCodeStep(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

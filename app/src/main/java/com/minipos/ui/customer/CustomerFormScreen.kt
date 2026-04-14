@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,7 +62,8 @@ fun CustomerFormScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.Background)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .imePadding(),
     ) {
         // ─── Top Bar ───
         Row(
@@ -389,7 +391,14 @@ fun FormTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = AppColors.TextTertiary) },
+            placeholder = {
+                Text(
+                    placeholder,
+                    color = AppColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
             singleLine = singleLine,
             readOnly = readOnly,
@@ -421,7 +430,13 @@ fun FormTextArea(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = AppColors.TextTertiary) },
+            placeholder = {
+                Text(
+                    placeholder,
+                    color = AppColors.TextTertiary,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 80.dp),

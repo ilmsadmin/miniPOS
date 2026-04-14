@@ -114,7 +114,8 @@ fun CategoryFormScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.Background)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .imePadding(),
     ) {
         // ─── Top Bar ───
         Row(

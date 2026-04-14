@@ -58,7 +58,9 @@ sealed class Screen(val route: String) {
     object StoreSettings : Screen("settings/store")
 
     // Barcode
+    object BarcodeGraph : Screen("barcode_graph")
     object BarcodeManagement : Screen("barcode")
+    object BarcodePreview : Screen("barcode/preview")
 
     // Store Management hub
     object StoreManagement : Screen("store_management")

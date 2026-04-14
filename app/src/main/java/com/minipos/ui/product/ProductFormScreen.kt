@@ -163,7 +163,8 @@ fun ProductFormScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .imePadding(),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // ── Top Bar ──
@@ -221,82 +222,76 @@ fun ProductFormScreen(
                         }
                     }
 
-                    // SKU + Barcode Row
+                    // SKU
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        FormField(
+                            label = stringResource(R.string.pf_sku),
                         ) {
-                            // SKU
-                            Box(modifier = Modifier.weight(1f)) {
-                                FormField(
-                                    label = stringResource(R.string.pf_sku),
-                                ) {
+                            FormInput(
+                                value = formState.sku,
+                                onValueChange = { viewModel.updateFormField { copy(sku = it) } },
+                                placeholder = stringResource(R.string.pf_sku_hint),
+                            )
+                        }
+                    }
+
+                    // Barcode with scan + generate buttons
+                    item {
+                        FormField(
+                            label = stringResource(R.string.pf_barcode),
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
                                     FormInput(
-                                        value = formState.sku,
-                                        onValueChange = { viewModel.updateFormField { copy(sku = it) } },
-                                        placeholder = stringResource(R.string.pf_sku_hint),
+                                        value = formState.barcode,
+                                        onValueChange = { viewModel.updateFormField { copy(barcode = it) } },
+                                        placeholder = stringResource(R.string.pf_barcode_hint),
                                     )
                                 }
-                            }
-                            // Barcode with scan + generate buttons
-                            Box(modifier = Modifier.weight(1f)) {
-                                FormField(
-                                    label = stringResource(R.string.pf_barcode),
+                                // Generate barcode button
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                        .border(
+                                            1.dp,
+                                            AppColors.Border,
+                                            RoundedCornerShape(MiniPosTokens.RadiusLg),
+                                        )
+                                        .background(AppColors.Surface)
+                                        .clickable { viewModel.generateBarcode() },
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    ) {
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            FormInput(
-                                                value = formState.barcode,
-                                                onValueChange = { viewModel.updateFormField { copy(barcode = it) } },
-                                                placeholder = stringResource(R.string.pf_barcode_hint),
-                                            )
-                                        }
-                                        // Generate barcode button
-                                        Box(
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
-                                                .border(
-                                                    1.dp,
-                                                    AppColors.Border,
-                                                    RoundedCornerShape(MiniPosTokens.RadiusLg),
-                                                )
-                                                .background(AppColors.Surface)
-                                                .clickable { viewModel.generateBarcode() },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Default.AutoAwesome,
-                                                contentDescription = stringResource(R.string.pf_generate_barcode),
-                                                tint = AppColors.Accent,
-                                                modifier = Modifier.size(20.dp),
-                                            )
-                                        }
-                                        // Scan icon button
-                                        Box(
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
-                                                .border(
-                                                    1.dp,
-                                                    AppColors.Border,
-                                                    RoundedCornerShape(MiniPosTokens.RadiusLg),
-                                                )
-                                                .background(AppColors.Surface)
-                                                .clickable { viewModel.showBarcodeScanner() },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Default.QrCodeScanner,
-                                                contentDescription = stringResource(R.string.pf_scan_barcode),
-                                                tint = AppColors.TextSecondary,
-                                                modifier = Modifier.size(22.dp),
-                                            )
-                                        }
-                                    }
+                                    Icon(
+                                        Icons.Default.AutoAwesome,
+                                        contentDescription = stringResource(R.string.pf_generate_barcode),
+                                        tint = AppColors.Accent,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                                // Scan icon button
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                        .border(
+                                            1.dp,
+                                            AppColors.Border,
+                                            RoundedCornerShape(MiniPosTokens.RadiusLg),
+                                        )
+                                        .background(AppColors.Surface)
+                                        .clickable { viewModel.showBarcodeScanner() },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Default.QrCodeScanner,
+                                        contentDescription = stringResource(R.string.pf_scan_barcode),
+                                        tint = AppColors.TextSecondary,
+                                        modifier = Modifier.size(22.dp),
+                                    )
                                 }
                             }
                         }
@@ -1005,6 +1000,8 @@ private fun FormInput(
                     text = placeholder,
                     fontSize = 14.sp,
                     color = AppColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             } else {
                 Text(
@@ -1024,6 +1021,8 @@ private fun FormInput(
                     text = placeholder,
                     fontSize = 14.sp,
                     color = AppColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             BasicTextField(

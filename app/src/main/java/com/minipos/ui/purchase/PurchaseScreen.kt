@@ -148,7 +148,8 @@ fun PurchaseScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .imePadding(),
             ) {
                 // ── Top bar ──
                 MiniPosTopBar(

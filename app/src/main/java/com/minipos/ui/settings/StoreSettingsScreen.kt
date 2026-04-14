@@ -121,7 +121,8 @@ fun StoreSettingsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .imePadding(),
             ) {
                 // ── Top bar with back + save ──
                 StoreSettingsTopBar(

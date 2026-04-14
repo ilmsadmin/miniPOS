@@ -258,6 +258,11 @@ class BarcodeViewModel @Inject constructor(
      */
     fun generateBarcodes() {
         viewModelScope.launch {
+            generateBarcodesSync()
+        }
+    }
+
+    private suspend fun generateBarcodesSync() {
             _state.update { it.copy(isGenerating = true, error = null) }
 
             try {
@@ -265,7 +270,7 @@ class BarcodeViewModel @Inject constructor(
                 val selected = state.products.filter { it.isSelected && !it.hasBarcode && it.generatedBarcode == null }
                 if (selected.isEmpty()) {
                     _state.update { it.copy(isGenerating = false, message = str(R.string.no_products_need_barcode)) }
-                    return@launch
+                    return
                 }
 
                 val isQr = state.barcodeType == BarcodeType.QR_CODE
@@ -284,7 +289,6 @@ class BarcodeViewModel @Inject constructor(
                 for (item in selected) {
                     seq++
                     val barcode = if (isQr) {
-                        // For QR: use EAN-13 as content so it's still scannable as product identifier
                         BarcodeGenerator.generateEan13(storeCode, seq)
                     } else {
                         BarcodeGenerator.generateEan13(storeCode, seq)
@@ -292,14 +296,12 @@ class BarcodeViewModel @Inject constructor(
                     generatedMap[item.itemId] = barcode
 
                     if (item.variant != null) {
-                        // Save barcode to variant
                         val updatedVariant = item.variant.copy(
                             barcode = barcode,
                             updatedAt = System.currentTimeMillis(),
                         )
                         productRepository.updateVariant(updatedVariant)
                     } else {
-                        // Save barcode to product
                         val updatedProduct = item.product.copy(
                             barcode = barcode,
                             updatedAt = System.currentTimeMillis(),
@@ -332,7 +334,6 @@ class BarcodeViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.update { it.copy(isGenerating = false, error = str(R.string.error_generate_barcode, e.message ?: "")) }
             }
-        }
     }
 
     /**
@@ -340,6 +341,11 @@ class BarcodeViewModel @Inject constructor(
      */
     fun showBarcodePreview() {
         viewModelScope.launch {
+            showBarcodePreviewSync()
+        }
+    }
+
+    private suspend fun showBarcodePreviewSync() {
             _state.update { it.copy(isGenerating = true) }
 
             val currentState = _state.value
@@ -349,7 +355,7 @@ class BarcodeViewModel @Inject constructor(
 
             if (selectedWithBarcode.isEmpty()) {
                 _state.update { it.copy(isGenerating = false, error = str(R.string.select_products_with_barcode)) }
-                return@launch
+                return
             }
 
             val isQr = currentState.barcodeType == BarcodeType.QR_CODE
@@ -377,11 +383,15 @@ class BarcodeViewModel @Inject constructor(
                     labelBitmaps = labels,
                 )
             }
-        }
     }
 
     fun dismissPreview() {
         _state.update { it.copy(showPreview = false, previewBitmap = null) }
+    }
+
+    /** Called after navigation to BarcodePreviewScreen so showPreview resets for next time */
+    fun onPreviewNavigated() {
+        _state.update { it.copy(showPreview = false) }
     }
 
     /**
@@ -540,20 +550,20 @@ class BarcodeViewModel @Inject constructor(
     }
 
     fun printLabels(context: Context) {
-        val selected = _state.value.selectedProducts
-        if (selected.isEmpty()) {
-            _state.update { it.copy(error = str(R.string.select_products_with_barcode)) }
-            return
-        }
+        viewModelScope.launch {
+            val selected = _state.value.selectedProducts
+            if (selected.isEmpty()) {
+                _state.update { it.copy(error = str(R.string.select_products_with_barcode)) }
+                return@launch
+            }
 
-        // First ensure all selected products have barcodes
-        val needGenerate = selected.filter { !it.hasBarcode && it.generatedBarcode == null }
-        if (needGenerate.isNotEmpty()) {
-            // Generate barcodes first, then show preview
-            generateBarcodes()
-        }
+            // If any selected product has no barcode, generate first then preview
+            val needGenerate = selected.filter { !it.hasBarcode && it.generatedBarcode == null }
+            if (needGenerate.isNotEmpty()) {
+                generateBarcodesSync()
+            }
 
-        // Show preview with generated labels
-        showBarcodePreview()
+            showBarcodePreviewSync()
+        }
     }
 }

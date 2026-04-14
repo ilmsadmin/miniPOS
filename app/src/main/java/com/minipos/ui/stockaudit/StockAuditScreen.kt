@@ -102,7 +102,8 @@ fun StockAuditScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .imePadding(),
         ) {
             // ── Top Bar ──
             MiniPosTopBar(

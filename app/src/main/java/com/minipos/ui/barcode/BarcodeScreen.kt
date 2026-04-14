@@ -26,9 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.core.view.WindowCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,6 +47,7 @@ import com.minipos.ui.components.*
 @Composable
 fun BarcodeScreen(
     onBack: () -> Unit,
+    onNavigateToPreview: () -> Unit,
     viewModel: BarcodeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -64,16 +63,12 @@ fun BarcodeScreen(
         }
     }
 
-    // Preview dialog
-    if (state.showPreview && state.previewBitmap != null) {
-        BarcodeLabelPreviewDialog(
-            bitmap = state.previewBitmap!!,
-            isPrinting = state.isPrinting,
-            onDismiss = { viewModel.dismissPreview() },
-            onSharePdf = { viewModel.shareAsPdf(context) },
-            onShareImage = { viewModel.shareAsImage(context) },
-            onPrintBluetooth = { viewModel.showPrinterPicker(context) },
-        )
+    // Navigate to preview screen when bitmap is ready
+    LaunchedEffect(state.showPreview, state.previewBitmap) {
+        if (state.showPreview && state.previewBitmap != null) {
+            viewModel.onPreviewNavigated()
+            onNavigateToPreview()
+        }
     }
 
     // Printer picker dialog
@@ -299,7 +294,7 @@ fun BarcodeScreen(
                                 RoundedCornerShape(MiniPosTokens.Radius2xl)
                             )
                             .clip(RoundedCornerShape(MiniPosTokens.Radius2xl))
-                            .clickable(enabled = state.selectedCount > 0) {
+                            .clickable(enabled = state.selectedProducts.isNotEmpty()) {
                                 viewModel.saveBarcodesAsImage(context)
                             },
                         contentAlignment = Alignment.Center,
@@ -331,7 +326,7 @@ fun BarcodeScreen(
                             .height(52.dp)
                             .clip(RoundedCornerShape(MiniPosTokens.Radius2xl))
                             .background(MiniPosGradients.primary())
-                            .clickable(enabled = state.selectedCount > 0) {
+                            .clickable(enabled = state.selectedProducts.isNotEmpty()) {
                                 viewModel.printLabels(context)
                             },
                         contentAlignment = Alignment.Center,
@@ -828,242 +823,13 @@ private fun PickerProductItem(
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BARCODE LABEL PREVIEW DIALOG (kept from old design)
-// ═══════════════════════════════════════════════════════════════
-
-@Composable
-private fun BarcodeLabelPreviewDialog(
-    bitmap: android.graphics.Bitmap,
-    isPrinting: Boolean,
-    onDismiss: () -> Unit,
-    onSharePdf: () -> Unit,
-    onShareImage: () -> Unit,
-    onPrintBluetooth: () -> Unit,
-) {
-    var showShareSheet by remember { mutableStateOf(false) }
-
-    // ── Share format picker bottom sheet ──
-    if (showShareSheet) {
-        MiniPosBottomSheet(
-            visible = true,
-            title = stringResource(R.string.share_format_title),
-            onDismiss = { showShareSheet = false },
-        ) {
-            // PDF option
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        showShareSheet = false
-                        onSharePdf()
-                    }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(AppColors.Primary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.PictureAsPdf,
-                        contentDescription = null,
-                        tint = AppColors.Primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Column {
-                    Text(
-                        stringResource(R.string.share_pdf_label),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        color = AppColors.TextPrimary,
-                    )
-                    Text(
-                        stringResource(R.string.share_pdf_desc),
-                        fontSize = 13.sp,
-                        color = AppColors.TextSecondary,
-                    )
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = AppColors.Divider)
-            // Image option
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        showShareSheet = false
-                        onShareImage()
-                    }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(AppColors.Primary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = null,
-                        tint = AppColors.Primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Column {
-                    Text(
-                        stringResource(R.string.share_image_label),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        color = AppColors.TextPrimary,
-                    )
-                    Text(
-                        stringResource(R.string.share_image_desc),
-                        fontSize = 13.sp,
-                        color = AppColors.TextSecondary,
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-
-    // ── Full-screen preview dialog ──
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-        ),
-    ) {
-        val view = LocalView.current
-        val dialogWindow = remember(view) {
-            (view.context as? android.app.Dialog)?.window
-        }
-        SideEffect {
-            dialogWindow?.let { win ->
-                WindowCompat.setDecorFitsSystemWindows(win, false)
-            }
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(AppColors.Background)
-                .statusBarsPadding(),
-        ) {
-            // ── Top bar ──
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(AppColors.Background)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource(R.string.close),
-                        tint = AppColors.TextPrimary,
-                    )
-                }
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    stringResource(R.string.barcode_preview),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AppColors.TextPrimary,
-                )
-            }
-            HorizontalDivider(color = AppColors.Divider)
-
-            // ── Scrollable preview ──
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(AppColors.Background),
-                contentPadding = PaddingValues(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                item {
-                    Card(
-                        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                    ) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "Barcode labels preview",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.White)
-                                .padding(8.dp),
-                            contentScale = ContentScale.FillWidth,
-                        )
-                    }
-                }
-            }
-
-            // ── Bottom action bar — 2 buttons only ──
-            HorizontalDivider(color = AppColors.Divider)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(AppColors.Surface)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Share button
-                OutlinedButton(
-                    onClick = { showShareSheet = true },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Primary),
-                ) {
-                    Icon(
-                        Icons.Default.Share,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = AppColors.Primary,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.share),
-                        color = AppColors.Primary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-                // Print button
-                MiniPosGradientButton(
-                    text = if (isPrinting) stringResource(R.string.printing) else stringResource(R.string.print_via_bluetooth),
-                    onClick = onPrintBluetooth,
-                    enabled = !isPrinting,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    icon = Icons.Default.Print,
-                )
-            }
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
 // PRINTER PICKER DIALOG (kept from old design)
 // ═══════════════════════════════════════════════════════════════
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PrinterPickerDialog(
+internal fun PrinterPickerDialog(
     devices: List<android.bluetooth.BluetoothDevice>,
     onSelect: (android.bluetooth.BluetoothDevice) -> Unit,
     onDismiss: () -> Unit,

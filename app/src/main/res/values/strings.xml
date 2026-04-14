@@ -420,7 +420,7 @@
     <string name="share_receipt_title">Share Receipt</string>
     <string name="select_share_format">Select share format:</string>
     <string name="share_pdf">Share PDF</string>
-    <string name="share_pdf_desc">Send receipt as a beautiful PDF file</string>
+    <string name="share_receipt_pdf_desc">Send receipt as a beautiful PDF file</string>
     <string name="share_text">Share Text</string>
     <string name="share_text_desc">Send via Zalo, SMS, Messenger…</string>
     <string name="order_not_found">Order not found</string>
@@ -495,6 +495,8 @@
     <string name="admin_password_hint">At least 6 characters, for sensitive operations</string>
     <string name="confirm_password_required">Confirm Password *</string>
     <string name="create_store_btn">🏪  Create Store</string>
+    <string name="onboarding_data_warning_title">⚠️ Important Notice</string>
+    <string name="onboarding_data_warning_message">All your data is stored locally on this device only. The app does not store any data online. Please remember your PIN and password — if you lose them, your data cannot be recovered.</string>
 
     <!-- Create Store section header -->
     <string name="create_owner_account_section">Owner Account</string>
