@@ -1,5 +1,10 @@
 package com.minipos.ui.navigation
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -40,8 +45,18 @@ fun MiniPosNavGraph(
     NavHost(
         navController = navController,
         startDestination = startDestination,
+        enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 10 } },
+        exitTransition = { fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { -it / 10 } },
+        popEnterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { -it / 10 } },
+        popExitTransition = { fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { it / 10 } },
     ) {
-        composable(Screen.Home.route) {
+        composable(
+            route = Screen.Home.route,
+            enterTransition = { fadeIn(tween(300)) },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition = { fadeOut(tween(200)) },
+        ) {
             HomeScreen(
                 onNavigate = { route -> navController.navigate(route) },
                 onLogout = onLogout,

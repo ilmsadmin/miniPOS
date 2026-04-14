@@ -15,11 +15,12 @@ import com.minipos.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class ForgotPinStep { ENTER_PASSWORD, RESET_PIN }
+enum class ForgotPinStep { ENTER_PASSWORD, SET_PASSWORD, RESET_PIN }
 
 data class LoginState(
     val users: List<User> = emptyList(),
@@ -38,6 +39,7 @@ data class LoginState(
     val forgotPinStep: ForgotPinStep = ForgotPinStep.ENTER_PASSWORD,
     val ownerHasPassword: Boolean = false,  // whether selected owner has a password set
     val password: String = "",
+    val newPassword: String = "",           // used in SET_PASSWORD step
     val newPin: String = "",
 )
 
@@ -55,6 +57,15 @@ class LoginViewModel @Inject constructor(
 
     init {
         loadUsers()
+        // Observe session changes so "current user" badge always reflects the live logged-in user.
+        // This fixes the stale-badge bug when the user switches accounts and comes back to this screen.
+        viewModelScope.launch {
+            combine(appPreferences.isLoggedIn, appPreferences.currentUserId) { loggedIn, userId ->
+                if (loggedIn) userId else null
+            }.collect { liveCurrentUserId ->
+                _state.update { it.copy(currentUserId = liveCurrentUserId) }
+            }
+        }
     }
 
     private fun loadUsers() {
@@ -67,10 +78,6 @@ class LoginViewModel @Inject constructor(
             // Dùng getAllUsers để hiển thị tất cả tài khoản (kể cả inactive).
             // AuthRepository.login() sẽ chặn user bị vô hiệu hóa khi họ cố đăng nhập.
             val users = userRepository.getAllUsers(store.id)
-            // Chỉ hiện badge "Đang dùng" nếu user thực sự đang đăng nhập (isLoggedIn = true)
-            // Không dùng currentUserId khi app mới khởi động mà chưa login
-            val isLoggedIn = appPreferences.isLoggedInSync()
-            val currentUserId = if (isLoggedIn) appPreferences.getCurrentUserIdSync() else null
 
             // Sort: OWNER first, then MANAGER, then CASHIER; each group sorted by name
             val sorted = users.sortedWith(
@@ -85,7 +92,7 @@ class LoginViewModel @Inject constructor(
                     users = sorted,
                     storeName = store.name,
                     storeCode = store.code,
-                    currentUserId = currentUserId,
+                    // currentUserId is managed by the Flow observer in init — do not overwrite here
                     isLoading = false,
                 )
             }
@@ -112,6 +119,12 @@ class LoginViewModel @Inject constructor(
 
     fun clearSelection() {
         _state.update { it.copy(selectedUser = null, pin = "", error = null) }
+    }
+
+    /** Re-loads users and resets selection — called each time LoginScreen enters composition */
+    fun refresh() {
+        _state.update { it.copy(selectedUser = null, pin = "", error = null, isLoading = true) }
+        loadUsers()
     }
 
     fun onPinChanged(pin: String) {
@@ -158,17 +171,24 @@ class LoginViewModel @Inject constructor(
     // ── Forgot PIN flow ────────────────────────────────────────────────
 
     fun showForgotPin() {
+        // Always start with authentication step:
+        // - If owner has a password → ENTER_PASSWORD (verify existing password)
+        // - If owner has no password yet → SET_PASSWORD (must create one first)
         val hasPassword = _state.value.ownerHasPassword
-        val initialStep = if (hasPassword) ForgotPinStep.ENTER_PASSWORD else ForgotPinStep.RESET_PIN
-        _state.update { it.copy(showForgotPin = true, forgotPinStep = initialStep, password = "", newPin = "", error = null) }
+        val initialStep = if (hasPassword) ForgotPinStep.ENTER_PASSWORD else ForgotPinStep.SET_PASSWORD
+        _state.update { it.copy(showForgotPin = true, forgotPinStep = initialStep, password = "", newPassword = "", newPin = "", error = null) }
     }
 
     fun hideForgotPin() {
-        _state.update { it.copy(showForgotPin = false, password = "", newPin = "", error = null) }
+        _state.update { it.copy(showForgotPin = false, password = "", newPassword = "", newPin = "", error = null) }
     }
 
     fun onPasswordChanged(value: String) {
         _state.update { it.copy(password = value, error = null) }
+    }
+
+    fun onNewPasswordChanged(value: String) {
+        _state.update { it.copy(newPassword = value, error = null) }
     }
 
     fun onNewPinChanged(value: String) {
@@ -185,6 +205,36 @@ class LoginViewModel @Inject constructor(
                 is Result.Success -> {
                     // Password correct → move to reset-PIN step
                     _state.update { it.copy(isLoading = false, forgotPinStep = ForgotPinStep.RESET_PIN, error = null) }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(isLoading = false, error = result.message) }
+                }
+            }
+        }
+    }
+
+    /** Step SET_PASSWORD: owner has no password yet → set one, then proceed to reset PIN */
+    fun setPasswordAndProceed() {
+        val user = _state.value.selectedUser ?: return
+        val newPassword = _state.value.newPassword
+        if (newPassword.length < 6) {
+            _state.update { it.copy(error = app.getString(R.string.error_password_too_short)) }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            when (val result = userRepository.setPassword(user.id, newPassword)) {
+                is Result.Success -> {
+                    // Password saved → promote to ownerHasPassword=true and keep as verification password
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            ownerHasPassword = true,
+                            password = newPassword,          // reuse as verified credential for resetPinAndLogin
+                            forgotPinStep = ForgotPinStep.RESET_PIN,
+                            error = null,
+                        )
+                    }
                 }
                 is Result.Error -> {
                     _state.update { it.copy(isLoading = false, error = result.message) }

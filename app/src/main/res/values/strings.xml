@@ -185,6 +185,9 @@
     <string name="login_use_password">Đăng nhập bằng mật khẩu</string>
     <string name="login_enter_password">Nhập mật khẩu của %1$s</string>
     <string name="login_password_hint">Mật khẩu chủ cửa hàng</string>
+    <string name="login_set_password_desc">%1$s chưa đặt mật khẩu. Hãy tạo mật khẩu để bảo vệ tài khoản trước khi đặt lại PIN.</string>
+    <string name="login_new_password_hint">Mật khẩu mới (tối thiểu 6 ký tự)</string>
+    <string name="login_set_password_btn">Tạo mật khẩu &amp; Tiếp tục</string>
     <string name="login_reset_pin_title">Đặt lại PIN</string>
     <string name="login_reset_pin_new">PIN mới (4–6 chữ số)</string>
     <string name="login_reset_pin_btn">Đặt lại PIN &amp; Đăng nhập</string>
@@ -214,6 +217,7 @@
     <string name="error_required">This field is required</string>
     <string name="error_pin_length">PIN must be 4–6 digits</string>
     <string name="error_password_length">Password must be at least 6 characters</string>
+    <string name="error_password_too_short">Mật khẩu phải có ít nhất 6 ký tự</string>
     <string name="error_password_mismatch">Passwords do not match</string>
     <string name="loading">Loading…</string>
     <string name="processing">Processing…</string>

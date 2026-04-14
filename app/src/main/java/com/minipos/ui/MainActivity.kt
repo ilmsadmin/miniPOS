@@ -4,9 +4,12 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -51,8 +54,7 @@ class MainActivity : AppCompatActivity() {
             MiniPosTheme(darkTheme = isDark) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .imePadding(),
+                        .fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     MiniPosApp()
@@ -68,59 +70,83 @@ fun MiniPosApp() {
     val appState by viewModel.appState.collectAsState()
     val navController = rememberNavController()
 
-    when (appState) {
-        AppState.Splash -> {
-            SplashScreen(
-                onSplashFinished = { viewModel.onSplashFinished() },
-            )
-        }
-        AppState.Onboarding -> {
-            val onboardingNavController = rememberNavController()
-            NavHost(
-                navController = onboardingNavController,
-                startDestination = Screen.Onboarding.route,
-            ) {
-                composable(Screen.Onboarding.route) {
-                    OnboardingScreen(
-                        onCreateStore = {
-                            onboardingNavController.navigate(Screen.CreateStore.route)
-                        },
-                        onJoinStore = {
-                            onboardingNavController.navigate(Screen.JoinStore.route)
-                        },
-                    )
+    AnimatedContent(
+        targetState = appState,
+        transitionSpec = {
+            when {
+                // Home → Login (Switch User): slide in từ trái, giống popBack
+                initialState == AppState.Home && targetState == AppState.Login -> {
+                    (fadeIn(tween(220)) + slideInHorizontally(tween(220)) { -it / 10 }) togetherWith
+                        (fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { it / 10 })
                 }
-                composable(Screen.CreateStore.route) {
-                    CreateStoreScreen(
-                        onStoreCreated = { viewModel.onOnboardingComplete() },
-                        onBack = { onboardingNavController.popBackStack() },
-                    )
+                // Login → Home (sau đăng nhập): slide in từ phải
+                initialState == AppState.Login && targetState == AppState.Home -> {
+                    (fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 10 }) togetherWith
+                        (fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { -it / 10 })
                 }
-                composable(Screen.JoinStore.route) {
-                    JoinStoreScreen(
-                        onBack = { onboardingNavController.popBackStack() },
-                        onJoinComplete = { viewModel.onOnboardingComplete() },
-                    )
+                // Các chuyển đổi khác (Splash, Onboarding...): fade đơn giản
+                else -> {
+                    fadeIn(tween(350, easing = LinearOutSlowInEasing)) togetherWith
+                        fadeOut(tween(250, easing = FastOutLinearInEasing))
                 }
             }
-        }
-        AppState.Locked -> {
-            PinLockScreen(onUnlocked = { viewModel.unlock() })
-        }
-        AppState.Login -> {
-            val canGoBack by viewModel.loginCanGoBack.collectAsState()
-            LoginScreen(
-                onLoginSuccess = { viewModel.onLoginSuccess() },
-                onBack = if (canGoBack) ({ viewModel.cancelSwitchUser() }) else null,
-            )
-        }
-        AppState.Home -> {
-            MiniPosNavGraph(
-                navController = navController,
-                startDestination = Screen.Home.route,
-                onLogout = { viewModel.logout() },
-                onSwitchUser = { viewModel.switchUser() },
-            )
+        },
+        label = "app_state_transition",
+    ) { state ->
+        when (state) {
+            AppState.Splash -> {
+                SplashScreen(
+                    onSplashFinished = { viewModel.onSplashFinished() },
+                )
+            }
+            AppState.Onboarding -> {
+                val onboardingNavController = rememberNavController()
+                NavHost(
+                    navController = onboardingNavController,
+                    startDestination = Screen.Onboarding.route,
+                ) {
+                    composable(Screen.Onboarding.route) {
+                        OnboardingScreen(
+                            onCreateStore = {
+                                onboardingNavController.navigate(Screen.CreateStore.route)
+                            },
+                            onJoinStore = {
+                                onboardingNavController.navigate(Screen.JoinStore.route)
+                            },
+                        )
+                    }
+                    composable(Screen.CreateStore.route) {
+                        CreateStoreScreen(
+                            onStoreCreated = { viewModel.onOnboardingComplete() },
+                            onBack = { onboardingNavController.popBackStack() },
+                        )
+                    }
+                    composable(Screen.JoinStore.route) {
+                        JoinStoreScreen(
+                            onBack = { onboardingNavController.popBackStack() },
+                            onJoinComplete = { viewModel.onOnboardingComplete() },
+                        )
+                    }
+                }
+            }
+            AppState.Locked -> {
+                PinLockScreen(onUnlocked = { viewModel.unlock() })
+            }
+            AppState.Login -> {
+                val canGoBack by viewModel.loginCanGoBack.collectAsState()
+                LoginScreen(
+                    onLoginSuccess = { viewModel.onLoginSuccess() },
+                    onBack = if (canGoBack) ({ viewModel.cancelSwitchUser() }) else null,
+                )
+            }
+            AppState.Home -> {
+                MiniPosNavGraph(
+                    navController = navController,
+                    startDestination = Screen.Home.route,
+                    onLogout = { viewModel.logout() },
+                    onSwitchUser = { viewModel.switchUser() },
+                )
+            }
         }
     }
 }

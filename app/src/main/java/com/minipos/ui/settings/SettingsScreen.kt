@@ -277,12 +277,15 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_label),
                     onBack = onBack,
                     actions = {
-                        IconButton(onClick = onNavigateToStoreSettings) {
-                            Icon(
-                                Icons.Rounded.Storefront,
-                                contentDescription = stringResource(R.string.store_settings_title),
-                                tint = AppColors.TextSecondary,
-                            )
+                        // Chỉ OWNER mới được vào cài đặt cửa hàng
+                        if (state.currentUser?.role == UserRole.OWNER) {
+                            IconButton(onClick = onNavigateToStoreSettings) {
+                                Icon(
+                                    Icons.Rounded.Storefront,
+                                    contentDescription = stringResource(R.string.store_settings_title),
+                                    tint = AppColors.TextSecondary,
+                                )
+                            }
                         }
                     },
                 )

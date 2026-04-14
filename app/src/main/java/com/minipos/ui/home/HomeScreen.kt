@@ -300,13 +300,16 @@ fun HomeScreen(
                 HomeHeader(
                     storeName = homeState.storeName.ifEmpty { "Mini POS" },
                     userName = homeState.userName,
-                    todayOrders = homeState.todayOrders,
+                    todayOrders = homeState.unreadOrders,
                     isDarkMode = isDark,
                     searchQuery = posState.searchQuery,
                     onSearch = { posViewModel.search(it) },
                     onScanBarcode = { posViewModel.showBarcodeScanner() },
                     onAvatarClick = { showProfileSheet = true },
-                    onOrdersClick = { onNavigate(Screen.OrderList.route) },
+                    onOrdersClick = {
+                        homeViewModel.markOrdersAsSeen()
+                        onNavigate(Screen.OrderList.route)
+                    },
                     onDarkModeClick = {
                         homeViewModel.themeManager.setThemeMode(
                             if (isDark) com.minipos.core.theme.ThemeMode.LIGHT

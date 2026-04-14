@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,6 +58,12 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    // Refresh user list & session state every time this screen enters composition
+    // (e.g. when coming back from Home via "switch user")
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     // Navigate on success
     LaunchedEffect(state.loginSuccess) {
@@ -261,7 +270,7 @@ private fun UserListContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // ── OWNER section ─────────────────────────────────
@@ -326,19 +335,19 @@ private fun UserCard(user: User, isCurrentUser: Boolean = false, onClick: () -> 
     }
 
     val shape = RoundedCornerShape(MiniPosTokens.RadiusXl)
+    val bgColor = if (isCurrentUser) gradientColors.first().copy(alpha = 0.07f) else Color.White
 
-    // Outer Box: only shadow (no clip, so shadow is not cut off)
-    // Inner Box: clip + background + border (border drawn inside clip boundary → always fully visible)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(if (isCurrentUser) 6.dp else 2.dp, shape, clip = false),
+            .padding(horizontal = 1.dp, vertical = 2.dp), // room for shadow to breathe without clip=false
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(shape)
-                .background(if (isCurrentUser) gradientColors.first().copy(alpha = 0.07f) else AppColors.Surface)
+                .shadow(2.dp, shape)
+                .background(Color.White, shape)  // white base so shadow doesn't bleed through
+                .background(bgColor, shape)
                 .then(
                     if (isCurrentUser)
                         Modifier.border(1.5.dp, Brush.linearGradient(gradientColors), shape)
@@ -353,113 +362,113 @@ private fun UserCard(user: User, isCurrentUser: Boolean = false, onClick: () -> 
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Avatar
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(gradientColors)),
-                    contentAlignment = Alignment.Center,
+            // Avatar
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(gradientColors)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    user.displayName.firstOrNull()?.uppercase() ?: "?",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+
+            // Info
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        user.displayName.firstOrNull()?.uppercase() ?: "?",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
+                        user.displayName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
-                }
-                Spacer(Modifier.width(14.dp))
-
-                // Info
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            user.displayName,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (isCurrentUser) {
-                            Spacer(Modifier.width(6.dp))
+                    if (isCurrentUser) {
+                        Spacer(Modifier.width(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .background(
-                                        Brush.linearGradient(gradientColors),
-                                        RoundedCornerShape(MiniPosTokens.RadiusFull),
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                            ) {
-                                Text(
-                                    stringResource(R.string.logged_in_badge),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White,
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        // Role badge
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    gradientColors.first().copy(alpha = 0.12f),
-                                    RoundedCornerShape(MiniPosTokens.RadiusFull),
-                                )
-                                .padding(horizontal = 10.dp, vertical = 2.dp),
-                        ) {
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF00C853)),
+                            )
                             Text(
-                                roleLabel,
+                                stringResource(R.string.logged_in_badge),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = gradientColors.first(),
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF00C853),
                             )
                         }
-                        // Tap-to-sign-in hint
-                        Text(
-                            stringResource(R.string.login_tap_to_signin),
-                            modifier = Modifier.weight(1f),
-                            fontSize = 11.sp,
-                            color = AppColors.TextTertiary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
                     }
                 }
-
-                Spacer(Modifier.width(8.dp))
-
-                // Arrow
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isCurrentUser) gradientColors.first().copy(alpha = 0.1f)
-                            else AppColors.InputBackground,
-                        ),
-                    contentAlignment = Alignment.Center,
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Icon(
-                        Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = if (isCurrentUser) gradientColors.first() else AppColors.TextTertiary,
-                        modifier = Modifier.size(20.dp),
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                gradientColors.first().copy(alpha = 0.12f),
+                                RoundedCornerShape(MiniPosTokens.RadiusFull),
+                            )
+                            .padding(horizontal = 10.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            roleLabel,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = gradientColors.first(),
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.login_tap_to_signin),
+                        modifier = Modifier.weight(1f),
+                        fontSize = 11.sp,
+                        color = AppColors.TextTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Arrow
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isCurrentUser) gradientColors.first().copy(alpha = 0.1f)
+                        else AppColors.InputBackground,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = if (isCurrentUser) gradientColors.first() else AppColors.TextTertiary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
-    }
+    }   // end inner Box (card)
+    }   // end outer Box (shadow wrapper)
 }
 
 // ─── PIN Input ───
@@ -475,6 +484,7 @@ private fun PinInputContent(
     onForgotPin: (() -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var showPin by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
@@ -504,6 +514,8 @@ private fun PinInputContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -580,12 +592,23 @@ private fun PinInputContent(
                     BasicTextField(
                         value = pin,
                         onValueChange = { v ->
-                            if (v.length <= 6 && v.all { it.isDigit() }) onPinChanged(v)
+                            if (v.length <= 6 && v.all { it.isDigit() }) {
+                                onPinChanged(v)
+                                // Đóng keyboard ngay khi gõ số cuối để tránh flicker khi navigate
+                                if (v.length == 6) {
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                }
+                            }
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         keyboardActions = KeyboardActions(
-                            onDone = { if (pin.length >= 4) onLogin(); focusManager.clearFocus() },
+                            onDone = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                if (pin.length >= 4) onLogin()
+                            },
                         ),
                         visualTransformation = if (showPin) VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier
@@ -686,7 +709,11 @@ private fun PinInputContent(
                     else
                         Brush.linearGradient(listOf(AppColors.BorderLight, AppColors.BorderLight)),
                 )
-                .then(if (buttonEnabled) Modifier.clickable { onLogin() } else Modifier),
+                .then(if (buttonEnabled) Modifier.clickable {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    onLogin()
+                } else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             if (isLoading) {

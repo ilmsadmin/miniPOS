@@ -40,6 +40,7 @@ data class HomeState(
     val currentUserHasPin: Boolean = false,
     val todayRevenue: Double = 0.0,
     val todayOrders: Int = 0,
+    val unreadOrders: Int = 0,
     val lowStockCount: Int = 0,
     // Permissions state — computed from role + cashierPerms
     val cashierPerms: CashierPermissions = CashierPermissions(),
@@ -112,10 +113,13 @@ class HomeViewModel @Inject constructor(
                     orderRepository.observeOrders(store.id).collect {
                         try {
                             val dashboard = orderRepository.getDashboardData(store.id)
+                            val lastSeen = appPreferences.getLastSeenTodayOrders()
+                            val unread = maxOf(0, dashboard.todayOrders - lastSeen)
                             _state.update { s ->
                                 s.copy(
                                     todayRevenue = dashboard.todayRevenue,
                                     todayOrders = dashboard.todayOrders,
+                                    unreadOrders = unread,
                                     lowStockCount = dashboard.lowStockCount,
                                 )
                             }
@@ -130,13 +134,25 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val store = storeRepository.getStore() ?: return@launch
             val dashboard = orderRepository.getDashboardData(store.id)
+            val lastSeen = appPreferences.getLastSeenTodayOrders()
+            val unread = maxOf(0, dashboard.todayOrders - lastSeen)
             _state.update {
                 it.copy(
                     todayRevenue = dashboard.todayRevenue,
                     todayOrders = dashboard.todayOrders,
+                    unreadOrders = unread,
                     lowStockCount = dashboard.lowStockCount,
                 )
             }
+        }
+    }
+
+    /** Gọi khi user click vào icon đơn hàng — đánh dấu đã xem tất cả đơn hiện tại */
+    fun markOrdersAsSeen() {
+        viewModelScope.launch {
+            val current = _state.value.todayOrders
+            appPreferences.setLastSeenTodayOrders(current)
+            _state.update { it.copy(unreadOrders = 0) }
         }
     }
 

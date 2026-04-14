@@ -28,6 +28,7 @@ class AppPreferences @Inject constructor(
         private val KEY_LANGUAGE = stringPreferencesKey("language")            // "system", "en", "vi"
         private val KEY_SETUP_GUIDE_DISMISSED = booleanPreferencesKey("setup_guide_dismissed")
         private val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        private val KEY_LAST_SEEN_TODAY_ORDERS = intPreferencesKey("last_seen_today_orders")
     }
 
     val currentStoreId: Flow<String?> = context.dataStore.data.map { it[KEY_CURRENT_STORE_ID] }
@@ -102,6 +103,14 @@ class AppPreferences @Inject constructor(
 
     suspend fun setSetupGuideDismissed(dismissed: Boolean) {
         context.dataStore.edit { it[KEY_SETUP_GUIDE_DISMISSED] = dismissed }
+    }
+
+    suspend fun getLastSeenTodayOrders(): Int {
+        return context.dataStore.data.first()[KEY_LAST_SEEN_TODAY_ORDERS] ?: 0
+    }
+
+    suspend fun setLastSeenTodayOrders(count: Int) {
+        context.dataStore.edit { it[KEY_LAST_SEEN_TODAY_ORDERS] = count }
     }
 
     suspend fun logout() {
