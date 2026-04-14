@@ -1868,28 +1868,28 @@ private fun HomeCustomerPickerSheet(
                 .clickable { onSelect(null) }
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    if (selectedCustomer == null) Icons.Rounded.CheckCircle else Icons.Rounded.Person,
-                    null,
-                    tint = if (selectedCustomer == null) AppColors.Primary else AppColors.TextTertiary,
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.pos_walk_in_customer), fontWeight = FontWeight.Medium)
-                    Text(stringResource(R.string.pos_skip_customer), fontSize = 12.sp, color = AppColors.TextSecondary)
-                }
-                if (selectedCustomer == null) {
-                    Icon(
-                        Icons.Rounded.CheckCircle,
-                        null,
-                        tint = AppColors.Primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+        ) {
+            Icon(
+                if (selectedCustomer == null) Icons.Rounded.CheckCircle else Icons.Rounded.Person,
+                null,
+                tint = if (selectedCustomer == null) AppColors.Primary else AppColors.TextTertiary,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.pos_walk_in_customer), fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.pos_skip_customer), fontSize = 12.sp, color = AppColors.TextSecondary)
             }
+            if (selectedCustomer == null) {
+                Icon(
+                    Icons.Rounded.CheckCircle,
+                    null,
+                    tint = AppColors.Primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
 
-            Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
             // Quick create form or search bar
             if (showCreateForm) {
