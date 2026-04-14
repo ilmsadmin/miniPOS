@@ -74,12 +74,15 @@ fun LoginScreen(
             step = state.forgotPinStep,
             ownerHasPassword = state.ownerHasPassword,
             password = state.password,
+            newPassword = state.newPassword,
             newPin = state.newPin,
             error = state.error,
             isLoading = state.isLoading,
             onPasswordChanged = { viewModel.onPasswordChanged(it) },
+            onNewPasswordChanged = { viewModel.onNewPasswordChanged(it) },
             onNewPinChanged = { viewModel.onNewPinChanged(it) },
             onVerifyPassword = { viewModel.verifyPasswordForReset() },
+            onSetPassword = { viewModel.setPasswordAndProceed() },
             onResetPin = { viewModel.resetPinAndLogin() },
             onDismiss = { viewModel.hideForgotPin() },
         )
@@ -322,116 +325,139 @@ private fun UserCard(user: User, isCurrentUser: Boolean = false, onClick: () -> 
 
     val shape = RoundedCornerShape(MiniPosTokens.RadiusXl)
 
-    // Border phải nằm TRƯỚC shadow+clip để không bị cắt
+    // Outer Box: only shadow (no clip, so shadow is not cut off)
+    // Inner Box: clip + background + border (border drawn inside clip boundary → always fully visible)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (isCurrentUser)
-                    Modifier.border(1.5.dp, Brush.linearGradient(gradientColors), shape)
-                else
-                    Modifier.border(1.dp, AppColors.Border, shape)
-            )
-            .shadow(if (isCurrentUser) 6.dp else 4.dp, shape)
-            .clip(shape)
-            .background(if (isCurrentUser) gradientColors.first().copy(alpha = 0.06f) else AppColors.Surface)
-            .clickable(onClick = onClick),
+            .shadow(if (isCurrentUser) 6.dp else 2.dp, shape, clip = false),
     ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Avatar
         Box(
             modifier = Modifier
-                .size(52.dp)
-                .clip(CircleShape)
-                .background(Brush.linearGradient(gradientColors)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                user.displayName.firstOrNull()?.uppercase() ?: "?",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
-            )
-        }
-        Spacer(Modifier.width(14.dp))
-
-        // Info
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    user.displayName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextPrimary,
+                .fillMaxWidth()
+                .clip(shape)
+                .background(if (isCurrentUser) gradientColors.first().copy(alpha = 0.07f) else AppColors.Surface)
+                .then(
+                    if (isCurrentUser)
+                        Modifier.border(1.5.dp, Brush.linearGradient(gradientColors), shape)
+                    else
+                        Modifier.border(1.dp, AppColors.Border, shape)
                 )
-                if (isCurrentUser) {
-                    Spacer(Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Brush.linearGradient(gradientColors),
-                                RoundedCornerShape(MiniPosTokens.RadiusFull),
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                .clickable(onClick = onClick),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(gradientColors)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        user.displayName.firstOrNull()?.uppercase() ?: "?",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+
+                // Info
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            stringResource(R.string.logged_in_badge),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
+                            user.displayName,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (isCurrentUser) {
+                            Spacer(Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Brush.linearGradient(gradientColors),
+                                        RoundedCornerShape(MiniPosTokens.RadiusFull),
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    stringResource(R.string.logged_in_badge),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        // Role badge
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    gradientColors.first().copy(alpha = 0.12f),
+                                    RoundedCornerShape(MiniPosTokens.RadiusFull),
+                                )
+                                .padding(horizontal = 10.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                roleLabel,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = gradientColors.first(),
+                            )
+                        }
+                        // Tap-to-sign-in hint
+                        Text(
+                            stringResource(R.string.login_tap_to_signin),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = AppColors.TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
-            }
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Role badge
+
+                Spacer(Modifier.width(8.dp))
+
+                // Arrow
                 Box(
                     modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
                         .background(
-                            gradientColors.first().copy(alpha = 0.12f),
-                            RoundedCornerShape(MiniPosTokens.RadiusFull),
-                        )
-                        .padding(horizontal = 10.dp, vertical = 2.dp),
+                            if (isCurrentUser) gradientColors.first().copy(alpha = 0.1f)
+                            else AppColors.InputBackground,
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(roleLabel, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = gradientColors.first())
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = if (isCurrentUser) gradientColors.first() else AppColors.TextTertiary,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
-                // Tap-to-sign-in hint
-                Text(
-                    stringResource(R.string.login_tap_to_signin),
-                    modifier = Modifier.weight(1f),
-                    fontSize = 11.sp,
-                    color = AppColors.TextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
         }
-
-        // Arrow
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isCurrentUser) gradientColors.first().copy(alpha = 0.1f) else AppColors.InputBackground,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = if (isCurrentUser) gradientColors.first() else AppColors.TextTertiary,
-                modifier = Modifier.size(20.dp),
-            )
-        }
     }
-    } // end Box (border wrapper)
 }
 
 // ─── PIN Input ───
@@ -711,17 +737,21 @@ private fun ForgotPinOverlay(
     step: ForgotPinStep,
     ownerHasPassword: Boolean,
     password: String,
+    newPassword: String,
     newPin: String,
     error: String?,
     isLoading: Boolean,
     onPasswordChanged: (String) -> Unit,
+    onNewPasswordChanged: (String) -> Unit,
     onNewPinChanged: (String) -> Unit,
     onVerifyPassword: () -> Unit,
+    onSetPassword: () -> Unit,
     onResetPin: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     var showPassword by remember { mutableStateOf(false) }
+    var showNewPassword by remember { mutableStateOf(false) }
     var showNewPin by remember { mutableStateOf(false) }
 
     val shakeOffset = remember { Animatable(0f) }
@@ -801,8 +831,28 @@ private fun ForgotPinOverlay(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Step indicator — only show when owner has a password (2-step flow)
+                // Step indicator — only show when there are multiple steps
                 if (ownerHasPassword) {
+                    // 2-step: ENTER_PASSWORD → RESET_PIN
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StepDot(active = true, done = step == ForgotPinStep.RESET_PIN, label = "1")
+                        Box(
+                            modifier = Modifier
+                                .width(32.dp)
+                                .height(2.dp)
+                                .background(
+                                    if (step == ForgotPinStep.RESET_PIN) AppColors.Primary else AppColors.BorderLight,
+                                ),
+                        )
+                        StepDot(active = step == ForgotPinStep.RESET_PIN, done = false, label = "2")
+                    }
+                    Spacer(Modifier.height(24.dp))
+                } else {
+                    // 2-step: SET_PASSWORD → RESET_PIN
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
@@ -862,6 +912,33 @@ private fun ForgotPinOverlay(
                                         label = stringResource(R.string.login_use_password),
                                         icon = Icons.Rounded.Key,
                                         onClick = onVerifyPassword,
+                                    )
+                                }
+                                ForgotPinStep.SET_PASSWORD -> {
+                                    Text(
+                                        stringResource(R.string.login_set_password_desc, user.displayName),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextSecondary,
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    PasswordInputField(
+                                        value = newPassword,
+                                        hint = stringResource(R.string.login_new_password_hint),
+                                        isPassword = !showNewPassword,
+                                        autoFocus = true,
+                                        onToggleVisibility = { showNewPassword = !showNewPassword },
+                                        onValueChange = onNewPasswordChanged,
+                                        onDone = { if (newPassword.length >= 6) onSetPassword(); focusManager.clearFocus() },
+                                        error = error,
+                                    )
+                                    Spacer(Modifier.height(20.dp))
+                                    ActionButton(
+                                        enabled = newPassword.length >= 6 && !isLoading,
+                                        isLoading = isLoading,
+                                        label = stringResource(R.string.login_set_password_btn),
+                                        icon = Icons.Rounded.Lock,
+                                        onClick = onSetPassword,
                                     )
                                 }
                                 ForgotPinStep.RESET_PIN -> {
