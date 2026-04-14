@@ -2,9 +2,9 @@
 <resources>
     <!-- Base theme using AppCompat for per-app language support -->
     <style name="Theme.MiniPOS" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="android:statusBarColor">#0A0E1A</item>
-        <item name="android:navigationBarColor">#0A0E1A</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#F5F9F9</item>
+        <item name="android:navigationBarColor">#F5F9F9</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <!--

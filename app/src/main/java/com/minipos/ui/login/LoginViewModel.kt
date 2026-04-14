@@ -143,12 +143,12 @@ class LoginViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             val hasPin = userRepository.hasPin(user.id)
             if (!hasPin) {
-                // No PIN set — this is a security issue, should not happen after onboarding fix
-                // Still allow login for legacy data but log warning
-                appPreferences.setCurrentUser(user.id)
-                val session = authRepository.getCurrentSession()
+                // No PIN set — this is a security risk. Block login and require PIN setup.
                 _state.update {
-                    it.copy(isLoading = false, loginSuccess = session)
+                    it.copy(
+                        isLoading = false,
+                        error = app.getString(R.string.error_account_no_pin),
+                    )
                 }
                 return@launch
             }

@@ -86,13 +86,20 @@ class WifiSyncManager @Inject constructor(
         stopServer()
         scope.launch {
             try {
-                serverSocket = ServerSocket(SERVICE_PORT)
+                // Try preferred port first, fall back to system-assigned port if busy
+                serverSocket = try {
+                    ServerSocket(SERVICE_PORT)
+                } catch (_: java.net.BindException) {
+                    Log.w(TAG, "Port $SERVICE_PORT in use, using system-assigned port")
+                    ServerSocket(0) // OS picks an available port
+                }
+                val actualPort = serverSocket!!.localPort
                 serverJob = launch { acceptConnections(storeCode) }
 
                 val serviceInfo = NsdServiceInfo().apply {
                     serviceName = "$deviceName-$storeCode"
                     serviceType = SERVICE_TYPE
-                    port = SERVICE_PORT
+                    port = actualPort
                     setAttribute("storeCode", storeCode)
                     setAttribute("version", PROTOCOL_VERSION.toString())
                 }
@@ -188,6 +195,13 @@ class WifiSyncManager @Inject constructor(
         serverJob = null
         try { serverSocket?.close() } catch (_: Exception) {}
         serverSocket = null
+    }
+
+    /** Release all resources. Call when the app is shutting down. */
+    fun destroy() {
+        stopServer()
+        stopDiscovery()
+        scope.cancel()
     }
 
     // ──────────────────────────────────────────────
@@ -1201,24 +1215,28 @@ class WifiSyncManager @Inject constructor(
             val combined = iv + cipherBytes
             Base64.encodeToString(combined, Base64.NO_WRAP)
         } catch (e: Exception) {
-            Log.e(TAG, "Encryption failed, sending plain", e)
-            plainText // fallback — still works if both devices lack Keystore
+            Log.e(TAG, "Encryption failed — aborting sync to prevent plaintext data leak", e)
+            throw SecurityException("Sync encryption failed. Cannot send data in plaintext.", e)
         }
     }
 
     private fun decryptPayload(data: String): String {
         return try {
             val combined = Base64.decode(data, Base64.NO_WRAP)
-            if (combined.size <= GCM_IV_LENGTH) return data // not encrypted
+            if (combined.size <= GCM_IV_LENGTH) {
+                throw SecurityException("Received data is too short to be encrypted — rejecting potential plaintext payload")
+            }
             val iv = combined.copyOfRange(0, GCM_IV_LENGTH)
             val cipherBytes = combined.copyOfRange(GCM_IV_LENGTH, combined.size)
             val key = getSyncKey()
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
             String(cipher.doFinal(cipherBytes), Charsets.UTF_8)
+        } catch (e: SecurityException) {
+            throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Decryption failed — treating as plaintext", e)
-            data
+            Log.e(TAG, "Decryption failed — rejecting untrusted payload", e)
+            throw SecurityException("Cannot decrypt sync payload. Data may be corrupted or from an untrusted source.", e)
         }
     }
 }

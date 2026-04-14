@@ -10,6 +10,7 @@ import com.minipos.core.receipt.ReceiptGenerator
 import com.minipos.core.receipt.ReceiptPdfGenerator
 import com.minipos.core.receipt.ReceiptPrintHelper
 import com.minipos.core.receipt.ReceiptShareHelper
+import com.minipos.core.receipt.ReceiptSystemPrintHelper
 import com.minipos.domain.model.OrderDetail
 import com.minipos.domain.model.Store
 import com.minipos.domain.repository.OrderRepository
@@ -68,16 +69,21 @@ class OrderDetailViewModel @Inject constructor(
     // ---- Print ----
 
     fun onPrintClick(context: Context) {
-        if (!ReceiptPrintHelper.isBluetoothAvailable(context)) {
-            _state.update { it.copy(message = context.getString(R.string.bluetooth_not_enabled)) }
+        val detail = _state.value.detail
+        val store = _state.value.store
+        if (detail == null || store == null) {
+            _state.update { it.copy(message = context.getString(R.string.no_order_data_print)) }
             return
         }
-        val devices = ReceiptPrintHelper.getAllPairedDevices(context)
-        if (devices.isEmpty()) {
-            _state.update { it.copy(message = context.getString(R.string.no_bluetooth_devices_found)) }
-            return
+        _state.update { it.copy(isPrinting = true) }
+        viewModelScope.launch {
+            try {
+                ReceiptSystemPrintHelper.printViaSystemDialog(context, store, detail)
+                _state.update { it.copy(isPrinting = false) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isPrinting = false, message = context.getString(R.string.error_print_receipt)) }
+            }
         }
-        _state.update { it.copy(showPrinterDialog = true, pairedDevices = devices) }
     }
 
     fun dismissPrinterDialog() {

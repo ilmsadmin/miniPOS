@@ -360,8 +360,8 @@ class BarcodeViewModel @Inject constructor(
 
             val isQr = currentState.barcodeType == BarcodeType.QR_CODE
 
-            val labels = selectedWithBarcode.flatMap { item ->
-                val barcode = item.currentBarcode!!
+            val labels = selectedWithBarcode.mapNotNull { item ->
+                val barcode = item.currentBarcode ?: return@mapNotNull null
                 List(currentState.labelsPerProduct) {
                     BarcodeGenerator.generateLabelBitmap(
                         barcode = barcode,
@@ -371,7 +371,7 @@ class BarcodeViewModel @Inject constructor(
                         isQrCode = isQr,
                     )
                 }
-            }
+            }.flatten()
 
             val combined = BarcodeGenerator.combineLabelBitmaps(labels)
 
@@ -527,8 +527,8 @@ class BarcodeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _state.update { it.copy(isGenerating = true) }
-                val labels = selected.flatMap { item ->
-                    val barcode = item.currentBarcode!!
+                val labels = selected.mapNotNull { item ->
+                    val barcode = item.currentBarcode ?: return@mapNotNull null
                     List(currentState.labelsPerProduct) {
                         BarcodeGenerator.generateLabelBitmap(
                             barcode = barcode,
@@ -538,7 +538,7 @@ class BarcodeViewModel @Inject constructor(
                             isQrCode = isQr,
                         )
                     }
-                }
+                }.flatten()
                 val combined = BarcodeGenerator.combineLabelBitmaps(labels)
                 val file = BarcodePrintHelper.saveLabelsImage(context, combined, "barcodes_${System.currentTimeMillis()}")
                 BarcodePrintHelper.shareImage(context, file)

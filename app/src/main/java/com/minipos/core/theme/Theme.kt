@@ -85,17 +85,21 @@ fun MiniPosTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val miniPosColors = if (darkTheme) DarkMiniPosColors else LightMiniPosColors
 
-    // Update status bar color
+    // Update status bar and navigation bar colors
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = if (darkTheme) {
+            val bgColor = if (darkTheme) {
                 DarkMiniPosColors.Background.toArgb()
             } else {
                 LightMiniPosColors.Background.toArgb()
             }
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.statusBarColor = bgColor
+            window.navigationBarColor = bgColor
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

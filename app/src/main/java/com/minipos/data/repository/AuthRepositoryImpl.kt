@@ -205,28 +205,8 @@ class AuthRepositoryImpl @Inject constructor(
             autoLogin()
             return
         }
-        // Legacy fallback: tạo store mặc định nếu chưa có
-        val now = DateUtils.now()
-        val deviceId = prefs.getDeviceIdSync()
-        val storeId = UuidGenerator.generate()
-        val userId = UuidGenerator.generate()
-        storeDao.insert(
-            StoreEntity(
-                id = storeId, name = "My Store", code = "STORE1",
-                address = null, phone = null, currency = "VND",
-                createdAt = now, updatedAt = now, deviceId = deviceId,
-            )
-        )
-        userDao.insert(
-            UserEntity(
-                id = userId, storeId = storeId, displayName = "Owner",
-                role = "owner", pinHash = "", passwordHash = "",
-                isActive = true, createdAt = now, updatedAt = now, deviceId = deviceId,
-            )
-        )
-        prefs.setCurrentStore(storeId)
-        prefs.setCurrentUser(userId)
-        prefs.setOnboarded(true)
+        // No legacy fallback — if no store exists, user must go through onboarding.
+        // Creating a default store with empty credentials is a security risk.
     }
 
     override suspend fun getCurrentSession(): AuthSession? {

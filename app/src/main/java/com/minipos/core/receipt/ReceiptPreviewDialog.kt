@@ -169,6 +169,8 @@ fun ReceiptPreviewDialog(
                             WebView(ctx).apply {
                                 webViewClient = WebViewClient()
                                 settings.javaScriptEnabled = false
+                                settings.allowFileAccess = false
+                                settings.allowContentAccess = false
                                 settings.loadWithOverviewMode = true
                                 settings.useWideViewPort = true
                                 setBackgroundColor(android.graphics.Color.WHITE)

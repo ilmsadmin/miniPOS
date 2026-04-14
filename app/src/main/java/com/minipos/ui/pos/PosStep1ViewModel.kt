@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class PosStep1State(
+    val isLoading: Boolean = true,
     val categories: List<Category> = emptyList(),
     val products: List<Product> = emptyList(),
     val allProducts: List<Product> = emptyList(),
@@ -114,6 +115,7 @@ class PosStep1ViewModel @Inject constructor(
                                 else -> products
                             }
                             current.copy(
+                                isLoading = false,
                                 allProducts = products,
                                 products = filteredProducts,
                             )

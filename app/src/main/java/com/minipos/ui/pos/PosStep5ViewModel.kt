@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.minipos.R
 import com.minipos.core.receipt.ReceiptPrintHelper
 import com.minipos.core.receipt.ReceiptShareHelper
+import com.minipos.core.receipt.ReceiptSystemPrintHelper
 import com.minipos.domain.model.OrderDetail
 import com.minipos.domain.model.Store
 import com.minipos.domain.repository.OrderRepository
@@ -90,20 +91,22 @@ class PosStep5ViewModel @Inject constructor(
     // ---- Print ----
 
     fun onPrintClick(context: Context) {
-        if (_state.value.orderDetail == null) {
+        val detail = _state.value.orderDetail
+        val store = _state.value.store
+        if (detail == null || store == null) {
             _state.update { it.copy(message = context.getString(R.string.no_order_data_print)) }
             return
         }
-        if (!ReceiptPrintHelper.isBluetoothAvailable(context)) {
-            _state.update { it.copy(message = context.getString(R.string.bluetooth_not_enabled)) }
-            return
+        // Use Android's built-in Print Framework — supports WiFi, Bluetooth, Cloud printers
+        _state.update { it.copy(isPrinting = true) }
+        viewModelScope.launch {
+            try {
+                ReceiptSystemPrintHelper.printViaSystemDialog(context, store, detail)
+                _state.update { it.copy(isPrinting = false) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isPrinting = false, message = context.getString(R.string.error_print_receipt)) }
+            }
         }
-        val devices = ReceiptPrintHelper.getAllPairedDevices(context)
-        if (devices.isEmpty()) {
-            _state.update { it.copy(message = context.getString(R.string.no_bluetooth_devices_found)) }
-            return
-        }
-        _state.update { it.copy(showPrinterDialog = true, pairedDevices = devices) }
     }
 
     fun dismissPrinterDialog() {

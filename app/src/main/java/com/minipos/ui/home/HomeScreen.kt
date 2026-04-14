@@ -41,6 +41,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,6 +68,8 @@ import com.minipos.ui.pos.PosStep1ViewModel
 import com.minipos.ui.scanner.BarcodeScannerScreen
 import com.minipos.ui.scanner.ImageViewerScreen
 import com.minipos.ui.settings.ChangePinBottomSheet
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +86,8 @@ fun HomeScreen(
     val cart by posViewModel.cartHolder.cart.collectAsState()
     val stockVersion by posViewModel.cartHolder.stockVersion.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var showToast by remember { mutableStateOf(false) }
@@ -268,9 +274,14 @@ fun HomeScreen(
                     if (!cart.isEmpty()) {
                         showCartSheet = true
                     } else {
-                        // Provide feedback so the user knows what to do
-                        toastMessage = cartEmptyHint
-                        showToast = true
+                        // Snackbar feedback so the user knows what to do
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = cartEmptyHint,
+                                duration = SnackbarDuration.Short,
+                            )
+                        }
                     }
                 },
                 canViewInventory = homeState.can(Permission.INVENTORY_VIEW),
@@ -342,7 +353,10 @@ fun HomeScreen(
                 }
 
                 // ── Product Grid ──
-                if (posState.allProducts.isEmpty() && homeState.setupGuideVisible) {
+                if (posState.isLoading) {
+                    // ── Skeleton loading ──
+                    ProductGridSkeleton(modifier = Modifier.weight(1f))
+                } else if (posState.allProducts.isEmpty() && homeState.setupGuideVisible) {
                     // ── Setup Guide (first-time empty state) ──
                     Box(
                         modifier = Modifier
@@ -392,7 +406,7 @@ fun HomeScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
+                        columns = GridCells.Adaptive(minSize = 110.dp),
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(
                             start = 12.dp,
@@ -414,6 +428,7 @@ fun HomeScreen(
                                 quantity = qty,
                                 availableStock = availableStock,
                                 onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     posViewModel.addToCart(product)
                                     toastMessage = product.name
                                     showToast = true
@@ -864,12 +879,12 @@ private fun HomeProductCard(
             Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 10.dp)) {
                 Text(
                     text = product.name,
-                    fontSize = 11.5.sp,
+                    fontSize = 12.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = AppColors.TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp,
+                    lineHeight = 16.sp,
                     minLines = 2,
                 )
                 Spacer(modifier = Modifier.height(4.dp))

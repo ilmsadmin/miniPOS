@@ -18,7 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +47,7 @@ fun PosStep4Screen(
 ) {
     val cart by viewModel.cartHolder.cart.collectAsState()
     val state by viewModel.state.collectAsState()
+    val haptic = LocalHapticFeedback.current
 
     Scaffold(
         containerColor = AppColors.Background,
@@ -288,6 +291,7 @@ fun PosStep4Screen(
                                     NumpadKey(
                                         key = key,
                                         onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             if (key == "del") {
                                                 val current = state.receivedAmountText
                                                 if (current.isNotEmpty()) {
@@ -382,6 +386,7 @@ fun PosStep4Screen(
                         .clickable(
                             enabled = !state.isProcessing && state.canConfirm(cart.grandTotal),
                         ) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.confirmPayment(
                                 grandTotal = cart.grandTotal,
                                 onSuccess = onPaymentSuccess,

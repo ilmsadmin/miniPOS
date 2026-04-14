@@ -18,6 +18,15 @@
 # Google API Client
 -keep class com.google.api.** { *; }
 
+# ── SECURITY: Strip all debug/verbose/info logs from release builds ──
+# This prevents sensitive data (file paths, store codes, payload sizes) from leaking in logcat
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+    public static int i(...);
+    public static int w(...);
+}
+
 # Apache HTTP client (missing classes on Android)
 -dontwarn javax.naming.InvalidNameException
 -dontwarn javax.naming.NamingException

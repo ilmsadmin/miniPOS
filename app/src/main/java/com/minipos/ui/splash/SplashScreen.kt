@@ -55,14 +55,14 @@ fun SplashScreen(
     var splashStarted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         splashStarted = true
-        delay(3200L)
+        delay(1800L)
         onSplashFinished()
     }
 
     // ─── Entrance animations ───
     val orbAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 1f else 0f,
-        animationSpec = tween(2000, delayMillis = 200, easing = EaseOut),
+        animationSpec = tween(1200, delayMillis = 100, easing = EaseOut),
         label = "orbAlpha",
     )
     val logoScale by animateFloatAsState(
@@ -75,7 +75,7 @@ fun SplashScreen(
     )
     val logoAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 1f else 0f,
-        animationSpec = tween(800, delayMillis = 300, easing = EaseOut),
+        animationSpec = tween(500, delayMillis = 100, easing = EaseOut),
         label = "logoAlpha",
     )
     val logoRotation by animateFloatAsState(
@@ -88,32 +88,32 @@ fun SplashScreen(
     )
     val iconAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 1f else 0f,
-        animationSpec = tween(600, delayMillis = 700, easing = EaseOut),
+        animationSpec = tween(400, delayMillis = 400, easing = EaseOut),
         label = "iconAlpha",
     )
     val brandAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 1f else 0f,
-        animationSpec = tween(700, delayMillis = 900, easing = EaseOut),
+        animationSpec = tween(500, delayMillis = 500, easing = EaseOut),
         label = "brandAlpha",
     )
     val brandOffset by animateFloatAsState(
         targetValue = if (splashStarted) 0f else 16f,
-        animationSpec = tween(700, delayMillis = 900, easing = EaseOut),
+        animationSpec = tween(500, delayMillis = 500, easing = EaseOut),
         label = "brandOffset",
     )
     val loaderAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 1f else 0f,
-        animationSpec = tween(500, delayMillis = 1400, easing = EaseOut),
+        animationSpec = tween(400, delayMillis = 800, easing = EaseOut),
         label = "loaderAlpha",
     )
     val bottomAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 0.6f else 0f,
-        animationSpec = tween(600, delayMillis = 100, easing = EaseOut),
+        animationSpec = tween(400, delayMillis = 100, easing = EaseOut),
         label = "bottomAlpha",
     )
     val zenixAlpha by animateFloatAsState(
         targetValue = if (splashStarted) 1f else 0f,
-        animationSpec = tween(800, delayMillis = 100, easing = EaseOut),
+        animationSpec = tween(500, delayMillis = 100, easing = EaseOut),
         label = "zenixAlpha",
     )
 

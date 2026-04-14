@@ -87,8 +87,13 @@ class PinLockViewModel @Inject constructor(
 
             val userId = appPreferences.getCurrentUserIdSync()
             if (userId == null) {
-                // No user found — just unlock
-                _state.update { it.copy(isLoading = false, isUnlocked = true) }
+                // No user found — cannot verify, show error instead of auto-unlocking
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = app.getString(R.string.error_account_not_found),
+                    )
+                }
                 return@launch
             }
 

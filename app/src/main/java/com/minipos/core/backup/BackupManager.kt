@@ -214,10 +214,11 @@ class BackupManager @Inject constructor(
         // Store
         root.put("store", storeEntityToJson(store))
 
-        // Users — include PIN hashes for full restore capability
+        // Users — NEVER include PIN/password hashes in backups for security.
+        // Restored users must set new credentials on the target device.
         val usersArr = JSONArray()
         database.userDao().getAllUsers(storeId).forEach { u ->
-            usersArr.put(userEntityToJson(u, includeSecrets = true))
+            usersArr.put(userEntityToJson(u, includeSecrets = false))
         }
         root.put("users", usersArr)
 

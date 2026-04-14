@@ -13,7 +13,7 @@
     <string name="welcome_title">ViPOS</string>
     <string name="welcome_subtitle">Simple point-of-sale system\nfor your store</string>
     <string name="create_store">Create New Store</string>
-    <string name="join_store">Tham gia cửa hàng đã có</string>
+    <string name="join_store">Join Existing Store</string>
     <string name="restore_from_gdrive">Restore from Google Drive</string>
 
     <!-- Onboarding Slides -->
@@ -175,23 +175,23 @@
     <string name="switch_user_desc">Login as a different staff member</string>
 
     <!-- Login / Switch User Screen -->
-    <string name="login_screen_title">Chọn tài khoản</string>
-    <string name="login_screen_subtitle">Chọn tài khoản của bạn để tiếp tục</string>
-    <string name="login_enter_pin">Nhập PIN của %1$s</string>
-    <string name="login_btn">Đăng nhập</string>
-    <string name="login_success">Xin chào, %1$s!</string>
-    <string name="login_no_pin">Chưa đặt PIN — đăng nhập trực tiếp</string>
-    <string name="login_forgot_pin">Quên PIN?</string>
-    <string name="login_use_password">Đăng nhập bằng mật khẩu</string>
-    <string name="login_enter_password">Nhập mật khẩu của %1$s</string>
-    <string name="login_password_hint">Mật khẩu chủ cửa hàng</string>
-    <string name="login_set_password_desc">%1$s chưa đặt mật khẩu. Hãy tạo mật khẩu để bảo vệ tài khoản trước khi đặt lại PIN.</string>
-    <string name="login_new_password_hint">Mật khẩu mới (tối thiểu 6 ký tự)</string>
-    <string name="login_set_password_btn">Tạo mật khẩu &amp; Tiếp tục</string>
-    <string name="login_reset_pin_title">Đặt lại PIN</string>
-    <string name="login_reset_pin_new">PIN mới (4–6 chữ số)</string>
-    <string name="login_reset_pin_btn">Đặt lại PIN &amp; Đăng nhập</string>
-    <string name="login_back_to_pin">Quay lại đăng nhập bằng PIN</string>
+    <string name="login_screen_title">Select Account</string>
+    <string name="login_screen_subtitle">Choose your account to continue</string>
+    <string name="login_enter_pin">Enter PIN for %1$s</string>
+    <string name="login_btn">Login</string>
+    <string name="login_success">Hello, %1$s!</string>
+    <string name="login_no_pin">No PIN set — login directly</string>
+    <string name="login_forgot_pin">Forgot PIN?</string>
+    <string name="login_use_password">Login with password</string>
+    <string name="login_enter_password">Enter password for %1$s</string>
+    <string name="login_password_hint">Store owner password</string>
+    <string name="login_set_password_desc">%1$s has no password set. Please create a password to secure the account before resetting PIN.</string>
+    <string name="login_new_password_hint">New password (at least 6 characters)</string>
+    <string name="login_set_password_btn">Create Password &amp; Continue</string>
+    <string name="login_reset_pin_title">Reset PIN</string>
+    <string name="login_reset_pin_new">New PIN (4–6 digits)</string>
+    <string name="login_reset_pin_btn">Reset PIN &amp; Login</string>
+    <string name="login_back_to_pin">Back to PIN login</string>
 
     <!-- Wi-Fi Sync -->
     <string name="wifi_sync_label">Wi-Fi Sync</string>
@@ -217,7 +217,7 @@
     <string name="error_required">This field is required</string>
     <string name="error_pin_length">PIN must be 4–6 digits</string>
     <string name="error_password_length">Password must be at least 6 characters</string>
-    <string name="error_password_too_short">Mật khẩu phải có ít nhất 6 ký tự</string>
+    <string name="error_password_too_short">Password must be at least 6 characters</string>
     <string name="error_password_mismatch">Passwords do not match</string>
     <string name="loading">Loading…</string>
     <string name="processing">Processing…</string>
@@ -333,47 +333,47 @@
     <string name="default_unit">pcs</string>
 
     <!-- Error messages (repository) -->
-    <string name="error_store_code_exists">Store code already exists</string>
-    <string name="error_create_store">Failed to create store</string>
+    <string name="error_store_code_exists">Store code already exists. Please choose a different code.</string>
+    <string name="error_create_store">Failed to create store. Please check your input and try again.</string>
     <string name="error_account_locked_minutes">Account locked. Try again in %1$d minutes</string>
-    <string name="error_account_not_found">Account not found</string>
-    <string name="error_account_disabled">Account has been disabled</string>
+    <string name="error_account_not_found">Account not found. Please check and try again.</string>
+    <string name="error_account_disabled">Account has been disabled. Contact the store owner.</string>
     <string name="error_account_locked_5min">Account locked for 5 minutes after 5 failed attempts</string>
     <string name="error_wrong_pin_attempts">Incorrect PIN. %1$d attempts remaining</string>
-    <string name="error_login">Login failed</string>
+    <string name="error_login">Login failed. Please check your PIN and try again.</string>
     <string name="error_account_no_pin">This account has no PIN set. Please contact the store owner.</string>
     <string name="error_owner_only">Only the store owner can perform this action.</string>
     <string name="error_permission_denied">You don\'t have permission to access this feature.</string>
     <string name="error_no_password_set">No password has been set for this account.</string>
     <string name="error_wrong_password">Incorrect password. Please try again.</string>
-    <string name="error_store_not_found">Store not found</string>
-    <string name="error_update_store">Failed to update store</string>
-    <string name="error_create_user">Failed to create user</string>
+    <string name="error_store_not_found">Store not found. Please restart the app.</string>
+    <string name="error_update_store">Failed to update store. Please try again.</string>
+    <string name="error_create_user">Failed to create user. Please check the details and try again.</string>
     <string name="error_user_not_found">User not found</string>
-    <string name="error_update_user">Failed to update user</string>
-    <string name="error_delete_user">Failed to delete user</string>
-    <string name="error_reset_pin">Failed to reset PIN</string>
-    <string name="error_create_category">Failed to create category</string>
+    <string name="error_update_user">Failed to update user. Please try again.</string>
+    <string name="error_delete_user">Failed to delete user. Please try again.</string>
+    <string name="error_reset_pin">Failed to reset PIN. Please try again.</string>
+    <string name="error_create_category">Failed to create category. Please try again.</string>
     <string name="error_category_not_found">Category not found</string>
-    <string name="error_update_category">Failed to update category</string>
-    <string name="error_category_has_products">Cannot delete category with %1$d products</string>
-    <string name="error_delete_category">Failed to delete category</string>
-    <string name="error_create_product">Failed to create product</string>
+    <string name="error_update_category">Failed to update category. Please try again.</string>
+    <string name="error_category_has_products">Cannot delete category with %1$d products. Move them first.</string>
+    <string name="error_delete_category">Failed to delete category. Please try again.</string>
+    <string name="error_create_product">Failed to create product. Please check the details and try again.</string>
     <string name="error_product_not_found_repo">Product not found</string>
-    <string name="error_update_product">Failed to update product</string>
-    <string name="error_delete_product">Failed to delete product</string>
-    <string name="error_create_supplier">Failed to create supplier</string>
+    <string name="error_update_product">Failed to update product. Please try again.</string>
+    <string name="error_delete_product">Failed to delete product. Please try again.</string>
+    <string name="error_create_supplier">Failed to create supplier. Please check the details and try again.</string>
     <string name="error_supplier_not_found">Supplier not found</string>
-    <string name="error_update_supplier">Failed to update supplier</string>
-    <string name="error_delete_supplier">Failed to delete supplier</string>
-    <string name="error_create_customer">Failed to create customer</string>
+    <string name="error_update_supplier">Failed to update supplier. Please try again.</string>
+    <string name="error_delete_supplier">Failed to delete supplier. Please try again.</string>
+    <string name="error_create_customer">Failed to create customer. Please check the details and try again.</string>
     <string name="error_customer_not_found">Customer not found</string>
-    <string name="error_update_customer">Failed to update customer</string>
-    <string name="error_delete_customer">Failed to delete customer</string>
+    <string name="error_update_customer">Failed to update customer. Please try again.</string>
+    <string name="error_delete_customer">Failed to delete customer. Please try again.</string>
     <string name="error_insufficient_stock">\"%1$s\" only has %2$d %3$s in stock, not enough for %4$d</string>
-    <string name="error_create_order">Failed to create order</string>
+    <string name="error_create_order">Failed to create order. Please try again.</string>
     <string name="error_inventory_not_found">Product inventory not found</string>
-    <string name="error_adjust_inventory">Failed to adjust inventory</string>
+    <string name="error_adjust_inventory">Failed to adjust inventory. Please try again.</string>
 
     <!-- POS Step 4 -->
     <string name="step4_title">Step 4: Payment</string>
@@ -508,10 +508,10 @@
     <string name="go_back">← Go Back</string>
 
     <!-- Login -->
-    <string name="select_account">Chọn tài khoản</string>
-    <string name="select_other_account">← Chọn tài khoản khác</string>
-    <string name="data_error">Lỗi dữ liệu</string>
-    <string name="logged_in_badge">Đang dùng</string>
+    <string name="select_account">Select Account</string>
+    <string name="select_other_account">← Select another account</string>
+    <string name="data_error">Data Error</string>
+    <string name="logged_in_badge">Active</string>
 
     <!-- Barcode Scanner -->
     <string name="scan_barcode_qr">Scan Barcode / QR</string>
@@ -691,16 +691,16 @@
     <string name="store_code_format">Code: %1$s</string>
     <string name="store_phone_format">Phone: %1$s</string>
     <string name="role_label">Role: %1$s</string>
-    <string name="role_owner">Chủ cửa hàng</string>
-    <string name="role_manager">Quản lý</string>
-    <string name="role_cashier">Thu ngân</string>
-    <string name="login_no_users_title">Chưa có tài khoản nhân viên</string>
-    <string name="login_no_users_desc">Vui lòng vào Cài đặt → Nhân viên để thêm tài khoản</string>
-    <string name="login_section_owner">Chủ cửa hàng</string>
-    <string name="login_section_staff">Nhân viên</string>
-    <string name="login_no_pin_set">Chưa đặt PIN</string>
-    <string name="login_tap_to_signin">Nhấn để đăng nhập</string>
-    <string name="login_pin_auto_submit">Tự động đăng nhập khi nhập đủ PIN</string>
+    <string name="role_owner">Store Owner</string>
+    <string name="role_manager">Manager</string>
+    <string name="role_cashier">Cashier</string>
+    <string name="login_no_users_title">No staff accounts yet</string>
+    <string name="login_no_users_desc">Please go to Settings → Staff to add accounts</string>
+    <string name="login_section_owner">Store Owner</string>
+    <string name="login_section_staff">Staff</string>
+    <string name="login_no_pin_set">No PIN set</string>
+    <string name="login_tap_to_signin">Tap to sign in</string>
+    <string name="login_pin_auto_submit">Auto-login when full PIN entered</string>
     <string name="section_store">Store</string>
     <string name="store_info_label">Store Information</string>
     <string name="store_info_desc">Edit name, address, phone</string>
