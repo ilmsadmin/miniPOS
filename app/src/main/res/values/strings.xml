@@ -535,8 +535,12 @@
     <string name="selected_count">Selected: %1$d</string>
     <string name="generate_barcodes">Generate</string>
     <string name="barcode_preview">Barcode Preview</string>
-    <string name="share_pdf_label">Share PDF</string>
-    <string name="share_image_label">Share Image</string>
+    <string name="share">Share</string>
+    <string name="share_format_title">Share format</string>
+    <string name="share_pdf_label">PDF</string>
+    <string name="share_pdf_desc">Share as PDF file</string>
+    <string name="share_image_label">Image</string>
+    <string name="share_image_desc">Share as PNG image</string>
     <string name="printing">Printing…</string>
     <string name="select_printer_title">Select Printer</string>
     <string name="no_printer_found">No printer found.\nPlease pair a Bluetooth printer in Settings.</string>

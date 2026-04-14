@@ -840,6 +840,99 @@ private fun BarcodeLabelPreviewDialog(
     onShareImage: () -> Unit,
     onPrintBluetooth: () -> Unit,
 ) {
+    var showShareSheet by remember { mutableStateOf(false) }
+
+    // ── Share format picker bottom sheet ──
+    if (showShareSheet) {
+        MiniPosBottomSheet(
+            visible = true,
+            title = stringResource(R.string.share_format_title),
+            onDismiss = { showShareSheet = false },
+        ) {
+            // PDF option
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showShareSheet = false
+                        onSharePdf()
+                    }
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(AppColors.Primary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Column {
+                    Text(
+                        stringResource(R.string.share_pdf_label),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        stringResource(R.string.share_pdf_desc),
+                        fontSize = 13.sp,
+                        color = AppColors.TextSecondary,
+                    )
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = AppColors.Divider)
+            // Image option
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showShareSheet = false
+                        onShareImage()
+                    }
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(AppColors.Primary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = null,
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Column {
+                    Text(
+                        stringResource(R.string.share_image_label),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        stringResource(R.string.share_image_desc),
+                        fontSize = 13.sp,
+                        color = AppColors.TextSecondary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+
+    // ── Full-screen preview dialog ──
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -847,8 +940,6 @@ private fun BarcodeLabelPreviewDialog(
             decorFitsSystemWindows = false,
         ),
     ) {
-        // Inside a Dialog, LocalView is the dialog's ComposeView.
-        // Its context IS the Dialog, so we can retrieve the Window directly.
         val view = LocalView.current
         val dialogWindow = remember(view) {
             (view.context as? android.app.Dialog)?.window
@@ -862,7 +953,7 @@ private fun BarcodeLabelPreviewDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .background(AppColors.Background)
-                .systemBarsPadding(),
+                .statusBarsPadding(),
         ) {
             // ── Top bar ──
             Row(
@@ -918,43 +1009,46 @@ private fun BarcodeLabelPreviewDialog(
                 }
             }
 
-            // ── Bottom action bar ──
+            // ── Bottom action bar — 2 buttons only ──
             HorizontalDivider(color = AppColors.Divider)
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(AppColors.Surface)
+                    .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // Share button
+                OutlinedButton(
+                    onClick = { showShareSheet = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Primary),
                 ) {
-                    OutlinedButton(
-                        onClick = onSharePdf,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-                    ) {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.share_pdf_label))
-                    }
-                    OutlinedButton(
-                        onClick = onShareImage,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-                    ) {
-                        Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.share_image_label))
-                    }
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = AppColors.Primary,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.share),
+                        color = AppColors.Primary,
+                        fontWeight = FontWeight.Medium,
+                    )
                 }
+                // Print button
                 MiniPosGradientButton(
                     text = if (isPrinting) stringResource(R.string.printing) else stringResource(R.string.print_via_bluetooth),
                     onClick = onPrintBluetooth,
                     enabled = !isPrinting,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
                     icon = Icons.Default.Print,
                 )
             }
