@@ -698,13 +698,15 @@ private fun QuickStockAddSheet(
         Spacer(Modifier.height(16.dp))
 
         // Quantity input
-        BottomSheetField(
+        CurrencyInputField(
+            rawValue = quantity,
+            onRawValue = { quantity = it },
             label = stringResource(R.string.quick_stock_qty_label),
-            value = quantity,
-            onValueChange = { quantity = it.filter { c -> c.isDigit() || c == '.' } },
             placeholder = stringResource(R.string.quick_stock_qty_hint),
-            required = true,
-            keyboardType = KeyboardType.Number,
+            suffix = "",
+            accentColor = AppColors.Primary,
+            isCurrency = false,
+            maxDigits = 8,
         )
 
         Spacer(Modifier.height(12.dp))

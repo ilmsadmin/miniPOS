@@ -392,18 +392,11 @@ fun ProductFormScreen(
                                     label = stringResource(R.string.pf_selling_price),
                                     required = true,
                                 ) {
-                                    FormInput(
-                                        value = formState.sellingPrice,
-                                        onValueChange = {
-                                            viewModel.updateFormField { copy(sellingPrice = it.filter { c -> c.isDigit() }) }
-                                        },
-                                        placeholder = "0",
-                                        keyboardType = KeyboardType.Number,
-                                        textStyle = TextStyle(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = AppColors.Accent,
-                                            fontSize = 14.sp,
-                                        ),
+                                    CurrencyInputField(
+                                        rawValue = formState.sellingPrice,
+                                        onRawValue = { viewModel.updateFormField { copy(sellingPrice = it) } },
+                                        label = stringResource(R.string.pf_selling_price),
+                                        accentColor = AppColors.Accent,
                                     )
                                 }
                             }
@@ -411,13 +404,10 @@ fun ProductFormScreen(
                                 FormField(
                                     label = stringResource(R.string.pf_cost_price),
                                 ) {
-                                    FormInput(
-                                        value = formState.costPrice,
-                                        onValueChange = {
-                                            viewModel.updateFormField { copy(costPrice = it.filter { c -> c.isDigit() }) }
-                                        },
-                                        placeholder = "0",
-                                        keyboardType = KeyboardType.Number,
+                                    CurrencyInputField(
+                                        rawValue = formState.costPrice,
+                                        onRawValue = { viewModel.updateFormField { copy(costPrice = it) } },
+                                        label = stringResource(R.string.pf_cost_price),
                                     )
                                 }
                             }
@@ -1463,26 +1453,20 @@ private fun VariantFormDialog(
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
                         FormField(label = stringResource(R.string.pf_cost_price)) {
-                            FormInput(
-                                value = formState.costPrice,
-                                onValueChange = { v -> onFieldChange { copy(costPrice = v.filter { it.isDigit() }) } },
-                                placeholder = "0",
-                                keyboardType = KeyboardType.Number,
+                            CurrencyInputField(
+                                rawValue = formState.costPrice,
+                                onRawValue = { v -> onFieldChange { copy(costPrice = v) } },
+                                label = stringResource(R.string.pf_cost_price),
                             )
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         FormField(label = stringResource(R.string.pf_selling_price)) {
-                            FormInput(
-                                value = formState.sellingPrice,
-                                onValueChange = { v -> onFieldChange { copy(sellingPrice = v.filter { it.isDigit() }) } },
-                                placeholder = "0",
-                                keyboardType = KeyboardType.Number,
-                                textStyle = TextStyle(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = AppColors.Accent,
-                                    fontSize = 14.sp,
-                                ),
+                            CurrencyInputField(
+                                rawValue = formState.sellingPrice,
+                                onRawValue = { v -> onFieldChange { copy(sellingPrice = v) } },
+                                label = stringResource(R.string.pf_selling_price),
+                                accentColor = AppColors.Accent,
                             )
                         }
                     }

@@ -19,12 +19,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.minipos.R
 import com.minipos.core.theme.AppColors
+import com.minipos.core.utils.CurrencyFormatter
+import java.text.NumberFormat
+import java.util.Locale
 
 // ═══════════════════════════════════════
 // DESIGN TOKENS
@@ -491,5 +497,391 @@ fun SectionTitle(
             color = AppColors.TextTertiary,
             letterSpacing = 0.8.sp,
         )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENCY INPUT FIELD
+// Tap to open a numpad bottom sheet with thousand-separator display.
+// rawValue   — chỉ chứa chữ số (e.g. "150000")
+// onRawValue — callback nhận chuỗi chữ số mới
+// label      — nhãn hiển thị phía trên (optional, truyền "" để ẩn)
+// suffix     — đơn vị hiển thị sau số (mặc định "đ")
+// accentColor — màu text số (mặc định AppColors.Accent)
+// ═══════════════════════════════════════════════════════════════
+
+private val vnNumberFormat = NumberFormat.getNumberInstance(Locale("vi", "VN"))
+
+/** Format raw digit string with thousand-separator, e.g. "150000" → "150.000" */
+fun formatWithSeparator(raw: String): String {
+    if (raw.isEmpty()) return ""
+    return if (raw.contains('.')) {
+        val parts = raw.split('.')
+        val intPart = parts[0].toLongOrNull() ?: return raw
+        val decPart = parts.getOrElse(1) { "" }
+        "${vnNumberFormat.format(intPart)}.$decPart"
+    } else {
+        val num = raw.toLongOrNull() ?: return raw
+        vnNumberFormat.format(num)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CurrencyInputField(
+    rawValue: String,          // only digits, e.g. "150000"
+    onRawValue: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String = "",
+    placeholder: String = "0",
+    suffix: String = "đ",
+    accentColor: Color = AppColors.Accent,
+    /** true = price (integer, no decimal), false = quantity (allows single decimal) */
+    isCurrency: Boolean = true,
+    maxDigits: Int = 13,
+) {
+    var showNumpad by remember { mutableStateOf(false) }
+
+    // Display text: formatted raw  +  suffix (if not empty)
+    val displayText = remember(rawValue) {
+        if (rawValue.isEmpty()) "" else "${formatWithSeparator(rawValue)}$suffix"
+    }
+
+    // Tap area — styled like FormInput
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .border(1.dp, AppColors.Border, RoundedCornerShape(MiniPosTokens.RadiusLg))
+            .background(AppColors.InputBackground)
+            .clickable { showNumpad = true }
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        if (rawValue.isEmpty()) {
+            Text(placeholder, fontSize = 14.sp, color = AppColors.TextTertiary)
+        } else {
+            Text(
+                displayText,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = accentColor,
+            )
+        }
+        // Calculator icon on the right
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(28.dp)
+                .clip(RoundedCornerShape(MiniPosTokens.RadiusSm))
+                .background(accentColor.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.Calculate,
+                contentDescription = null,
+                tint = accentColor.copy(alpha = 0.6f),
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+
+    if (showNumpad) {
+        CurrencyNumpadSheet(
+            rawValue = rawValue,
+            onRawValue = onRawValue,
+            label = label,
+            suffix = suffix,
+            accentColor = accentColor,
+            isCurrency = isCurrency,
+            maxDigits = maxDigits,
+            onDismiss = { showNumpad = false },
+        )
+    }
+}
+
+// ─── Numpad bottom sheet ───────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CurrencyNumpadSheet(
+    rawValue: String,
+    onRawValue: (String) -> Unit,
+    label: String,
+    suffix: String,
+    accentColor: Color,
+    isCurrency: Boolean,
+    maxDigits: Int,
+    onDismiss: () -> Unit,
+) {
+    // Local editable copy while sheet is open
+    var localRaw by remember { mutableStateOf(rawValue) }
+
+    fun appendKey(key: String) {
+        when (key) {
+            "del" -> {
+                localRaw = localRaw.dropLast(1)
+            }
+            "." -> {
+                if (!isCurrency && !localRaw.contains('.') && localRaw.isNotEmpty()) {
+                    localRaw += "."
+                }
+            }
+            else -> {
+                // Prevent leading zeros (e.g. "000" when raw is empty → keep "0")
+                if (localRaw.isEmpty() && key == "0") {
+                    // skip — no leading zero for currency
+                    return
+                }
+                if (localRaw.isEmpty() && key in listOf("00", "000")) return
+                val stripped = key.trimStart('0')
+                val toAdd = if (stripped.isEmpty() && localRaw.isNotEmpty()) key else stripped.ifEmpty { "0" }
+                if ((localRaw + toAdd).replace(".", "").length <= maxDigits) {
+                    localRaw += if (key.all { it == '0' }) key else toAdd
+                }
+            }
+        }
+        // Trim excessive leading zeros (keep "0" but not "00...")
+        if (localRaw.length > 1 && localRaw.startsWith("0") && !localRaw.startsWith("0.")) {
+            localRaw = localRaw.trimStart('0').ifEmpty { "" }
+        }
+        onRawValue(localRaw)
+    }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AppColors.Surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 4.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusFull))
+                    .background(AppColors.TextTertiary.copy(alpha = 0.3f)),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Label
+            if (label.isNotEmpty()) {
+                Text(
+                    label,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextSecondary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp, top = 4.dp),
+                )
+            }
+
+            // Amount display area
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp)
+                    .clip(RoundedCornerShape(MiniPosTokens.RadiusXl))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(accentColor.copy(alpha = 0.06f), accentColor.copy(alpha = 0.02f))
+                        )
+                    )
+                    .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(MiniPosTokens.RadiusXl))
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    if (localRaw.isEmpty()) {
+                        Text(
+                            "0$suffix",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            color = AppColors.TextTertiary,
+                        )
+                    } else {
+                        Text(
+                            text = "${formatWithSeparator(localRaw)}$suffix",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            color = accentColor,
+                        )
+                    }
+                    // Blinking cursor indicator
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 3.dp)
+                                .width(2.dp)
+                                .height(36.dp)
+                                .background(accentColor),
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Numpad grid: 3 columns
+            // Row 1: 1 2 3
+            // Row 2: 4 5 6
+            // Row 3: 7 8 9
+            // Row 4: 000  0  ⌫
+            // Row 5 (if not currency): 00  .  Done  (optional)
+            val numRows: List<List<String>> = if (isCurrency) {
+                listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("000", "0", "del"),
+                )
+            } else {
+                listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("00", "0", "del"),
+                    listOf(".", "", "done"),
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                numRows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        row.forEach { key ->
+                            when (key) {
+                                "" -> Spacer(Modifier.weight(1f))
+                                "done" -> {
+                                    // Done button
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(56.dp)
+                                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(AppColors.Primary, AppColors.PrimaryLight)
+                                                )
+                                            )
+                                            .clickable { onDismiss() },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    }
+                                }
+                                "del" -> {
+                                    // Delete key
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(56.dp)
+                                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                            .background(AppColors.Error.copy(alpha = 0.08f))
+                                            .border(
+                                                1.dp,
+                                                AppColors.Error.copy(alpha = 0.2f),
+                                                RoundedCornerShape(MiniPosTokens.RadiusLg),
+                                            )
+                                            .clickable { appendKey("del") },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Backspace,
+                                            contentDescription = null,
+                                            tint = AppColors.Error,
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    // Normal digit / 00 / 000 / .
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(56.dp)
+                                            .clip(RoundedCornerShape(MiniPosTokens.RadiusLg))
+                                            .background(AppColors.SurfaceVariant)
+                                            .border(
+                                                1.dp,
+                                                AppColors.Border,
+                                                RoundedCornerShape(MiniPosTokens.RadiusLg),
+                                            )
+                                            .clickable { appendKey(key) },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            key,
+                                            fontSize = if (key.length > 1) 16.sp else 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextPrimary,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Done button (for currency mode — no separate done key in grid)
+            if (isCurrency) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(MiniPosTokens.Radius2xl))
+                        .background(
+                            Brush.linearGradient(listOf(AppColors.Primary, AppColors.PrimaryLight))
+                        )
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Xong",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
