@@ -1977,7 +1977,6 @@ private fun HomeCustomerPickerSheet(
             }
         }
     }
-}
 
 @Composable
 private fun HomeQuickCreateCustomerCard(
