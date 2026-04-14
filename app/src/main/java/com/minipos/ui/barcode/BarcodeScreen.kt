@@ -26,7 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -845,6 +847,17 @@ private fun BarcodeLabelPreviewDialog(
             decorFitsSystemWindows = false,
         ),
     ) {
+        // Inside a Dialog, LocalView is the dialog's ComposeView.
+        // Its context IS the Dialog, so we can retrieve the Window directly.
+        val view = LocalView.current
+        val dialogWindow = remember(view) {
+            (view.context as? android.app.Dialog)?.window
+        }
+        SideEffect {
+            dialogWindow?.let { win ->
+                WindowCompat.setDecorFitsSystemWindows(win, false)
+            }
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
