@@ -845,67 +845,43 @@ private fun BarcodeLabelPreviewDialog(
             decorFitsSystemWindows = false,
         ),
     ) {
-        Scaffold(
-            containerColor = AppColors.Background,
-            topBar = {
-                @OptIn(ExperimentalMaterial3Api::class)
-                TopAppBar(
-                    title = { Text(stringResource(R.string.barcode_preview)) },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Background),
-                )
-            },
-            bottomBar = {
-                Surface(shadowElevation = 8.dp, color = AppColors.Surface) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            OutlinedButton(
-                                onClick = onSharePdf,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-                            ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.share_pdf_label))
-                            }
-                            OutlinedButton(
-                                onClick = onShareImage,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
-                            ) {
-                                Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.share_image_label))
-                            }
-                        }
-                        MiniPosGradientButton(
-                            text = if (isPrinting) stringResource(R.string.printing) else stringResource(R.string.print_via_bluetooth),
-                            onClick = onPrintBluetooth,
-                            enabled = !isPrinting,
-                            modifier = Modifier.fillMaxWidth(),
-                            icon = Icons.Default.Print,
-                        )
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.Background)
+                .systemBarsPadding(),
+        ) {
+            // ── Top bar ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(AppColors.Background)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.close),
+                        tint = AppColors.TextPrimary,
+                    )
                 }
-            },
-        ) { paddingValues ->
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    stringResource(R.string.barcode_preview),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AppColors.TextPrimary,
+                )
+            }
+            HorizontalDivider(color = AppColors.Divider)
+
+            // ── Scrollable preview ──
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                    .weight(1f)
+                    .fillMaxWidth()
                     .background(AppColors.Background),
                 contentPadding = PaddingValues(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -927,6 +903,47 @@ private fun BarcodeLabelPreviewDialog(
                         )
                     }
                 }
+            }
+
+            // ── Bottom action bar ──
+            HorizontalDivider(color = AppColors.Divider)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AppColors.Surface)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onSharePdf,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.share_pdf_label))
+                    }
+                    OutlinedButton(
+                        onClick = onShareImage,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(MiniPosTokens.RadiusMd),
+                    ) {
+                        Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.share_image_label))
+                    }
+                }
+                MiniPosGradientButton(
+                    text = if (isPrinting) stringResource(R.string.printing) else stringResource(R.string.print_via_bluetooth),
+                    onClick = onPrintBluetooth,
+                    enabled = !isPrinting,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Print,
+                )
             }
         }
     }
